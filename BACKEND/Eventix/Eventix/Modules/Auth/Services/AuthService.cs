@@ -217,5 +217,10 @@ namespace Eventix.Modules.Auth.Services
                 }
             };
         }
+
+        public Task LogoutAsync(Guid userId)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
