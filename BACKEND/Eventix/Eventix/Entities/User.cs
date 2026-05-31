@@ -1,6 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Eventix.Entities;
 
@@ -81,6 +83,9 @@ public partial class User
 
     [InverseProperty("User")]
     public virtual ICollection<UserEventInteraction> UserEventInteractions { get; set; } = new List<UserEventInteraction>();
+
+    [InverseProperty("User")]
+    public virtual ICollection<UserRefreshToken> UserRefreshTokens { get; set; } = new List<UserRefreshToken>();
 
     [InverseProperty("CreatedByNavigation")]
     public virtual ICollection<Venue> Venues { get; set; } = new List<Venue>();
