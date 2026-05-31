@@ -1,0 +1,75 @@
+﻿using Eventix.Common.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace TIMORA.Controllers
+{
+    /// <summary>
+    /// Base controller class that provides type-safe response methods
+    /// All API controllers should inherit from this class to ensure consistent response patterns
+    /// </summary>
+    [ApiController]
+    [Authorize]
+    public abstract class BaseApiController : ControllerBase
+    {
+        /// <summary>
+        /// Returns a successful response with typed data
+        /// </summary>
+        /// <typeparam name="T">The type of the response data</typeparam>
+        /// <param name="message">System message for the response</param>
+        /// <param name="data">The response data</param>
+        /// <returns>ActionResult with typed ApiResponseModel</returns>
+        protected ActionResult<ApiResponseModel<T>> SuccessResponse<T>(SystemMessage message, T data)
+        {
+            return Ok(ApiResponseModel<T>.Success(message, data));
+        }
+
+        /// <summary>
+        /// Returns a successful response without data (for operations like delete, update confirmations)
+        /// </summary>
+        /// <param name="message">System message for the response</param>
+        /// <returns>ActionResult with object ApiResponseModel</returns>
+        protected ActionResult<ApiResponseModel<object>> SuccessResponse(SystemMessage message)
+        {
+            return Ok(ApiResponseModel<object>.Success(message, null));
+        }
+
+        /// <summary>
+        /// Validates that the response model matches the expected type
+        /// This method can be used in development to catch type mismatches early
+        /// </summary>
+        /// <typeparam name="TExpected">Expected response model type</typeparam>
+        /// <typeparam name="TActual">Actual response model type</typeparam>
+        /// <param name="data">The response data</param>
+        /// <returns>True if types match</returns>
+        protected bool ValidateResponseType<TExpected, TActual>(TActual data) where TActual : class
+        {
+            return data is TExpected;
+        }
+
+        /// <summary>
+        /// Creates a typed response with compile-time validation
+        /// This ensures the data type matches the declared response type
+        /// </summary>
+        /// <typeparam name="T">The response model type</typeparam>
+        /// <param name="message">System message</param>
+        /// <param name="data">Response data that must match type T</param>
+        /// <returns>ActionResult with typed ApiResponseModel</returns>
+        protected ActionResult<ApiResponseModel<T>> TypedSuccessResponse<T>(SystemMessage message, T data) where T : class
+        {
+            // Compile-time validation ensures T matches the data type
+            return Ok(ApiResponseModel<T>.Success(message, data));
+        }
+        protected ActionResult<ApiResponseModel<PaginationResponse<T>>> TypedEmptyResponse<T>(SystemMessage message, PaginationRequest<T> request) where T : class
+        {
+            var emptyPaged = new PaginationResponse<T>
+            {
+                CurrentPage = request.CurrentPage,
+                PageSize = request.PageSize,
+                DataList = new List<T>()
+            };
+
+            return Ok(ApiResponseModel<PaginationResponse<T>>.Success(message, emptyPaged));
+        }
+    }
+}
