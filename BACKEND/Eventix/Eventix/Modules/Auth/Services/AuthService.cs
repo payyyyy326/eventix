@@ -313,5 +313,50 @@ namespace Eventix.Modules.Auth.Services
             var randomBytes = RandomNumberGenerator.GetBytes(64);
             return Convert.ToBase64String(randomBytes);
         }
+
+        public async Task ForgotPasswordAsync(ForgetPasswordRequest request)
+        {
+            var email = request.Email.Trim().ToLower();
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.Email == email);
+
+            if (user == null)
+            {
+                throw new ApiException(SystemError.USER_NOT_FOUND);
+            }
+
+            await SendOtpAsync(user.Id, user.Email, SystemConstants.PurposeEmail.RESET_PASSWORD);
+        }
+
+        public async Task ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            if (request.NewPassword != request.ConfirmPassword)
+            {
+                throw new ApiException(SystemError.PASSWORD_NOT_MATCH);
+            }
+
+            var email = request.Email.Trim().ToLower();
+
+            var otp = await _context.EmailOtps
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Email == email &&
+                    x.OtpCode == request.OtpCode &&
+                    x.Purpose == SystemConstants.PurposeEmail.RESET_PASSWORD &&
+                    !x.IsUsed &&
+                    x.ExpiresAt > DateTime.UtcNow);
+
+            if (otp == null)
+            {
+                throw new ApiException(SystemError.INVALID_OR_EXPIRED_RESET_TOKEN);
+            }
+
+            otp.IsUsed = true;
+
+            otp.User.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+            await _context.SaveChangesAsync();
+        }
     }
 }
