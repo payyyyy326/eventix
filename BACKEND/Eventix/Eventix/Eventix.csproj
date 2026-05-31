@@ -39,8 +39,6 @@
 
   <ItemGroup>
     <Folder Include="Controllers\" />
-    <Folder Include="Modules\User\Controllers\" />
-    <Folder Include="Modules\User\Services\" />
   </ItemGroup>
 
 </Project>
