@@ -31,6 +31,7 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage USER_CHANGED_PASSWORD = new("104", "Change password successfully", true);
         public static readonly SystemMessage USER_CREATED = new("105", "User created successfully", true);
         public static readonly SystemMessage USERS_BY_ROLE_RETRIEVED = new("106", "Users by role retrieved successfully", true);
+        public static readonly SystemMessage PASSWORD_RESET_SUCCESS = new("107", "Password reset successfully", true);
 
         // TaskItem Success Messages (040-059)
         public static readonly SystemMessage TASK_ITEM_RETRIEVED = new("040", "TaskItem retrieved successfully", true);

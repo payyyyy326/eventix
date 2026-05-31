@@ -52,8 +52,7 @@ namespace Eventix.Modules.Auth.Controllers
 
         [AllowAnonymous]
         [HttpPost("refresh-token")]
-        public async Task<ActionResult<ApiResponseModel<AuthResponse>>> RefreshToken(
-            [FromBody] RefreshTokenRequest request)
+        public async Task<ActionResult<ApiResponseModel<AuthResponse>>> RefreshToken([FromBody] RefreshTokenRequest request)
         {
             var response = await _authService.RefreshTokenAsync(request);
 
@@ -62,12 +61,30 @@ namespace Eventix.Modules.Auth.Controllers
 
         [Authorize]
         [HttpPost("logout")]
-        public async Task<ActionResult<ApiResponseModel<object>>> Logout(
-            [FromBody] LogoutRequest request)
+        public async Task<ActionResult<ApiResponseModel<object>>> Logout([FromBody] LogoutRequest request)
         {
             await _authService.LogoutAsync(request);
 
             return SuccessResponse(SystemSuccess.LOGOUT_SUCCESS);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("forgot-password")]
+        public async Task<ActionResult<ApiResponseModel<object>>> ForgotPassword([FromBody] ForgetPasswordRequest request)
+        {
+            await _authService.ForgotPasswordAsync(request);
+
+            return SuccessResponse(SystemSuccess.OTP_SEND_SUCCESS);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("reset-password")]
+        public async Task<ActionResult<ApiResponseModel<object>>> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            await _authService.ResetPasswordAsync(request);
+
+            return SuccessResponse(
+                SystemSuccess.PASSWORD_RESET_SUCCESS);
         }
     }
 }
