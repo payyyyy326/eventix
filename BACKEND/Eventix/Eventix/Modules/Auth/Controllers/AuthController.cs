@@ -49,5 +49,25 @@ namespace Eventix.Modules.Auth.Controllers
             await _authService.ResendOtpAsync(request);
             return SuccessResponse(SystemSuccess.OTP_SEND_SUCCESS);
         }
+
+        [AllowAnonymous]
+        [HttpPost("refresh-token")]
+        public async Task<ActionResult<ApiResponseModel<AuthResponse>>> RefreshToken(
+            [FromBody] RefreshTokenRequest request)
+        {
+            var response = await _authService.RefreshTokenAsync(request);
+
+            return SuccessResponse(SystemSuccess.LOGIN_SUCCESS, response);
+        }
+
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<ActionResult<ApiResponseModel<object>>> Logout(
+            [FromBody] LogoutRequest request)
+        {
+            await _authService.LogoutAsync(request);
+
+            return SuccessResponse(SystemSuccess.LOGOUT_SUCCESS);
+        }
     }
 }
