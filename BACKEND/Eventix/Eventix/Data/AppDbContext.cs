@@ -72,6 +72,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<UserEventInteraction> UserEventInteractions { get; set; }
 
+    public virtual DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
+
     public virtual DbSet<Venue> Venues { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -528,6 +530,18 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK__UserEvent__Event__10216507");
 
             entity.HasOne(d => d.User).WithMany(p => p.UserEventInteractions).HasConstraintName("FK__UserEvent__UserI__0F2D40CE");
+        });
+
+        modelBuilder.Entity<UserRefreshToken>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__UserRefr__3214EC077BD6BB65");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserRefreshTokens)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__UserRefre__UserI__44952D46");
         });
 
         modelBuilder.Entity<Venue>(entity =>

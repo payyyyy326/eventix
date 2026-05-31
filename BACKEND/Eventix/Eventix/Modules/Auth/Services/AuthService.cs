@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Eventix.Modules.Auth.Services
@@ -151,7 +152,9 @@ namespace Eventix.Modules.Auth.Services
 
         private async Task SendOtpAsync(Guid userId, string email, string purpose)
         {
-            var otpCode = new Random().Next(100000, 999999).ToString();
+            var otpCode = RandomNumberGenerator
+                .GetInt32(100000, 1000000)
+                .ToString();
 
             var otp = new EmailOtp
             {
@@ -189,6 +192,9 @@ namespace Eventix.Modules.Auth.Services
                 claims.Add(new Claim(ClaimTypes.Role, role.Name));
             }
 
+            var accessTokenExpiresAt = DateTime.UtcNow
+                .AddMinutes(_jwtSettings.AccessTokenExpireMinutes);
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
@@ -201,26 +207,111 @@ namespace Eventix.Modules.Auth.Services
             var token = tokenHandler.CreateToken(tokenDescriptor);
             var tokenString = tokenHandler.WriteToken(token);
 
+            var refreshToken = GenerateRefreshToken();
+            var refreshTokenExpiresAt = DateTime.UtcNow
+                .AddDays(_jwtSettings.RefreshTokenExpireDays);
+
+            var userRefreshToken = new UserRefreshToken
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Token = refreshToken,
+                ExpiresAt = refreshTokenExpiresAt,
+                IsRevoked = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.UserRefreshTokens.Add(userRefreshToken);
+            await _context.SaveChangesAsync();
+
             return new AuthResponse
             {
                 Token = tokenString,
-                AccessTokenExpiresAt = tokenDescriptor.Expires.Value,
-                RefreshToken = Guid.NewGuid().ToString(), // Mock refresh token
-                RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(7),
+                AccessTokenExpiresAt = accessTokenExpiresAt,
+                RefreshToken = refreshToken,
+                RefreshTokenExpiresAt = refreshTokenExpiresAt,
                 User = new AuthUserDto
                 {
                     Id = user.Id,
                     Email = user.Email,
                     FullName = user.FullName,
                     EmailVerified = user.EmailVerified
-                    // RoleID mapping might need adjustment based on how roles are handled
                 }
             };
         }
 
-        public Task LogoutAsync(Guid userId)
+        public async Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request)
         {
-            throw new NotImplementedException();
+            var refreshTokenValue = request.RefreshToken?.Trim();
+
+            if (string.IsNullOrWhiteSpace(refreshTokenValue))
+            {
+                throw new ApiException(SystemError.INVALID_REFRESH_TOKEN);
+            }
+
+            var refreshToken = await _context.UserRefreshTokens
+                .Include(x => x.User)
+                .ThenInclude(u => u.Roles)
+                .FirstOrDefaultAsync(x => x.Token == refreshTokenValue);
+
+            if (refreshToken == null)
+            {
+                throw new ApiException(SystemError.INVALID_REFRESH_TOKEN);
+            }
+
+            if (refreshToken.IsRevoked)
+            {
+                throw new ApiException(SystemError.INVALID_REFRESH_TOKEN);
+            }
+
+            if (refreshToken.ExpiresAt <= DateTime.UtcNow)
+            {
+                throw new ApiException(SystemError.REFRESH_TOKEN_EXPIRED);
+            }
+
+            if (!refreshToken.User.EmailVerified ||
+                refreshToken.User.Status != SystemConstants.StatusAccount.ACTIVE)
+            {
+                throw new ApiException(SystemError.ACCOUNT_NOT_ACTIVE);
+            }
+
+            refreshToken.IsRevoked = true;
+            refreshToken.RevokedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return await GenerateAuthResponse(refreshToken.User);
+        }
+
+        public async Task LogoutAsync(LogoutRequest request)
+        {
+            var refreshTokenValue = request.RefreshToken?.Trim();
+
+            if (string.IsNullOrWhiteSpace(refreshTokenValue))
+            {
+                return;
+            }
+
+            var refreshToken = await _context.UserRefreshTokens
+                .FirstOrDefaultAsync(x => x.Token == refreshTokenValue);
+
+            if (refreshToken == null)
+            {
+                return;
+            }
+
+            if (!refreshToken.IsRevoked)
+            {
+                refreshToken.IsRevoked = true;
+                refreshToken.RevokedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+            }
+        }
+        private static string GenerateRefreshToken()
+        {
+            var randomBytes = RandomNumberGenerator.GetBytes(64);
+            return Convert.ToBase64String(randomBytes);
         }
     }
 }

@@ -21,6 +21,9 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage CURRENT_PASSWORD_INCORRECT = new("427", "Current password incorrect", false);
         public static readonly SystemMessage NOT_PERMISSION = new("428", "You do not have permission", false);
         public static readonly SystemMessage INVALID_OR_EXPIRED_RESET_TOKEN = new("429", "OTP is invalid or expired", false);
+        public static readonly SystemMessage INVALID_REFRESH_TOKEN = new("430", "Invalid refresh token", false);
+        public static readonly SystemMessage REFRESH_TOKEN_EXPIRED = new("431", "Refresh token expired", false);
+        public static readonly SystemMessage ACCOUNT_NOT_ACTIVE = new("432", "Account not active", false);
 
         // Validation Errors (440-459)
         public static readonly SystemMessage EMAIL_REQUIRED = new("440", "Email is required", false);
