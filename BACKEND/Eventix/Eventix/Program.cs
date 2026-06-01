@@ -1,9 +1,13 @@
-﻿using Eventix.Common.Settings;
+﻿using Eventix.Common.Constants.SystemData;
+using Eventix.Common.Models;
+using Eventix.Common.Settings;
 using Eventix.Data;
 using Eventix.Extensions;
 using Eventix.Infrastructure.Email;
 using Eventix.Modules.Auth.Interfaces;
 using Eventix.Modules.Auth.Services;
+using Eventix.Modules.CategoryModule.Interfaces;
+using Eventix.Modules.CategoryModule.Services;
 using Eventix.Modules.UserModule.Interfaces;
 using Eventix.Modules.UserModule.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -26,31 +30,81 @@ namespace Eventix
                 builder.Configuration.GetSection(EmailSettings.SectionName));
 
             // Configure JWT Authentication
-            var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
-            if (jwtSettings != null && !string.IsNullOrEmpty(jwtSettings.Key))
+            var jwtSettings = builder.Configuration
+    .GetSection(JwtSettings.SectionName)
+    .Get<JwtSettings>();
+
+            if (jwtSettings != null && !string.IsNullOrWhiteSpace(jwtSettings.Key))
             {
-                var key = Encoding.ASCII.GetBytes(jwtSettings.Key);
-                builder.Services.AddAuthentication(x =>
-                {
-                    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                })
-                .AddJwtBearer(x =>
-                {
-                    x.RequireHttpsMetadata = false;
-                    x.SaveToken = true;
-                    x.TokenValidationParameters = new TokenValidationParameters
+                var key = Encoding.UTF8.GetBytes(jwtSettings.Key);
+
+                builder.Services
+                    .AddAuthentication(options =>
                     {
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(key),
-                        ValidateIssuer = true,
-                        ValidIssuer = jwtSettings.Issuer,
-                        ValidateAudience = true,
-                        ValidAudience = jwtSettings.Audience,
-                        ValidateLifetime = true,
-                        ClockSkew = TimeSpan.Zero
-                    };
-                });
+                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                    })
+                    .AddJwtBearer(options =>
+                    {
+                        options.RequireHttpsMetadata = false;
+                        options.SaveToken = true;
+
+                        options.TokenValidationParameters = new TokenValidationParameters
+                        {
+                            ValidateIssuerSigningKey = true,
+                            IssuerSigningKey = new SymmetricSecurityKey(key),
+
+                            ValidateIssuer = true,
+                            ValidIssuer = jwtSettings.Issuer,
+
+                            ValidateAudience = true,
+                            ValidAudience = jwtSettings.Audience,
+
+                            ValidateLifetime = true,
+                            ClockSkew = TimeSpan.Zero
+                        };
+
+                        options.Events = new JwtBearerEvents
+                        {
+                            OnAuthenticationFailed = context =>
+                            {
+                                var logger = context.HttpContext.RequestServices
+                                    .GetRequiredService<ILogger<Program>>();
+
+                                logger.LogError(context.Exception, "JWT authentication failed");
+
+                                return Task.CompletedTask;
+                            },
+
+                            OnChallenge = async context =>
+                            {
+                                context.HandleResponse();
+
+                                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                                context.Response.ContentType = "application/json";
+
+                                var response = new ApiResponseModel<object>(
+                                    SystemError.UNAUTHORIZED,
+                                    null);
+
+                                await context.Response.WriteAsJsonAsync(response);
+                            },
+
+                            OnForbidden = async context =>
+                            {
+                                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                                context.Response.ContentType = "application/json";
+
+                                var response = new ApiResponseModel<object>(
+                                    SystemError.ACCESS_DENIED,
+                                    null);
+
+                                await context.Response.WriteAsJsonAsync(response);
+                            }
+                        };
+                    });
+
+                builder.Services.AddAuthorization();
             }
 
             builder.Services.AddApplicationHealthChecks(builder.Configuration);
@@ -63,6 +117,7 @@ namespace Eventix
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<ICategoryService, CategoryService>();
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();

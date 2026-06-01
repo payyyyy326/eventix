@@ -1,0 +1,15 @@
+﻿namespace Eventix.Modules.CategoryModule.DTOs
+{
+    public class UpdateCategoryRequest
+    {
+        public string Name { get; set; } = null!;
+
+        public string Slug { get; set; } = null!;
+
+        public string? Description { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public Guid UpdatedBy { get; set; }
+    }
+}
