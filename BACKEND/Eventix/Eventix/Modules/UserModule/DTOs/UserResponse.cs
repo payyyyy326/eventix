@@ -25,8 +25,7 @@ namespace Eventix.Modules.UserModule.DTOs
         public bool EmailVerified { get; set; }
 
         public DateTime? EmailVerifiedAt { get; set; }
-
-        public virtual ICollection<Role> Roles { get; set; } = new List<Role>();
+        public List<string> Roles { get; set; } = new();
 
     }
 }

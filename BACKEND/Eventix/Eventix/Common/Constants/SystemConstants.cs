@@ -44,6 +44,12 @@
             public const string ACTIVE = "ACTIVE";
             public const string INACTIVE = "INACTIVE";
             public const string BANNED = "BANNED";
+            public const string DELETED = "DELETED";
+        }
+
+        public static class AppPaths
+        {
+            public const string AVATAR_UPLOADS = "uploads/avatars";
         }
     }
 }
