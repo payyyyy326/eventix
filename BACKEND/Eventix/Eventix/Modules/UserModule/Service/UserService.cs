@@ -86,7 +86,7 @@ namespace Eventix.Modules.UserModule.Service
 
             if (user == null)
             {
-                throw new ApiException(SystemError.USER_NOT_FOUND);
+                throw new BadRequestException(SystemError.USER_NOT_FOUND);
             }
 
             if (!string.IsNullOrEmpty(request.PhoneNumber) && request.PhoneNumber != user.PhoneNumber)
@@ -94,7 +94,7 @@ namespace Eventix.Modules.UserModule.Service
                 var phoneExists = await _context.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber && u.Id != userId);
                 if (phoneExists)
                 {
-                    throw new ApiException(SystemError.PHONE_ALREADY_EXISTS);
+                    throw new BadRequestException(SystemError.PHONE_ALREADY_EXISTS);
                 }
                 user.PhoneNumber = request.PhoneNumber;
             }
@@ -144,12 +144,12 @@ namespace Eventix.Modules.UserModule.Service
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null)
             {
-                throw new ApiException(SystemError.USER_NOT_FOUND);
+                throw new BadRequestException(SystemError.USER_NOT_FOUND);
             }
 
             if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
             {
-                throw new ApiException(SystemError.CURRENT_PASSWORD_INCORRECT);
+                throw new BadRequestException(SystemError.CURRENT_PASSWORD_INCORRECT);
             }
 
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);

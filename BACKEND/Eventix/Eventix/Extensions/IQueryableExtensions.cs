@@ -5,7 +5,7 @@ namespace Eventix.Extensions;
 
 public static class IQueryableExtensions
 {
-    public static async Task<PaginationResponse<T>> ToPagedResultAsync<T>(
+    public static async Task<PaginationResponse<T>> GetPaged<T>(
         this IQueryable<T> query,
         int page = 1,
         int pageSize = 10)

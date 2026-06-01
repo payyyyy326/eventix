@@ -65,11 +65,11 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage SUBTASK_DELETED = new("184", "SubTask deleted successfully", true);
 
         //Category Success Messages (201-220)
-        public static readonly SystemMessage CATEGORY_RETRIEVED = new("201", "SubTasks retrieved successfully", true);
-        public static readonly SystemMessage CATEGORY_CREATED = new("202", "SubTask created successfully", true);
-        public static readonly SystemMessage CATEGORY_UPDATED = new("203", "SubTask updated successfully", true);
-        public static readonly SystemMessage CATEGORY_DELETED = new("204", "SubTask deleted successfully", true);
-
+        public static readonly SystemMessage CATEGORIES_RETRIEVED = new("201", "Categories retrieved successfully", true);
+        public static readonly SystemMessage CATEGORY_RETRIEVED = new("202", "Category retrieved successfully", true);
+        public static readonly SystemMessage CATEGORY_CREATED = new("203", "Category created successfully", true);
+        public static readonly SystemMessage CATEGORY_UPDATED = new("204", "Category updated successfully", true);
+        public static readonly SystemMessage CATEGORY_DELETED = new("205", "Category deleted successfully", true);
         //Reminder Success Messages (221-240)
         public static readonly SystemMessage REMINDERS_RETRIEVED = new("221", "Reminders retrieved successfully", false);
         public static readonly SystemMessage REMINDER_RETRIEVED = new("222", "Reminder retrieved successfully", false);
