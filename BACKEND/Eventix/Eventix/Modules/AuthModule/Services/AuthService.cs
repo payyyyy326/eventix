@@ -54,9 +54,26 @@ namespace Eventix.Modules.Auth.Services
 
         public async Task<AuthUserDto> RegisterAsync(RegisterRequest request)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == request.Email.Trim().ToLower()))
+            var userExist = await _context.Users.AnyAsync(u => u.Email == request.Email.Trim().ToLower());
+            if (userExist)
             {
                 throw new ApiException(SystemError.EMAIL_ALREADY_EXISTS);
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Password) || string.IsNullOrWhiteSpace(request.ConfirmPassword))
+            {
+                throw new ApiException(SystemError.PASSWORD_REQUIRED);
+            }
+
+            if (request.Password.Length < 6)
+            {
+                throw new ApiException(SystemError.PASSWORD_TOO_SHORT);
+            }
+
+            var phoneExist = await _context.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber.Trim());
+            if (phoneExist)
+            {
+                throw new ApiException(SystemError.PHONE_ALREADY_EXISTS);
             }
 
             if (request.Password != request.ConfirmPassword)
@@ -70,6 +87,7 @@ namespace Eventix.Modules.Auth.Services
             {
                 role = await _context.Roles.FirstOrDefaultAsync(r => r.Name == SystemConstants.RoleConstants.CUSTOMER);
             }
+
 
             var user = new User
             {

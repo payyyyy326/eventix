@@ -1,4 +1,5 @@
-﻿using Eventix.Modules.UserModule.DTOs;
+﻿using Eventix.Common.Models;
+using Eventix.Modules.UserModule.DTOs;
 
 namespace Eventix.Modules.UserModule.Interfaces
 {
@@ -8,9 +9,11 @@ namespace Eventix.Modules.UserModule.Interfaces
 
         public Task<UserResponse> GetUserByEmailAsync(string email);
 
-        public Task<IEnumerable<UserResponse>> GetAllUsersAsync();
+        public Task<PaginationRequest<UserResponse>> GetAllUsersAsync();
 
-        public Task<UserResponse> UpdateUserAsync(Guid userId, UserUpdateRequest request);
+        public Task<UserResponse> UpdateProfileAsync(Guid userId, UpdateProfileRequest request);
+
+        public Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request);
 
         public Task<bool> DeleteUserAsync(Guid userId);
     }

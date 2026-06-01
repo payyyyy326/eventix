@@ -1,9 +1,11 @@
-using Eventix.Common.Settings;
+﻿using Eventix.Common.Settings;
 using Eventix.Data;
 using Eventix.Extensions;
 using Eventix.Infrastructure.Email;
 using Eventix.Modules.Auth.Interfaces;
 using Eventix.Modules.Auth.Services;
+using Eventix.Modules.UserModule.Interfaces;
+using Eventix.Modules.UserModule.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -60,10 +62,36 @@ namespace Eventix
             // Register Services
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IUserService, UserService>();
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                });
+
+                c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+            });
 
             var app = builder.Build();
 
@@ -75,6 +103,8 @@ namespace Eventix
             }
 
             app.UseHttpsRedirection();
+
+            app.UseStaticFiles();
 
             app.UseAuthentication();
             app.UseAuthorization();

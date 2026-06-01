@@ -9,12 +9,16 @@
   <ItemGroup>
     <Compile Remove="Infrastructure\Health\**" />
     <Compile Remove="Modules\Health\**" />
+    <Compile Remove="Modules\User\**" />
     <Content Remove="Infrastructure\Health\**" />
     <Content Remove="Modules\Health\**" />
+    <Content Remove="Modules\User\**" />
     <EmbeddedResource Remove="Infrastructure\Health\**" />
     <EmbeddedResource Remove="Modules\Health\**" />
+    <EmbeddedResource Remove="Modules\User\**" />
     <None Remove="Infrastructure\Health\**" />
     <None Remove="Modules\Health\**" />
+    <None Remove="Modules\User\**" />
   </ItemGroup>
 
   <ItemGroup>
