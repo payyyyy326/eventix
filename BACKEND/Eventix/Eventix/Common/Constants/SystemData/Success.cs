@@ -19,10 +19,10 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage LOGOUT_SUCCESS = new("003", "Logout successful", true);
         public static readonly SystemMessage NO_ACTIVE_SESSION = new("004", "No active session found", true);
         public static readonly SystemMessage INVALID_ROLE = new("005", "Invalid user role", true);
-        public static readonly SystemMessage REGISTER_PENDING_VERIFY = new("006", "Verification OTP has been sent to your email.");
-        public static readonly SystemMessage EMAIL_VERIFY_SUCCESS = new("007", "Email verified successfully. Registration completed.");
-        public static readonly SystemMessage REFRESH_TOKEN_SUCCESS = new("008", "Refresh token successful.");
-        public static readonly SystemMessage OTP_SEND_SUCCESS = new("009", "OTP has been sent successfully.");
+        public static readonly SystemMessage REGISTER_PENDING_VERIFY = new("006", "Verification OTP has been sent to your email.", true);
+        public static readonly SystemMessage EMAIL_VERIFY_SUCCESS = new("007", "Email verified successfully. Registration completed.", true);
+        public static readonly SystemMessage REFRESH_TOKEN_SUCCESS = new("008", "Refresh token successful.", true);
+        public static readonly SystemMessage OTP_SEND_SUCCESS = new("009", "OTP has been sent successfully.", true);
 
         // User Success Messages (100-119)
         public static readonly SystemMessage USERS_RETRIEVED = new("101", "Users retrieved successfully", true);
@@ -71,35 +71,29 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage CATEGORY_UPDATED = new("204", "Category updated successfully", true);
         public static readonly SystemMessage CATEGORY_DELETED = new("205", "Category deleted successfully", true);
         //Reminder Success Messages (221-240)
-        public static readonly SystemMessage REMINDERS_RETRIEVED = new("221", "Reminders retrieved successfully", false);
-        public static readonly SystemMessage REMINDER_RETRIEVED = new("222", "Reminder retrieved successfully", false);
-        public static readonly SystemMessage REMINDER_CREATED = new("223", "Reminder created successfully", false);
-        public static readonly SystemMessage REMINDER_UPDATED = new("224", "Reminder updated successfully", false);
-        public static readonly SystemMessage REMINDER_DELETED = new("225", "Reminder deleted successfully", false);
-
+        public static readonly SystemMessage REMINDERS_RETRIEVED = new("221", "Reminders retrieved successfully", true);
+        public static readonly SystemMessage REMINDER_RETRIEVED = new("222", "Reminder retrieved successfully", true);
+        public static readonly SystemMessage REMINDER_CREATED = new("223", "Reminder created successfully", true);
+        public static readonly SystemMessage REMINDER_UPDATED = new("224", "Reminder updated successfully", true);
+        public static readonly SystemMessage REMINDER_DELETED = new("225", "Reminder deleted successfully", true);
         //Notification Success Messages (241-260)
-        public static readonly SystemMessage NOTIFICATIONS_RETRIEVED = new("241", "Notifications retrieved successfully", false);
-        public static readonly SystemMessage NOTIFICATION_RETRIEVED = new("242", "Notification retrieved successfully", false);
-        public static readonly SystemMessage NOTIFICATION_CREATED = new("243", "Notification created successfully", false);
-        public static readonly SystemMessage NOTIFICATION_UPDATED = new("244", "Notification updated successfully", false);
-        public static readonly SystemMessage NOTIFICATION_READ = new("245", "Notification marked as read successfully", false);
+        public static readonly SystemMessage NOTIFICATIONS_RETRIEVED = new("241", "Notifications retrieved successfully", true);
+        public static readonly SystemMessage NOTIFICATION_RETRIEVED = new("242", "Notification retrieved successfully", true);
+        public static readonly SystemMessage NOTIFICATION_CREATED = new("243", "Notification created successfully", true);
+        public static readonly SystemMessage NOTIFICATION_UPDATED = new("244", "Notification updated successfully", true);
+        public static readonly SystemMessage NOTIFICATION_READ = new("245", "Notification marked as read successfully", true);
 
         //Venue Success Messages (261-280)
-        public static readonly SystemMessage VENUES_RETRIEVED = new("261", "Venues retrieved successfully", false);
-        public static readonly SystemMessage VENUE_RETRIEVED = new("262", "Venue retrieved successfully", false);
-        public static readonly SystemMessage VENUE_CREATED = new("263", "Venue created successfully", false);
-        public static readonly SystemMessage VENUE_UPDATED = new("264", "Venue updated successfully", false);
+        public static readonly SystemMessage VENUES_RETRIEVED = new("261", "Venues retrieved successfully", true);
+        public static readonly SystemMessage VENUE_RETRIEVED = new("262", "Venue retrieved successfully", true);
+        public static readonly SystemMessage VENUE_CREATED = new("263", "Venue created successfully", true);
+        public static readonly SystemMessage VENUE_UPDATED = new("264", "Venue updated successfully", true);
+
+        //Seat Success Messages (281-300)
+        public static readonly SystemMessage SEATS_RETRIEVED = new("281", "Seats retrieved successfully", true);
+        public static readonly SystemMessage SEAT_RETRIEVED = new("282", "Seat retrieved successfully", true);
+        public static readonly SystemMessage SEATS_CREATED = new("283", "Seat created successfully", true);
 
         #endregion
-
-        #region Error Messages (400-599)
-
-
-        //
-        #endregion
-
-
-
-
     }
 }

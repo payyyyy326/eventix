@@ -51,5 +51,22 @@
         {
             public const string AVATAR_UPLOADS = "uploads/avatars";
         }
+        public static class SeatImportColumns
+        {
+            public const int Section = 0;
+            public const int StartRow = 1;
+            public const int EndRow = 2;
+            public const int StartNumber = 3;
+            public const int EndNumber = 4;
+            public const int StartX = 5;
+            public const int StartY = 6;
+            public const int GapX = 7;
+            public const int GapY = 7;
+        }
+
+        public static class SeatStatus
+        {
+            public const string AVAILABLE = "Available";
+        }
     }
 }
