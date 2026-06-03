@@ -83,6 +83,13 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage NOTIFICATION_CREATED = new("243", "Notification created successfully", false);
         public static readonly SystemMessage NOTIFICATION_UPDATED = new("244", "Notification updated successfully", false);
         public static readonly SystemMessage NOTIFICATION_READ = new("245", "Notification marked as read successfully", false);
+
+        //Venue Success Messages (261-280)
+        public static readonly SystemMessage VENUES_RETRIEVED = new("261", "Venues retrieved successfully", false);
+        public static readonly SystemMessage VENUE_RETRIEVED = new("262", "Venue retrieved successfully", false);
+        public static readonly SystemMessage VENUE_CREATED = new("263", "Venue created successfully", false);
+        public static readonly SystemMessage VENUE_UPDATED = new("264", "Venue updated successfully", false);
+
         #endregion
 
         #region Error Messages (400-599)
