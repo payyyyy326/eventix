@@ -46,6 +46,9 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage PHONE_ALREADY_EXISTS = new("461", "Phone number already exists", false);
         public static readonly SystemMessage EMAIL_ALREADY_VERIFIED = new("462", "Email already verified", false);
         public static readonly SystemMessage OTP_RESEND_TOO_SOON = new("463", "Please wait before requesting another OTP.", false);
+        public static readonly SystemMessage CATEGORY_EXIST = new("464", "Category already exists", false);
+        public static readonly SystemMessage VENUE_EXIST = new("465", "Venue already exists", false);
+
 
         // Not Found Errors (480-499)
         public static readonly SystemMessage EMAIL_NOT_FOUND = new("480", "Email not found", false);
@@ -60,6 +63,7 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage SUBTASK_NOT_FOUND = new("489", "SubTask not found", false);
         public static readonly SystemMessage REMINDER_NOT_FOUND = new("490", "Reminder not found", false);
         public static readonly SystemMessage NOTIFICATION_NOT_FOUND = new("491", "Notification not found", false);
+        public static readonly SystemMessage VENUE_NOT_FOUND = new("492", "Venue not found", false);
 
 
         // Business Logic Errors (500-519)
@@ -69,7 +73,6 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage TASK_UPDATE_TIME_EXPIRED = new("503", "Task can only be updated before or on its start date.", false);
         public static readonly SystemMessage INVALID_SEAT_RANGE = new("509", "The number of seats greater the capacity of venue.", false);
         public static readonly SystemMessage INVALID_LEVEL = new("510", "Level must be greater than 0", false);
-        public static readonly SystemMessage CATEGORY_EXIST = new("511", "Category already exists", false);
 
 
         // Server Errors (520-539)

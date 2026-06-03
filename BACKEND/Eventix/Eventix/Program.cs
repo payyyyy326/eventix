@@ -10,6 +10,8 @@ using Eventix.Modules.CategoryModule.Interfaces;
 using Eventix.Modules.CategoryModule.Services;
 using Eventix.Modules.UserModule.Interfaces;
 using Eventix.Modules.UserModule.Service;
+using Eventix.Modules.VenueModule.Interfaces;
+using Eventix.Modules.VenueModule.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -118,6 +120,7 @@ namespace Eventix
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
+            builder.Services.AddScoped<IVenueService, VenueService>();
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();

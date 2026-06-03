@@ -22,6 +22,10 @@ public partial class Venue
 
     public DateTime CreatedAt { get; set; }
 
+    public DateTime? UpdatedAt { get; set; }
+
+    public Guid? UpdatedBy { get; set; }
+
     [ForeignKey("CreatedBy")]
     [InverseProperty("Venues")]
     public virtual User? CreatedByNavigation { get; set; }
