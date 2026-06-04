@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Eventix.Entities;
+﻿namespace Eventix.Entities;
 
 public partial class Payment
 {

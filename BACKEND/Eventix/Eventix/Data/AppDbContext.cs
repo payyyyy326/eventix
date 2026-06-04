@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Eventix.Entities;
+﻿using Eventix.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Eventix.Data;
