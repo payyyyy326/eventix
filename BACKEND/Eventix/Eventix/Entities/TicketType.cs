@@ -1,23 +1,18 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Eventix.Entities;
 
-[Index("EventId", Name = "IX_TicketTypes_EventId")]
 public partial class TicketType
 {
-    [Key]
     public Guid Id { get; set; }
 
     public Guid EventId { get; set; }
 
-    [StringLength(100)]
     public string Name { get; set; } = null!;
 
     public string? Description { get; set; }
 
-    [Column(TypeName = "decimal(18, 2)")]
     public decimal Price { get; set; }
 
     public int Quantity { get; set; }
@@ -25,6 +20,8 @@ public partial class TicketType
     public int SoldQuantity { get; set; }
 
     public int ReservedQuantity { get; set; }
+
+    public string? Section { get; set; }
 
     public DateTime SaleStartTime { get; set; }
 
@@ -34,19 +31,13 @@ public partial class TicketType
 
     public DateTime CreatedAt { get; set; }
 
-    [InverseProperty("TicketType")]
-    public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+    public Guid? CreatedBy { get; set; }
 
-    [ForeignKey("EventId")]
-    [InverseProperty("TicketTypes")]
+    public DateTime? UpdatedAt { get; set; }
+
+    public Guid? UpdatedBy { get; set; }
+
     public virtual Event Event { get; set; } = null!;
 
-    [InverseProperty("TicketType")]
-    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-
-    [InverseProperty("TicketType")]
-    public virtual ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
-
-    [InverseProperty("TicketType")]
-    public virtual ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
+    public virtual ICollection<EventSeatStatus> EventSeatStatuses { get; set; } = new List<EventSeatStatus>();
 }

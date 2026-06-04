@@ -1,13 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Eventix.Entities;
 
-[Index("EventId", "UserId", Name = "UQ_Reviews_UserEvent", IsUnique = true)]
 public partial class Review
 {
-    [Key]
     public Guid Id { get; set; }
 
     public Guid EventId { get; set; }
@@ -20,11 +17,5 @@ public partial class Review
 
     public DateTime CreatedAt { get; set; }
 
-    [ForeignKey("EventId")]
-    [InverseProperty("Reviews")]
-    public virtual Event Event { get; set; } = null!;
-
-    [ForeignKey("UserId")]
-    [InverseProperty("Reviews")]
     public virtual User User { get; set; } = null!;
 }
