@@ -48,6 +48,7 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage OTP_RESEND_TOO_SOON = new("463", "Please wait before requesting another OTP.", false);
         public static readonly SystemMessage CATEGORY_EXIST = new("464", "Category already exists", false);
         public static readonly SystemMessage VENUE_EXIST = new("465", "Venue already exists", false);
+        public static readonly SystemMessage ORGANIZER_EXIST = new("466", "User already has an organizer profile.", false);
 
 
         // Not Found Errors (480-499)
@@ -64,6 +65,7 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage REMINDER_NOT_FOUND = new("490", "Reminder not found", false);
         public static readonly SystemMessage NOTIFICATION_NOT_FOUND = new("491", "Notification not found", false);
         public static readonly SystemMessage VENUE_NOT_FOUND = new("492", "Venue not found", false);
+        public static readonly SystemMessage ORGANIZER_NOT_FOUND = new("493", "Organizer not found", false);
 
 
         // Business Logic Errors (500-519)

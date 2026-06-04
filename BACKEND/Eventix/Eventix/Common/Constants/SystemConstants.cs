@@ -67,6 +67,33 @@
         public static class SeatStatus
         {
             public const string AVAILABLE = "Available";
+            public const string SOLD = "Sold";
+        }
+
+        public static class EventStatus
+        {
+            public const string Draft = "Draft";
+            public const string Published = "Published";
+            public const string OnSale = "OnSale";
+            public const string SoldOut = "SoldOut";
+            public const string Ongoing = "Ongoing";
+            public const string Completed = "Completed";
+            public const string Cancelled = "Cancelled";
+        }
+        public static class OrganizerStatus
+        {
+            public const string PENDING = "Pending";
+            public const string APPROVED = "Approved";
+            public const string REJECTED = "Rejected";
+            public const string SUSPENDED = "Suspended";
+
+            public static readonly List<string> All =
+            [
+                PENDING,
+                APPROVED,
+                REJECTED,
+                SUSPENDED
+            ];
         }
     }
 }
