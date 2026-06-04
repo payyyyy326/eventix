@@ -1,11 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Eventix.Entities;
 
 public partial class EventImage
 {
-    [Key]
     public Guid Id { get; set; }
 
     public Guid EventId { get; set; }
@@ -13,8 +12,4 @@ public partial class EventImage
     public string ImageUrl { get; set; } = null!;
 
     public int SortOrder { get; set; }
-
-    [ForeignKey("EventId")]
-    [InverseProperty("EventImages")]
-    public virtual Event Event { get; set; } = null!;
 }
