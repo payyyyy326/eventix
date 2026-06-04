@@ -94,6 +94,14 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage SEAT_RETRIEVED = new("282", "Seat retrieved successfully", true);
         public static readonly SystemMessage SEATS_CREATED = new("283", "Seat created successfully", true);
 
+        //OrganizerProfile Success Messages (301-320)
+        public static readonly SystemMessage ORGANIZERS_RETRIEVED = new("301", "Organizers retrieved successfully", true);
+        public static readonly SystemMessage ORGANIZER_RETRIEVED = new("302", "Organizer retrieved successfully", true);
+        public static readonly SystemMessage ORGANIZER_CREATED = new("303", "Organizer created successfully", true);
+        public static readonly SystemMessage ORGANIZER_UPDATED = new("304", "Organizer updated successfully", true);
+        public static readonly SystemMessage ORGANIZER_DELETED = new("305", "Organizer deleted successfully", true);
+        public static readonly SystemMessage ORGANIZER_APPROVED = new("306", "Organizer approved successfully", true);
+        public static readonly SystemMessage ORGANIZER_REJECTED = new("307", "Organizer rejected successfully", true);
         #endregion
     }
 }
