@@ -8,6 +8,8 @@ using Eventix.Modules.Auth.Interfaces;
 using Eventix.Modules.Auth.Services;
 using Eventix.Modules.CategoryModule.Interfaces;
 using Eventix.Modules.CategoryModule.Services;
+using Eventix.Modules.EventModule.Interfaces;
+using Eventix.Modules.EventModule.Services;
 using Eventix.Modules.OrganizerModule.Interfaces;
 using Eventix.Modules.OrganizerModule.Services;
 using Eventix.Modules.SeatModule.Interfaces;
@@ -127,6 +129,7 @@ namespace Eventix
             builder.Services.AddScoped<IVenueService, VenueService>();
             builder.Services.AddScoped<ISeatService, SeatService>();
             builder.Services.AddScoped<IOrganizerProfileService, OrganizerProfileService>();
+            builder.Services.AddScoped<IEventService, EventService>();
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();

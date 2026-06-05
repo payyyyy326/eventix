@@ -66,6 +66,8 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage NOTIFICATION_NOT_FOUND = new("491", "Notification not found", false);
         public static readonly SystemMessage VENUE_NOT_FOUND = new("492", "Venue not found", false);
         public static readonly SystemMessage ORGANIZER_NOT_FOUND = new("493", "Organizer not found", false);
+        public static readonly SystemMessage EVENT_NOT_FOUND = new("494", "Event not found", false);
+
 
 
         // Business Logic Errors (500-519)
@@ -75,6 +77,8 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage TASK_UPDATE_TIME_EXPIRED = new("503", "Task can only be updated before or on its start date.", false);
         public static readonly SystemMessage INVALID_SEAT_RANGE = new("509", "The number of seats greater the capacity of venue.", false);
         public static readonly SystemMessage INVALID_LEVEL = new("510", "Level must be greater than 0", false);
+        public static readonly SystemMessage ORGANIZER_NOT_APPROVED = new("511", "Organizer profile is not approved yet", false);
+        public static readonly SystemMessage INVALID_PRICE_RANGE = new("512", "Price must be greater than or equal to 0", false);
 
 
         // Server Errors (520-539)
