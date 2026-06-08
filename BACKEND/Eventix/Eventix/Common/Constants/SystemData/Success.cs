@@ -34,11 +34,10 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage PASSWORD_RESET_SUCCESS = new("107", "Password reset successfully", true);
 
         // TaskItem Success Messages (040-059)
-        public static readonly SystemMessage TASK_ITEM_RETRIEVED = new("040", "TaskItem retrieved successfully", true);
-        public static readonly SystemMessage TASK_ITEM_CREATED = new("041", "TaskItem created successfully", true);
-        public static readonly SystemMessage TASK_ITEM_UPDATED = new("042", "TaskItem updated successfully", true);
-        public static readonly SystemMessage TASK_ITEM_DELETED = new("043", "TaskItem deleted successfully", true);
-        public static readonly SystemMessage TASK_ITEM_COMPLETED = new("044", "TaskItem marked as completed", true);
+        public static readonly SystemMessage TICKET_TYPES_RETRIEVED = new("040", "TicketTypes retrieved successfully", true);
+        public static readonly SystemMessage TICKET_TYPE_RETRIEVED = new("041", "TicketType retrieved successfully", true);
+        public static readonly SystemMessage TICKET_TYPE_CREATED = new("042", "TicketType created successfully", true);
+        public static readonly SystemMessage TICKET_TYPE_UPDATED = new("043", "TicketType updated successfully", true);
         public static readonly SystemMessage TICKET_TYPE_DELETED = new("045", "TicketType deleted successfully", true);
         public static readonly SystemMessage TICKET_TYPE_LEVEL_SORTED = new("046", "TicketType level sorted successfully", true);
 

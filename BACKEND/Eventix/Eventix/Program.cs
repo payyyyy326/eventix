@@ -18,6 +18,7 @@ using Eventix.Modules.UserModule.Interfaces;
 using Eventix.Modules.UserModule.Service;
 using Eventix.Modules.VenueModule.Interfaces;
 using Eventix.Modules.VenueModule.Services;
+using EventTicketingSystem.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -145,19 +146,29 @@ namespace Eventix
                 });
 
                 c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
                 {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
+                    {
+                        new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                        {
+                            Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                            {
+                                Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
+                });
+            });
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowNextApp", policy =>
+                {
+                    policy
+                        .WithOrigins("http://localhost:3000")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
             });
 
             var app = builder.Build();
@@ -169,10 +180,13 @@ namespace Eventix
                 app.UseSwaggerUI();
             }
 
+            app.UseGlobalExceptionHandler();
+
             app.UseHttpsRedirection();
 
             app.UseStaticFiles();
 
+            app.UseCors("AllowNextApp");
             app.UseAuthentication();
             app.UseAuthorization();
 
