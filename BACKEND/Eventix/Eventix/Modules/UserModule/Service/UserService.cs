@@ -103,13 +103,23 @@ namespace Eventix.Modules.UserModule.Service
 
             if (request.Avatar != null)
             {
-                var uploadsFolder = Path.Combine(_environment.WebRootPath, SystemConstants.AppPaths.AVATAR_UPLOADS);
+                var webRootPath = _environment.WebRootPath
+                    ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+
+                var uploadsFolder = Path.Combine(
+                    webRootPath,
+                    SystemConstants.AppPaths.AVATAR_UPLOADS
+                );
+
                 if (!Directory.Exists(uploadsFolder))
                 {
                     Directory.CreateDirectory(uploadsFolder);
                 }
 
-                var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(request.Avatar.FileName);
+                var uniqueFileName =
+                    Guid.NewGuid().ToString() +
+                    Path.GetExtension(request.Avatar.FileName);
+
                 var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
                 using (var fileStream = new FileStream(filePath, FileMode.Create))
@@ -117,7 +127,8 @@ namespace Eventix.Modules.UserModule.Service
                     await request.Avatar.CopyToAsync(fileStream);
                 }
 
-                user.AvatarUrl = $"/{SystemConstants.AppPaths.AVATAR_UPLOADS}/{uniqueFileName}";
+                user.AvatarUrl =
+                    $"/{SystemConstants.AppPaths.AVATAR_UPLOADS}/{uniqueFileName}";
             }
 
             user.UpdatedAt = DateTime.UtcNow;
