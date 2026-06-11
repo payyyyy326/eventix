@@ -54,6 +54,7 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage VENUE_EXIST = new("465", "Venue already exists", false);
         public static readonly SystemMessage ORGANIZER_EXIST = new("466", "User already has an organizer profile.", false);
         public static readonly SystemMessage TICKET_TYPE_EXIST = new("467", "Ticket type with the same name already exists for this event.", false);
+        public static readonly SystemMessage EVENT_EXIST = new("468", "Event already existed", false);
 
 
         // Not Found Errors (480-499)

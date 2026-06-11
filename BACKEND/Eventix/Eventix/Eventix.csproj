@@ -44,7 +44,6 @@
 
   <ItemGroup>
     <Folder Include="Controllers\" />
-    <Folder Include="Modules\EventModule\DTOs\" />
   </ItemGroup>
 
 </Project>
