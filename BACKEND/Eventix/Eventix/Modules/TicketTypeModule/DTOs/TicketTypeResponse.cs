@@ -1,6 +1,4 @@
-﻿using Eventix.Modules.EventModule.DTOs;
-
-namespace Eventix.Modules.TicketTypeModule.DTOs
+﻿namespace Eventix.Modules.TicketTypeModule.DTOs
 {
     public class TicketTypeResponse
     {
@@ -35,7 +33,5 @@ namespace Eventix.Modules.TicketTypeModule.DTOs
         public DateTime? UpdatedAt { get; set; }
 
         public Guid? UpdatedBy { get; set; }
-
-        public virtual EventResponse EventResponse { get; set; } = null!;
     }
 }

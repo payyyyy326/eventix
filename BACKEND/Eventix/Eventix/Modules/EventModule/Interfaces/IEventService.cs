@@ -5,14 +5,14 @@ namespace Eventix.Modules.EventModule.Interfaces
 {
     public interface IEventService
     {
-        Task<EventResponse> CreateEventAsync(CreateEventRequest request, Guid organizerId);
-        Task<EventResponse> UpdateEventAsync(Guid eventId, UpdateEventRequest request, Guid userId);
+        Task<EventDetailResponse> CreateEventAsync(CreateEventRequest request, Guid organizerId);
+        Task<EventDetailResponse> UpdateEventAsync(Guid eventId, UpdateEventRequest request, Guid userId);
         Task<bool> DeleteEventAsync(Guid eventId, Guid organizerId);
-        Task<EventResponse> GetEventByIdAsync(Guid eventId);
-        Task<PaginationResponse<EventResponse>> GetEventsByOrganizerAsync(Guid organizerId, PaginationRequest<EventResponse> request);
+        Task<EventDetailResponse> GetEventByIdAsync(Guid eventId);
+        Task<PaginationResponse<OrganizerEventResponse>> GetEventsByOrganizerAsync(Guid organizerId, PaginationRequest<OrganizerEventResponse> request);
         Task<PaginationResponse<EventResponse>> GetEventsAsync(FIlterEventRequest request);
-
-        Task<EventResponse> UpLoadBannerAsync(Guid eventId, string bannerUrl, Guid organizerId);
-        Task<EventResponse> UpLoadImageAsync(Guid eventId, string imageUrl, Guid organizerId);
+        Task<EventBookingResponse> GetEventBookingAsync(Guid eventId);
+        Task<EventDetailResponse> UpLoadBannerAsync(Guid eventId, string bannerUrl, Guid organizerId);
+        Task<EventDetailResponse> UpLoadImageAsync(Guid eventId, string imageUrl, Guid organizerId);
     }
 }

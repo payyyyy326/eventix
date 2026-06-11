@@ -4,8 +4,12 @@ using Eventix.Common.Models;
 using Eventix.Data;
 using Eventix.Entities;
 using Eventix.Extensions;
+using Eventix.Modules.CategoryModule.DTOs;
 using Eventix.Modules.EventModule.DTOs;
 using Eventix.Modules.EventModule.Interfaces;
+using Eventix.Modules.OrganizerModule.DTOs;
+using Eventix.Modules.TicketTypeModule.DTOs;
+using Eventix.Modules.VenueModule.DTOs;
 using Microsoft.EntityFrameworkCore;
 using static Eventix.Common.Constants.SystemConstants;
 
@@ -19,27 +23,22 @@ namespace Eventix.Modules.EventModule.Services
         {
             _context = context;
         }
-        public async Task<EventResponse> CreateEventAsync(CreateEventRequest request, Guid organizerId)
+        public async Task<EventDetailResponse> CreateEventAsync(CreateEventRequest request, Guid organizerId)
         {
             var organizer = await _context.OrganizerProfiles
                 .FirstOrDefaultAsync(x => x.UserId == organizerId);
 
-            if (organizer == null)
-                throw new BadRequestException(SystemError.ORGANIZER_NOT_FOUND);
+            if (organizer == null) throw new BadRequestException(SystemError.ORGANIZER_NOT_FOUND);
+            if (organizer.Status != OrganizerStatus.APPROVED) throw new BadRequestException(SystemError.ORGANIZER_NOT_APPROVED);
 
-            if (organizer.Status != OrganizerStatus.APPROVED)
-            {
-                throw new BadRequestException(
-                    SystemError.ORGANIZER_NOT_APPROVED);
-            }
+            var venue = await _context.Venues.AnyAsync(x => x.Id == request.VenueId);
+            if (!venue) throw new BadRequestException(SystemError.VENUE_NOT_FOUND);
 
             var categoryExists = await _context.Categories.AnyAsync(x => x.Id == request.CategoryId);
+            if (!categoryExists) throw new BadRequestException(SystemError.CATEGORY_NOT_FOUND);
 
-            if (!categoryExists)
-            {
-                throw new BadRequestException(
-                    SystemError.CATEGORY_NOT_FOUND);
-            }
+            var eventExist = await _context.Events.FirstOrDefaultAsync(e => ((e.StartTime > request.StartTime && e.StartTime < request.EndTime) || (e.EndTime > request.StartTime && e.EndTime < request.EndTime) && e.Venue.Id == request.VenueId));
+            if (eventExist != null) throw new BadRequestException(SystemError.EVENT_EXIST);
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -70,26 +69,35 @@ namespace Eventix.Modules.EventModule.Services
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return new EventResponse
+                var createdEvent = await _context.Events
+                    .AsNoTracking()
+                    .Include(e => e.Category)
+                    .Include(e => e.Venue)
+                    .Include(e => e.Organizer)
+                    .FirstOrDefaultAsync(e => e.Id == newEvent.Id);
+
+                return new EventDetailResponse
                 {
-                    Id = newEvent.Id,
-                    OrganizerId = newEvent.OrganizerId,
-                    CategoryId = newEvent.CategoryId,
-                    VenueId = newEvent.VenueId,
-                    Title = newEvent.Title,
-                    Slug = newEvent.Slug,
-                    Description = newEvent.Description,
-                    Summary = newEvent.Summary,
-                    ImageUrl = newEvent.ImageUrl,
-                    BannerUrl = newEvent.BannerUrl,
-                    StartTime = newEvent.StartTime,
-                    EndTime = newEvent.EndTime,
-                    Status = newEvent.Status,
-                    ViewCount = newEvent.ViewCount,
-                    IsFeatured = newEvent.IsFeatured,
-                    CreatedAt = newEvent.CreatedAt,
-                    CreatedBy = newEvent.CreatedBy,
-                    PublishedAt = newEvent.PublishedAt
+                    Id = createdEvent.Id,
+                    Title = createdEvent.Title,
+                    Slug = createdEvent.Slug,
+                    Description = createdEvent.Description,
+                    Summary = createdEvent.Summary,
+                    ImageUrl = createdEvent.ImageUrl,
+                    BannerUrl = createdEvent.BannerUrl,
+                    StartTime = createdEvent.StartTime,
+                    EndTime = createdEvent.EndTime,
+                    Status = createdEvent.Status,
+                    ViewCount = createdEvent.ViewCount,
+                    IsFeatured = createdEvent.IsFeatured,
+                    CreatedAt = createdEvent.CreatedAt,
+                    CreatedBy = createdEvent.CreatedBy,
+                    PublishedAt = createdEvent.PublishedAt,
+                    Venue = new VenueResponse
+                    {
+                        Name = createdEvent.Venue.Name
+                    }
+
                 };
             }
             catch
@@ -104,35 +112,121 @@ namespace Eventix.Modules.EventModule.Services
             throw new NotImplementedException();
         }
 
-        public async Task<EventResponse> GetEventByIdAsync(Guid eventId)
+        public async Task<EventBookingResponse> GetEventBookingAsync(Guid eventId)
+        {
+            var eventEntity = await _context.Events
+                .AsNoTracking()
+                .Include(e => e.Venue)
+                .Include(e => e.TicketTypes)
+                .FirstOrDefaultAsync(e => e.Id == eventId);
+
+            if (eventEntity == null)
+            {
+                throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
+            }
+
+            return new EventBookingResponse
+            {
+                Id = eventEntity.Id,
+                Title = eventEntity.Title,
+                Slug = eventEntity.Slug,
+                BannerUrl = eventEntity.BannerUrl,
+                StartTime = eventEntity.StartTime,
+                EndTime = eventEntity.EndTime,
+
+                Venue = new VenueResponse
+                {
+                    Id = eventEntity.Venue.Id,
+                    Name = eventEntity.Venue.Name,
+                    Address = eventEntity.Venue.Address,
+                    City = eventEntity.Venue.City
+                },
+
+                TicketTypes = eventEntity.TicketTypes
+                .Select(t => new TicketTypeResponse
+                {
+                    Id = t.Id,
+                    EventId = t.EventId,
+                    Name = t.Name,
+                    Description = t.Description,
+                    Price = t.Price,
+
+                    Quantity = t.Quantity,
+                    SoldQuantity = t.SoldQuantity,
+                    ReservedQuantity = t.ReservedQuantity,
+
+                    Section = t.Section,
+
+                    SaleStartTime = t.SaleStartTime,
+                    SaleEndTime = t.SaleEndTime,
+
+                    IsSeatRequired = t.IsSeatRequired,
+
+                    CreatedAt = t.CreatedAt,
+                    CreatedBy = t.CreatedBy,
+                    UpdatedAt = t.UpdatedAt,
+                    UpdatedBy = t.UpdatedBy
+                })
+                .ToList()
+            };
+        }
+
+        public async Task<EventDetailResponse> GetEventByIdAsync(Guid eventId)
         {
             var eventEntity = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
             if (eventEntity == null)
                 throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
 
-            var eventResponse = new EventResponse
+            eventEntity.ViewCount++;
+            _context.Events.Update(eventEntity);
+            await _context.SaveChangesAsync();
+
+            return new EventDetailResponse
             {
                 Id = eventEntity.Id,
                 OrganizerId = eventEntity.OrganizerId,
                 CategoryId = eventEntity.CategoryId,
                 VenueId = eventEntity.VenueId,
+
                 Title = eventEntity.Title,
                 Slug = eventEntity.Slug,
+
                 Description = eventEntity.Description,
                 Summary = eventEntity.Summary,
+
+
                 ImageUrl = eventEntity.ImageUrl,
                 BannerUrl = eventEntity.BannerUrl,
+
                 StartTime = eventEntity.StartTime,
                 EndTime = eventEntity.EndTime,
+
                 Status = eventEntity.Status,
+
                 ViewCount = eventEntity.ViewCount,
                 IsFeatured = eventEntity.IsFeatured,
+
                 CreatedAt = eventEntity.CreatedAt,
                 CreatedBy = eventEntity.CreatedBy,
-                PublishedAt = eventEntity.PublishedAt
-            };
 
-            return eventResponse;
+                UpdatedAt = eventEntity.UpdatedAt,
+                UpdatedBy = eventEntity.UpdatedBy,
+
+                PublishedAt = eventEntity.PublishedAt,
+
+                Category = new CategoryResponse
+                {
+                    Name = eventEntity.Category.Name,
+                },
+                Venue = new VenueResponse
+                {
+                    Name = eventEntity.Venue.Name,
+                },
+                Organizer = new OrganizerProfileResponse
+                {
+                    OrganizationName = eventEntity.Organizer.OrganizationName,
+                }
+            };
         }
 
         public async Task<PaginationResponse<EventResponse>> GetEventsAsync(FIlterEventRequest request)
@@ -175,23 +269,27 @@ namespace Eventix.Modules.EventModule.Services
             var response = events.Select(e => new EventResponse
             {
                 Id = e.Id,
-                OrganizerId = e.OrganizerId,
-                CategoryId = e.CategoryId,
-                VenueId = e.VenueId,
+
                 Title = e.Title,
                 Slug = e.Slug,
-                Description = e.Description,
+
                 Summary = e.Summary,
                 ImageUrl = e.ImageUrl,
-                BannerUrl = e.BannerUrl,
+
                 StartTime = e.StartTime,
                 EndTime = e.EndTime,
+
                 Status = e.Status,
                 ViewCount = e.ViewCount,
+
                 IsFeatured = e.IsFeatured,
-                CreatedAt = e.CreatedAt,
-                CreatedBy = e.CreatedBy,
-                PublishedAt = e.PublishedAt
+
+                CategoryId = e.CategoryId,
+                CategoryName = e.Category.Name,
+
+                VenueId = e.VenueId,
+                VenueName = e.Venue.Name,
+                VenueCity = e.Venue.City,
             });
 
             var responseList = await response.GetPaged(request.CurrentPage, request.PageSize);
@@ -200,30 +298,33 @@ namespace Eventix.Modules.EventModule.Services
             return responseList;
         }
 
-        public async Task<PaginationResponse<EventResponse>> GetEventsByOrganizerAsync(Guid organizerId, PaginationRequest<EventResponse> request)
+        public async Task<PaginationResponse<OrganizerEventResponse>> GetEventsByOrganizerAsync(Guid organizerId, PaginationRequest<OrganizerEventResponse> request)
         {
             var events = _context.Events.Where(e => e.OrganizerId == organizerId).AsQueryable();
             if (!events.Any()) throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
 
-            var eventResponse = events.Select(e => new EventResponse
+            var eventResponse = events.Select(e => new OrganizerEventResponse
             {
                 Id = e.Id,
-                OrganizerId = e.OrganizerId,
-                CategoryId = e.CategoryId,
-                VenueId = e.VenueId,
+
                 Title = e.Title,
                 Slug = e.Slug,
-                Description = e.Description,
-                Summary = e.Summary,
+
                 ImageUrl = e.ImageUrl,
-                BannerUrl = e.BannerUrl,
+
                 StartTime = e.StartTime,
                 EndTime = e.EndTime,
+
                 Status = e.Status,
+
                 ViewCount = e.ViewCount,
+
                 IsFeatured = e.IsFeatured,
+
+                CategoryName = e.Category.Name,
+                VenueName = e.Venue.Name,
+
                 CreatedAt = e.CreatedAt,
-                CreatedBy = e.CreatedBy,
                 PublishedAt = e.PublishedAt
             });
 
@@ -231,7 +332,7 @@ namespace Eventix.Modules.EventModule.Services
             return response;
         }
 
-        public async Task<EventResponse> UpdateEventAsync(Guid eventId, UpdateEventRequest request, Guid organizerId)
+        public async Task<EventDetailResponse> UpdateEventAsync(Guid eventId, UpdateEventRequest request, Guid organizerId)
         {
             var eventEntity = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
             if (eventEntity == null)
@@ -253,7 +354,7 @@ namespace Eventix.Modules.EventModule.Services
             _context.Events.Update(eventEntity);
             _context.SaveChanges();
 
-            return new EventResponse
+            return new EventDetailResponse
             {
                 Id = eventEntity.Id,
                 OrganizerId = eventEntity.OrganizerId,
@@ -278,7 +379,7 @@ namespace Eventix.Modules.EventModule.Services
             };
         }
 
-        public async Task<EventResponse> UpLoadBannerAsync(Guid eventId, string bannerUrl, Guid organizerId)
+        public async Task<EventDetailResponse> UpLoadBannerAsync(Guid eventId, string bannerUrl, Guid organizerId)
         {
             var eventEntity = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
             if (eventEntity == null)
@@ -290,7 +391,7 @@ namespace Eventix.Modules.EventModule.Services
             _context.Events.Update(eventEntity);
             _context.SaveChanges();
 
-            return new EventResponse
+            return new EventDetailResponse
             {
                 Id = eventEntity.Id,
                 OrganizerId = eventEntity.OrganizerId,
@@ -315,7 +416,7 @@ namespace Eventix.Modules.EventModule.Services
             };
         }
 
-        public async Task<EventResponse> UpLoadImageAsync(Guid eventId, string imageUrl, Guid organizerId)
+        public async Task<EventDetailResponse> UpLoadImageAsync(Guid eventId, string imageUrl, Guid organizerId)
         {
             var eventEntity = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
             if (eventEntity == null)
@@ -327,7 +428,7 @@ namespace Eventix.Modules.EventModule.Services
             _context.Events.Update(eventEntity);
             _context.SaveChanges();
 
-            return new EventResponse
+            return new EventDetailResponse
             {
                 Id = eventEntity.Id,
                 OrganizerId = eventEntity.OrganizerId,

@@ -21,12 +21,16 @@ namespace Eventix.Modules.TicketTypeModule.Controllers
         }
 
         //GET: api/ticketType/gets
+
+        [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<ApiResponseModel<PaginationResponse<TicketTypeResponse>>>> GetTicketTypes([FromQuery] Guid eventId, [FromQuery] PaginationRequest<TicketTypeResponse> request)
         {
             var reponse = await _ticketTypeService.GetTicketTypesByEventIdAsync(eventId, request);
             return SuccessResponse(SystemSuccess.TICKET_TYPES_RETRIEVED, reponse);
         }
-
+        [HttpGet("{id}")]
+        [AllowAnonymous]
         //GET: api/ticketType/{id}
         public async Task<ActionResult<ApiResponseModel<TicketTypeResponse>>> GetTicketTypeById([FromQuery] Guid ticketTypeId)
         {
@@ -34,6 +38,7 @@ namespace Eventix.Modules.TicketTypeModule.Controllers
             return SuccessResponse(SystemSuccess.TICKET_TYPE_RETRIEVED, response);
         }
 
+        [HttpPost("create")]
         //POST: api/ticketType/create
         public async Task<ActionResult<ApiResponseModel<TicketTypeResponse>>> CreateTicketType([FromBody] CreateTicketTypeRequest request, [FromQuery] Guid eventId)
         {
@@ -42,6 +47,7 @@ namespace Eventix.Modules.TicketTypeModule.Controllers
             return SuccessResponse(SystemSuccess.TICKET_TYPES_RETRIEVED, response);
         }
 
+        [HttpPut("update/{id}")]
         //PUT: api/TicketType/update
         public async Task<ActionResult<ApiResponseModel<TicketTypeResponse>>> UpdateTicketTypes([FromBody] UpdateTicketTypeRequest request, [FromQuery] Guid eventId)
         {
