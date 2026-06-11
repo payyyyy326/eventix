@@ -116,7 +116,8 @@ namespace Eventix.Modules.Auth.Services
                 Id = user.Id,
                 Email = user.Email,
                 FullName = user.FullName,
-                EmailVerified = user.EmailVerified
+                EmailVerified = user.EmailVerified,
+                AvatarUrl = user.AvatarUrl,
             };
         }
 
@@ -253,7 +254,8 @@ namespace Eventix.Modules.Auth.Services
                     Id = user.Id,
                     Email = user.Email,
                     FullName = user.FullName,
-                    EmailVerified = user.EmailVerified
+                    EmailVerified = user.EmailVerified,
+                    AvatarUrl = user.AvatarUrl,
                 }
             };
         }
