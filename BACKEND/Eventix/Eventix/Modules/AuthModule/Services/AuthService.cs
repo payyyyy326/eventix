@@ -1,12 +1,12 @@
-using Eventix.Common.Constants;
 using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Exceptions;
 using Eventix.Common.Settings;
 using Eventix.Data;
 using Eventix.Entities;
 using Eventix.Infrastructure.Email;
-using Eventix.Modules.Auth.DTOs;
 using Eventix.Modules.Auth.Interfaces;
+using Eventix.Share.Auth;
+using Eventix.Share.Common.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;

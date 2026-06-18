@@ -1,13 +1,13 @@
-﻿using Eventix.Common.Constants;
-using Eventix.Common.Constants.SystemData;
+﻿using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Exceptions;
-using Eventix.Common.Models;
 using Eventix.Data;
 using Eventix.Entities;
 using Eventix.Extensions;
 using Eventix.Helpers;
-using Eventix.Modules.SeatModule.DTOs;
 using Eventix.Modules.SeatModule.Interfaces;
+using Eventix.Share.Common.Constants;
+using Eventix.Share.Common.Models;
+using Eventix.Share.Seat;
 using Microsoft.EntityFrameworkCore;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;

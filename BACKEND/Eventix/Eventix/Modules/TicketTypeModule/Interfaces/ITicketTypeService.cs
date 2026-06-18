@@ -1,5 +1,5 @@
-﻿using Eventix.Common.Models;
-using Eventix.Modules.TicketTypeModule.DTOs;
+﻿using Eventix.Share.Common.Models;
+using Eventix.Share.TicketType;
 
 namespace Eventix.Modules.TicketTypeModule.Interfaces
 {

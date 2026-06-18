@@ -1,5 +1,5 @@
-﻿using Eventix.Common.Models;
-using Eventix.Modules.UserModule.DTOs;
+﻿using Eventix.Share.Common.Models;
+using Eventix.Share.User;
 
 namespace Eventix.Modules.UserModule.Interfaces
 {

@@ -1,4 +1,4 @@
-﻿using Eventix.Modules.Auth.DTOs;
+﻿using Eventix.Share.Auth;
 
 namespace Eventix.Modules.Auth.Interfaces
 {

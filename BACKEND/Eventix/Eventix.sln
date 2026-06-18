@@ -1,9 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36811.4 d17.14
+VisualStudioVersion = 17.14.36811.4
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eventix", "Eventix\Eventix.csproj", "{477494D0-5C83-4424-A4D9-438C4D045EDE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eventix.Web", "Eventix.Web\Eventix.Web.csproj", "{9C0D6F5A-4C24-43D3-9DD3-1A59C511B133}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eventix.Share", "Eventix.Share\Eventix.Share.csproj", "{D3E8594D-301E-4E16-AB05-4288A35E64DE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{477494D0-5C83-4424-A4D9-438C4D045EDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{477494D0-5C83-4424-A4D9-438C4D045EDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{477494D0-5C83-4424-A4D9-438C4D045EDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C0D6F5A-4C24-43D3-9DD3-1A59C511B133}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C0D6F5A-4C24-43D3-9DD3-1A59C511B133}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C0D6F5A-4C24-43D3-9DD3-1A59C511B133}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C0D6F5A-4C24-43D3-9DD3-1A59C511B133}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D3E8594D-301E-4E16-AB05-4288A35E64DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D3E8594D-301E-4E16-AB05-4288A35E64DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D3E8594D-301E-4E16-AB05-4288A35E64DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D3E8594D-301E-4E16-AB05-4288A35E64DE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

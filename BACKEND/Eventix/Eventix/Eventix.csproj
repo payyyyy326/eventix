@@ -46,4 +46,8 @@
     <Folder Include="Controllers\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Eventix.Share\Eventix.Share.csproj" />
+  </ItemGroup>
+
 </Project>

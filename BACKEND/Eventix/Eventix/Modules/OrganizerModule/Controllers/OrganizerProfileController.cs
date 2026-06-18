@@ -1,9 +1,9 @@
-﻿using Eventix.Common.Constants;
-using Eventix.Common.Constants.SystemData;
-using Eventix.Common.Models;
+﻿using Eventix.Common.Constants.SystemData;
 using Eventix.Controllers;
-using Eventix.Modules.OrganizerModule.DTOs;
 using Eventix.Modules.OrganizerModule.Interfaces;
+using Eventix.Share.Common.Constants;
+using Eventix.Share.Common.Models;
+using Eventix.Share.Organizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;

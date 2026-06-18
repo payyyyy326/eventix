@@ -1,12 +1,12 @@
 ﻿using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Exceptions;
-using Eventix.Common.Models;
 using Eventix.Data;
 using Eventix.Entities;
 using Eventix.Extensions;
-using Eventix.Modules.UserModule.DTOs;
-using Eventix.Modules.VenueModule.DTOs;
 using Eventix.Modules.VenueModule.Interfaces;
+using Eventix.Share.Common.Models;
+using Eventix.Share.User;
+using Eventix.Share.Venue;
 using Microsoft.EntityFrameworkCore;
 
 namespace Eventix.Modules.VenueModule.Services

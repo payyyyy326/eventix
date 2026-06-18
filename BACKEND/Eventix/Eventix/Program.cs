@@ -1,5 +1,4 @@
 ﻿using Eventix.Common.Constants.SystemData;
-using Eventix.Common.Models;
 using Eventix.Common.Settings;
 using Eventix.Data;
 using Eventix.Extensions;
@@ -18,6 +17,7 @@ using Eventix.Modules.UserModule.Interfaces;
 using Eventix.Modules.UserModule.Service;
 using Eventix.Modules.VenueModule.Interfaces;
 using Eventix.Modules.VenueModule.Services;
+using Eventix.Share.Common.Models;
 using EventTicketingSystem.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -170,6 +170,7 @@ namespace Eventix
                         .AllowAnyMethod();
                 });
             });
+            builder.Services.AddControllersWithViews();
 
             var app = builder.Build();
 
@@ -179,6 +180,9 @@ namespace Eventix
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+            app.MapControllerRoute(
+                name: "default",
+                pattern: "{controller=Home}/{action=Index}/{id?}");
 
             app.UseGlobalExceptionHandler();
 

@@ -1,7 +1,7 @@
 ﻿using Eventix.Common.Constants.SystemData;
-using Eventix.Common.Models;
-using Eventix.Modules.SeatModule.DTOs;
 using Eventix.Modules.SeatModule.Interfaces;
+using Eventix.Share.Common.Models;
+using Eventix.Share.Seat;
 using Microsoft.AspNetCore.Mvc;
 using TIMORA.Controllers;
 

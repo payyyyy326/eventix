@@ -1,5 +1,5 @@
-﻿using Eventix.Common.Models;
-using Eventix.Modules.EventModule.DTOs;
+﻿using Eventix.Share.Common.Models;
+using Eventix.Share.Event;
 
 namespace Eventix.Modules.EventModule.Interfaces
 {

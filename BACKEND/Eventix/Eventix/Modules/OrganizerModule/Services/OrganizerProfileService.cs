@@ -1,14 +1,15 @@
-﻿using Eventix.Common.Constants;
-using Eventix.Common.Constants.SystemData;
+﻿using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Exceptions;
-using Eventix.Common.Models;
 using Eventix.Data;
 using Eventix.Entities;
 using Eventix.Extensions;
-using Eventix.Modules.OrganizerModule.DTOs;
 using Eventix.Modules.OrganizerModule.Interfaces;
+using Eventix.Share.Common.Constants;
+using Eventix.Share.Common.Models;
+using Eventix.Share.Organizer;
+using Eventix.Share.User;
 using Microsoft.EntityFrameworkCore;
-using static Eventix.Common.Constants.SystemConstants;
+using static Eventix.Share.Common.Constants.SystemConstants;
 
 namespace Eventix.Modules.OrganizerModule.Services
 {
@@ -50,7 +51,7 @@ namespace Eventix.Modules.OrganizerModule.Services
                 CreatedAt = organizerProfile.CreatedAt,
                 ApprovedBy = organizerProfile.ApprovedBy,
                 ApprovedAt = organizerProfile.ApprovedAt,
-                ApprovedByNavigation = new User
+                ApprovedByNavigation = new UserResponse
                 {
                     Id = adminId,
                     FullName = _context.Users.Where(u => u.Id == adminId).Select(u => u.FullName).FirstOrDefault() ?? RoleConstants.ADMIN

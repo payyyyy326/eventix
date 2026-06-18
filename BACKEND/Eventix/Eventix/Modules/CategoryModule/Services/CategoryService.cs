@@ -1,11 +1,11 @@
 ﻿using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Exceptions;
-using Eventix.Common.Models;
 using Eventix.Data;
 using Eventix.Entities;
 using Eventix.Extensions;
-using Eventix.Modules.CategoryModule.DTOs;
 using Eventix.Modules.CategoryModule.Interfaces;
+using Eventix.Share.Category;
+using Eventix.Share.Common.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Eventix.Modules.CategoryModule.Services
