@@ -1,5 +1,5 @@
-﻿using Eventix.Common.Models;
-using Eventix.Modules.SeatModule.DTOs;
+﻿using Eventix.Share.Common.Models;
+using Eventix.Share.Seat;
 
 namespace Eventix.Modules.SeatModule.Interfaces
 {

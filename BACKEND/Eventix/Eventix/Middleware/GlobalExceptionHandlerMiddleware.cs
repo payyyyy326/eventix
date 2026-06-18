@@ -1,6 +1,6 @@
 ﻿using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Exceptions;
-using Eventix.Common.Models;
+using Eventix.Share.Common.Models;
 using System.Net;
 using System.Text.Json;
 

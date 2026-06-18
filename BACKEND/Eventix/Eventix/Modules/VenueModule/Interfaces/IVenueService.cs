@@ -1,5 +1,5 @@
-﻿using Eventix.Common.Models;
-using Eventix.Modules.VenueModule.DTOs;
+﻿using Eventix.Share.Common.Models;
+using Eventix.Share.Venue;
 
 namespace Eventix.Modules.VenueModule.Interfaces
 {

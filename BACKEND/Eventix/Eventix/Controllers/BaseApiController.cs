@@ -1,4 +1,4 @@
-using Eventix.Common.Models;
+using Eventix.Share.Common.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Eventix.Controllers

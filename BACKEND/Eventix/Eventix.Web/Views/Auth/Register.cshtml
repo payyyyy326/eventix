@@ -1,0 +1,55 @@
+﻿@model Eventix.Share.Auth.RegisterRequest;
+
+@{
+    ViewData["Title"] = "Đăng ký";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <title>Đăng ký - Eventix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="~/css/auth.css" />
+</head>
+<body>
+    <main class="login-page">
+        <section class="login-card register-card">
+            <h1>Tạo tài khoản</h1>
+            <p class="subtitle">Tham gia Eventix để đặt vé và quản lý sự kiện</p>
+
+            <form asp-controller="Auth" asp-action="Register" method="post">
+                <div asp-validation-summary="All" class="validation"></div>
+
+                <div class="form-group compact">
+                    <input asp-for="FullName" placeholder="Họ tên" />
+                </div>
+
+                <div class="form-group compact">
+                    <input asp-for="Email" type="email" placeholder="Email" />
+                </div>
+
+                <div class="form-group compact">
+                    <input asp-for="PhoneNumber" placeholder="Số điện thoại" />
+                </div>
+
+                <div class="form-group compact">
+                    <input asp-for="Password" type="password" placeholder="Mật khẩu" />
+                </div>
+
+                <div class="form-group compact">
+                    <input asp-for="ConfirmPassword" type="password" placeholder="Nhập lại mật khẩu" />
+                </div>
+
+                <button type="submit" class="login-btn">Đăng ký</button>
+
+                <p class="register-text">
+                    Đã có tài khoản?
+                    <a asp-controller="Auth" asp-action="Login">Đăng nhập</a>
+                </p>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

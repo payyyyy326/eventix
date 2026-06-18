@@ -1,4 +1,4 @@
-using Eventix.Common.Models;
+using Eventix.Share.Common.Models;
 using System.Net;
 
 namespace Eventix.Common.Exceptions

@@ -1,17 +1,17 @@
 ﻿using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Exceptions;
-using Eventix.Common.Models;
 using Eventix.Data;
 using Eventix.Entities;
 using Eventix.Extensions;
-using Eventix.Modules.CategoryModule.DTOs;
-using Eventix.Modules.EventModule.DTOs;
 using Eventix.Modules.EventModule.Interfaces;
-using Eventix.Modules.OrganizerModule.DTOs;
-using Eventix.Modules.TicketTypeModule.DTOs;
-using Eventix.Modules.VenueModule.DTOs;
+using Eventix.Share.Category;
+using Eventix.Share.Common.Models;
+using Eventix.Share.Event;
+using Eventix.Share.Organizer;
+using Eventix.Share.TicketType;
+using Eventix.Share.Venue;
 using Microsoft.EntityFrameworkCore;
-using static Eventix.Common.Constants.SystemConstants;
+using static Eventix.Share.Common.Constants.SystemConstants;
 
 namespace Eventix.Modules.EventModule.Services
 {

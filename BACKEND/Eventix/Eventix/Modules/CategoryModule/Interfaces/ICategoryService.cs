@@ -1,5 +1,5 @@
-﻿using Eventix.Common.Models;
-using Eventix.Modules.CategoryModule.DTOs;
+﻿using Eventix.Share.Category;
+using Eventix.Share.Common.Models;
 
 namespace Eventix.Modules.CategoryModule.Interfaces
 {

@@ -1,0 +1,135 @@
+﻿* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    color: #ffffff;
+    background: radial-gradient(circle at 50% 0%, rgba(88, 66, 190, 0.9) 0%, rgba(36, 35, 96, 0.75) 26%, rgba(5, 8, 22, 0.98) 58%, #02030a 100%);
+}
+
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 545px;
+    padding: 44px 40px 38px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(63, 62, 112, 0.78), rgba(28, 30, 45, 0.92));
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.52);
+}
+
+    .login-card h1 {
+        margin: 0;
+        text-align: center;
+        font-size: 34px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+    }
+
+.subtitle {
+    margin: 14px 0 36px;
+    text-align: center;
+    color: #c9cce0;
+    font-size: 16px;
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+    .form-group label {
+        display: block;
+        margin-bottom: 10px;
+        color: #eef0fb;
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    .form-group input {
+        width: 100%;
+        height: 58px;
+        padding: 0 20px;
+        border: none;
+        border-radius: 13px;
+        outline: none;
+        background: #e9f1ff;
+        color: #121827;
+        font-size: 17px;
+    }
+
+        .form-group input:focus {
+            box-shadow: 0 0 0 3px rgba(129, 43, 255, 0.35);
+        }
+
+.login-btn {
+    width: 100%;
+    height: 58px;
+    margin-top: 2px;
+    border: none;
+    border-radius: 13px;
+    background: linear-gradient(90deg, #8a25ff 0%, #2563ff 100%);
+    color: white;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 16px 32px rgba(105, 54, 255, 0.35);
+}
+
+.register-text {
+    margin: 30px 0 0;
+    text-align: center;
+    color: #aeb4ca;
+    font-size: 16px;
+}
+
+    .register-text a {
+        color: #ded4ff;
+        font-weight: 800;
+        text-decoration: none;
+    }
+
+.validation {
+    margin-bottom: 18px;
+    color: #ffb4b4;
+    font-size: 14px;
+    text-align: center;
+}
+
+    .validation ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+.register-card {
+    max-width: 560px;
+    padding-top: 42px;
+}
+
+.form-group.compact {
+    margin-bottom: 20px;
+}
+
+    .form-group.compact input {
+        background: #0f1328;
+        color: #ffffff;
+    }
+
+        .form-group.compact input::placeholder {
+            color: #7f8ba3;
+        }
+
+    .form-group.compact:nth-of-type(2) input,
+    .form-group.compact:nth-of-type(4) input {
+        background: #e9f1ff;
+        color: #111827;
+    }

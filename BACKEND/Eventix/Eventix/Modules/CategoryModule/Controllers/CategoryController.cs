@@ -1,12 +1,12 @@
 ﻿using Eventix.Common.Constants.SystemData;
-using Eventix.Common.Models;
 using Eventix.Controllers;
-using Eventix.Modules.CategoryModule.DTOs;
 using Eventix.Modules.CategoryModule.Interfaces;
+using Eventix.Share.Category;
+using Eventix.Share.Common.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using static Eventix.Common.Constants.SystemConstants;
+using static Eventix.Share.Common.Constants.SystemConstants;
 
 namespace Eventix.Modules.CategoryModule.Controllers
 {

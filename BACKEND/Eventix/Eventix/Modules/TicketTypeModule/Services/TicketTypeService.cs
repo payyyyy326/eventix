@@ -1,11 +1,11 @@
 ﻿using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Exceptions;
-using Eventix.Common.Models;
 using Eventix.Data;
 using Eventix.Entities;
 using Eventix.Extensions;
-using Eventix.Modules.TicketTypeModule.DTOs;
 using Eventix.Modules.TicketTypeModule.Interfaces;
+using Eventix.Share.Common.Models;
+using Eventix.Share.TicketType;
 using Microsoft.EntityFrameworkCore;
 
 namespace Eventix.Modules.TicketTypeModule.Services

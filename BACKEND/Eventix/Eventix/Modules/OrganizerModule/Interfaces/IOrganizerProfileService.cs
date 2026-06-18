@@ -1,5 +1,5 @@
-﻿using Eventix.Common.Models;
-using Eventix.Modules.OrganizerModule.DTOs;
+﻿using Eventix.Share.Common.Models;
+using Eventix.Share.Organizer;
 
 namespace Eventix.Modules.OrganizerModule.Interfaces
 {

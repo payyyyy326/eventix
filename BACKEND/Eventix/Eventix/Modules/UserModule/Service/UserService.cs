@@ -1,9 +1,10 @@
-using Eventix.Common.Constants;
 using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Exceptions;
 using Eventix.Data;
-using Eventix.Modules.UserModule.DTOs;
 using Eventix.Modules.UserModule.Interfaces;
+using Eventix.Share.Common.Constants;
+using Eventix.Share.Common.Models;
+using Eventix.Share.User;
 using Microsoft.EntityFrameworkCore;
 
 namespace Eventix.Modules.UserModule.Service
@@ -73,7 +74,7 @@ namespace Eventix.Modules.UserModule.Service
             };
         }
 
-        public async Task<Common.Models.PaginationRequest<UserResponse>> GetAllUsersAsync()
+        public async Task<PaginationRequest<UserResponse>> GetAllUsersAsync()
         {
             throw new NotImplementedException();
         }
