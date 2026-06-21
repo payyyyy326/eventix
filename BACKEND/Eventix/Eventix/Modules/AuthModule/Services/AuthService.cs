@@ -22,12 +22,14 @@ namespace Eventix.Modules.Auth.Services
         private readonly AppDbContext _context;
         private readonly JwtSettings _jwtSettings;
         private readonly IEmailService _emailService;
+        private readonly ApiSettings _apiSettings;
 
-        public AuthService(AppDbContext context, IOptions<JwtSettings> jwtSettings, IEmailService emailService)
+        public AuthService(AppDbContext context, IOptions<JwtSettings> jwtSettings, IEmailService emailService, IOptions<ApiSettings> apiSettings)
         {
             _context = context;
             _jwtSettings = jwtSettings.Value;
             _emailService = emailService;
+            _apiSettings = apiSettings.Value;
         }
 
         public async Task<AuthResponse> LoginAsync(LoginRequest request)
@@ -117,7 +119,9 @@ namespace Eventix.Modules.Auth.Services
                 Email = user.Email,
                 FullName = user.FullName,
                 EmailVerified = user.EmailVerified,
-                AvatarUrl = user.AvatarUrl,
+                AvatarUrl = string.IsNullOrWhiteSpace(user.AvatarUrl)
+                    ? null
+                    : $"{_apiSettings.BaseUrl}{user.AvatarUrl}",
             };
         }
 
@@ -255,7 +259,9 @@ namespace Eventix.Modules.Auth.Services
                     Email = user.Email,
                     FullName = user.FullName,
                     EmailVerified = user.EmailVerified,
-                    AvatarUrl = user.AvatarUrl,
+                    AvatarUrl = string.IsNullOrWhiteSpace(user.AvatarUrl)
+                        ? null
+                        : $"{_apiSettings.BaseUrl}{user.AvatarUrl}",
                 }
             };
         }

@@ -1,45 +1,38 @@
-﻿@model Eventix.Share.Auth.LoginRequest;
+﻿@model Eventix.Share.Auth.LoginRequest
 
 @{
-    ViewData["Title"] = "Đăng nhập";
-    Layout = null;
+    ViewData["Title"] = "Login";
+    Layout = "_AuthLayout";
 }
 
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="utf-8" />
-    <title>Đăng nhập - Eventix</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="~/css/auth.css" />
-</head>
-<body>
-    <main class="login-page">
-        <section class="login-card">
-            <h1>Eventix</h1>
-            <p class="subtitle">Đăng nhập để quản lý và đặt vé sự kiện</p>
+<main class="auth-page">
+    <section class="auth-card">
+        <h1>Welcome back</h1>
+        <p class="subtitle">Login to continue with Eventix</p>
 
-            <form asp-controller="Auth" asp-action="Login" method="post">
-                <div asp-validation-summary="All" class="validation"></div>
+        <form asp-controller="Auth" asp-action="Login" method="post">
+            <div asp-validation-summary="All" class="validation"></div>
 
-                <div class="form-group">
-                    <label asp-for="Email">Email</label>
-                    <input asp-for="Email" placeholder="Nhập email" />
-                </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input asp-for="Email" type="email" placeholder="Enter your email" />
+            </div>
 
-                <div class="form-group">
-                    <label asp-for="Password">Mật khẩu</label>
-                    <input asp-for="Password" type="password" placeholder="Nhập mật khẩu" />
-                </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input asp-for="Password" type="password" placeholder="Enter your password" />
+            </div>
 
-                <button type="submit" class="login-btn">Đăng nhập</button>
+            <div class="auth-link-row">
+                <a asp-controller="Auth" asp-action="ForgotPassword">Forgot password?</a>
+            </div>
 
-                <p class="register-text">
-                    Chưa có tài khoản?
-                    <a asp-controller="Auth" asp-action="Register">Đăng ký ngay</a>
-                </p>
-            </form>
-        </section>
-    </main>
-</body>
-</html>
+            <button type="submit" class="auth-btn">Login</button>
+
+            <p class="bottom-text">
+                Don't have an account?
+                <a asp-controller="Auth" asp-action="Register">Register</a>
+            </p>
+        </form>
+    </section>
+</main>

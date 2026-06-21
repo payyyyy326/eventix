@@ -1,8 +1,52 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Home";
+    Layout = "_Layout";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section class="hero">
+    <div class="hero-content">
+        <span class="badge">Discover. Book. Enjoy.</span>
+
+        <h1>Find and book amazing events with Eventix</h1>
+
+        <p>
+            Explore concerts, workshops, conferences and entertainment events.
+            Book your tickets quickly and manage everything in one place.
+        </p>
+
+        <div class="hero-actions">
+            <a href="#" class="primary-btn">Explore Events</a>
+            <a href="#" class="secondary-btn">Become Organizer</a>
+        </div>
+    </div>
+
+    <div class="hero-card">
+        <h3>Upcoming Event</h3>
+        <h2>Music Night 2026</h2>
+        <p>June 25 • Grand Hall • 8:00 PM</p>
+
+        <div class="ticket-box">
+            <span>Available tickets</span>
+            <strong>248</strong>
+        </div>
+
+        <a href="#" class="card-btn">View Details</a>
+    </div>
+</section>
+
+<section class="features">
+    <div class="feature-card">
+        <h3>Easy Booking</h3>
+        <p>Book tickets in just a few steps with a simple and secure process.</p>
+    </div>
+
+    <div class="feature-card">
+        <h3>Smart Management</h3>
+        <p>Organizers can manage events, venues, ticket types and bookings.</p>
+    </div>
+
+    <div class="feature-card">
+        <h3>Fast Check-in</h3>
+        <p>Support ticket verification and attendee management at the event.</p>
+    </div>
+</section>

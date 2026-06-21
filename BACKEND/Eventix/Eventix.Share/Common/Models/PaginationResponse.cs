@@ -2,6 +2,7 @@
 {
     public class PaginationResponse<T> where T : class
     {
+
         public PaginationResponse()
         {
             DataList = new List<T>();
@@ -22,6 +23,4 @@
         //page size
         public int PageSize { get; set; } = 10;
     }
-
-
 }

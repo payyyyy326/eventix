@@ -131,6 +131,9 @@ namespace Eventix
             builder.Services.AddScoped<ISeatService, SeatService>();
             builder.Services.AddScoped<IOrganizerProfileService, OrganizerProfileService>();
             builder.Services.AddScoped<IEventService, EventService>();
+            builder.Services.Configure<ApiSettings>(
+                builder.Configuration.GetSection(ApiSettings.SectionName));
+
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();

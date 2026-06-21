@@ -7,6 +7,9 @@
         public bool IsSuccess { get; set; }
         public T? Data { get; set; }
 
+        public ApiResponseModel()
+        {
+        }
         public ApiResponseModel(string message, bool isSuccess, T? data)
         {
             Code = "000"; // Default code
