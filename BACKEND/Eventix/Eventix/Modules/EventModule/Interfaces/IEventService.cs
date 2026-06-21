@@ -10,7 +10,7 @@ namespace Eventix.Modules.EventModule.Interfaces
         Task<bool> DeleteEventAsync(Guid eventId, Guid organizerId);
         Task<EventDetailResponse> GetEventByIdAsync(Guid eventId);
         Task<PaginationResponse<OrganizerEventResponse>> GetEventsByOrganizerAsync(Guid organizerId, PaginationRequest<OrganizerEventResponse> request);
-        Task<PaginationResponse<EventResponse>> GetEventsAsync(FIlterEventRequest request);
+        Task<PaginationResponse<EventResponse>> GetEventsAsync(FilterEventRequest request);
         Task<EventBookingResponse> GetEventBookingAsync(Guid eventId);
         Task<EventDetailResponse> UpLoadBannerAsync(Guid eventId, string bannerUrl, Guid organizerId);
         Task<EventDetailResponse> UpLoadImageAsync(Guid eventId, string imageUrl, Guid organizerId);

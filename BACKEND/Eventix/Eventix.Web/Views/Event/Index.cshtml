@@ -1,0 +1,33 @@
+﻿@model Eventix.Share.Common.Models.PaginationResponse<Eventix.Share.Event.EventResponse>
+
+@{
+    ViewData["Title"] = "Events";
+    Layout = "_Layout";
+}
+
+<section class="events-page">
+    <h1>Search results</h1>
+
+    @if (Model == null || !Model.DataList.Any())
+    {
+        <p class="empty-text">No events found.</p>
+    }
+    else
+    {
+        <div class="event-grid">
+            @foreach (var item in Model.DataList)
+            {
+                <article class="event-card">
+                    <img src="@item.ImageUrl" alt="@item.Title" />
+
+                    <div class="event-card-body">
+                        <span>@item.CategoryName</span>
+                        <h3>@item.Title</h3>
+                        <p>@item.VenueName • @item.VenueCity</p>
+                        <p>@item.StartTime.ToString("dd/MM/yyyy HH:mm")</p>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</section>

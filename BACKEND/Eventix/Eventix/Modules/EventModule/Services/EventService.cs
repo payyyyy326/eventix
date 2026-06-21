@@ -229,17 +229,19 @@ namespace Eventix.Modules.EventModule.Services
             };
         }
 
-        public async Task<PaginationResponse<EventResponse>> GetEventsAsync(FIlterEventRequest request)
+        public async Task<PaginationResponse<EventResponse>> GetEventsAsync(FilterEventRequest request)
         {
             var events = _context.Events.AsQueryable();
-            if (events == null) throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
 
             if (request.CategoryId.HasValue)
                 events = events.Where(e => e.CategoryId == request.CategoryId.Value);
+
             if (request.VenueId.HasValue)
                 events = events.Where(e => e.VenueId == request.VenueId.Value);
+
             if (!string.IsNullOrEmpty(request.Search))
-                events = events.Where(e => e.Title.Contains(request.Search));
+                events = events.Where(e => e.Title.Contains(request.Search.Trim().ToLower()));
+
             if (request.MinPrice != null || request.MaxPrice != null)
             {
                 if (request.MinPrice < 0 || request.MaxPrice <= 0 || request.MinPrice > request.MaxPrice)

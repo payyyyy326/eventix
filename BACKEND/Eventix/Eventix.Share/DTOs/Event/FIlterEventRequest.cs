@@ -2,7 +2,7 @@
 
 namespace Eventix.Share.Event
 {
-    public class FIlterEventRequest : PaginationRequest<EventResponse>
+    public class FilterEventRequest : PaginationRequest<EventResponse>
     {
 
         public Guid? CategoryId { get; set; }

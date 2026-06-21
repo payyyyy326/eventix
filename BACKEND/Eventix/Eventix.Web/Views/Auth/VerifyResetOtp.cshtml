@@ -1,24 +1,23 @@
 ﻿@model Eventix.Share.Auth.VerifyOtpRequest
 
 @{
-    ViewData["Title"] = "Verify OTP";
+    ViewData["Title"] = "Verify Reset OTP";
     Layout = "_AuthLayout";
 }
+
 <main class="login-page">
     <section class="login-card">
-        <h1>Verify your email</h1>
+        <h1>Verify OTP</h1>
 
         <p class="subtitle">
             Enter the 6-digit code sent to your email
         </p>
 
-        <form asp-controller="Auth" asp-action="VerifyOtp" method="post">
-
+        <form asp-controller="Auth" asp-action="VerifyResetOtp" method="post">
             <div asp-validation-summary="All" class="validation"></div>
 
             <input asp-for="Email" type="hidden" />
 
-            <!-- OTP 6 digits -->
             <div class="otp-container">
                 <input maxlength="1" class="otp-box" />
                 <input maxlength="1" class="otp-box" />
@@ -27,16 +26,15 @@
                 <input maxlength="1" class="otp-box" />
                 <input maxlength="1" class="otp-box" />
 
-                <!-- hidden field gửi về server -->
                 <input asp-for="OtpCode" type="hidden" id="OtpCode" />
             </div>
 
             <button type="submit" class="login-btn">
-                Verify
+                Continue
             </button>
 
             <p class="register-text">
-                Already verified?
+                Remember your password?
                 <a asp-controller="Auth" asp-action="Login">Login</a>
             </p>
         </form>
@@ -49,6 +47,8 @@
 
     inputs.forEach((input, index) => {
         input.addEventListener("input", () => {
+            input.value = input.value.replace(/\D/g, "");
+
             if (input.value.length === 1 && index < inputs.length - 1) {
                 inputs[index + 1].focus();
             }

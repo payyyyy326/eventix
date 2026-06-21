@@ -23,7 +23,7 @@ namespace Eventix.Modules.EventModule.Controllers
         // GET: api/events
         [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult<ApiResponseModel<PaginationResponse<EventResponse>>>> GetEvents([FromQuery] FIlterEventRequest request)
+        public async Task<ActionResult<ApiResponseModel<PaginationResponse<EventResponse>>>> GetEvents([FromQuery] FilterEventRequest request)
         {
             var events = await _eventService.GetEventsAsync(request);
             return SuccessResponse(SystemSuccess.EVENTS_RETRIEVED, events);

@@ -3,47 +3,86 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Eventix.Web</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/Eventix.Web.styles.css" asp-append-version="true" />
+    <title>@ViewData["Title"] - Eventix</title>
+    <link rel="stylesheet" href="~/css/home.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Eventix.Web</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
+    <header class="topbar">
+        <div class="topbar-container">
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - Eventix.Web - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            <a class="brand"
+               asp-controller="Home"
+               asp-action="Index">
+                Eventix
+            </a>
+
+            <form class="header-search"
+                  asp-controller="Event"
+                  asp-action="Index"
+                  method="get">
+                <input name="Search"
+                       type="text"
+                       placeholder="Tìm kiếm sự kiện..." />
+
+                <button type="submit">Search</button>
+            </form>
+
+            <nav class="menu">
+                <a asp-controller="Event" asp-action="Index">
+                    Sự kiện
+                </a>
+
+                <a asp-controller="Category" asp-action="Index">
+                    Danh mục
+                </a>
+            </nav>
+
+            <div class="auth-actions">
+                @if (Context.Request.Cookies["token"] != null)
+                {
+                    <a class="user-profile" asp-controller="User" asp-action="Profile">
+                        <img src="@(Context.Request.Cookies["avatarUrl"] ?? "/images/default-avatar.png")"
+                             alt="User avatar"
+                             class="user-avatar" />
+
+                        <span>
+                            @(Context.Request.Cookies["userName"] ?? "My Account")
+                        </span>
+                    </a>
+
+                    <a asp-controller="User"
+                       asp-action="EditProfile">
+                        Hồ sơ
+                    </a>
+
+                    <form asp-controller="Auth"
+                          asp-action="Logout"
+                          method="post">
+                        <button type="submit">
+                            Đăng xuất
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <a asp-controller="Auth"
+                       asp-action="Login">
+                        Đăng nhập
+                    </a>
+
+                    <a class="register-btn"
+                       asp-controller="Auth"
+                       asp-action="Register">
+                        Đăng ký
+                    </a>
+                }
+            </div>
+
         </div>
-    </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    </header>
+
+    @RenderBody()
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
