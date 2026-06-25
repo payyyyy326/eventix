@@ -1,0 +1,44 @@
+﻿@model Eventix.Share.User.UpdateProfileRequest
+
+@{
+    ViewData["Title"] = "Edit Profile";
+    Layout = "_Layout";
+}
+
+<section class="profile-page">
+
+    <div class="profile-card">
+
+        <h1>Edit Profile</h1>
+
+        <form asp-controller="User"
+              asp-action="EditProfile"
+              method="post">
+
+            <div asp-validation-summary="All" class="validation"></div>
+
+            <div class="profile-form-group">
+                <label>Full Name</label>
+                <input asp-for="FullName" />
+            </div>
+
+            <div class="profile-form-group">
+                <label>Phone Number</label>
+                <input asp-for="PhoneNumber" />
+            </div>
+
+            <button type="submit" class="profile-btn">
+                Save Changes
+            </button>
+
+            <a class="profile-secondary-btn"
+               asp-controller="User"
+               asp-action="Profile">
+                Cancel
+            </a>
+
+        </form>
+
+    </div>
+
+</section>

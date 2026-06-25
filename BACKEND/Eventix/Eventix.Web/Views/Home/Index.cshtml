@@ -1,52 +1,263 @@
-﻿@{
+﻿@model Eventix.Web.Models.HomeViewModel
+@{
     ViewData["Title"] = "Home";
     Layout = "_Layout";
 }
 
-<section class="hero">
-    <div class="hero-content">
-        <span class="badge">Discover. Book. Enjoy.</span>
+<section class="category-strip">
+    <a asp-controller="Event"
+       asp-action="Index"
+       class="category-chip active">
+        Tất cả
+    </a>
 
-        <h1>Find and book amazing events with Eventix</h1>
+    @foreach (var category in Model.Categories)
+    {
+        <a asp-controller="Event"
+           asp-action="Index"
+           asp-route-CategoryId="@category.Id"
+           class="category-chip">
+            @category.Name
+        </a>
+    }
+</section>
 
-        <p>
-            Explore concerts, workshops, conferences and entertainment events.
-            Book your tickets quickly and manage everything in one place.
-        </p>
+<section class="featured-section">
 
-        <div class="hero-actions">
-            <a href="#" class="primary-btn">Explore Events</a>
-            <a href="#" class="secondary-btn">Become Organizer</a>
-        </div>
+    <div class="section-header">
+        <span>Upcoming</span>
+        <h2>Upcoming Events</h2>
+        <p>Don't miss the next big events.</p>
     </div>
 
-    <div class="hero-card">
-        <h3>Upcoming Event</h3>
-        <h2>Music Night 2026</h2>
-        <p>June 25 • Grand Hall • 8:00 PM</p>
+    <div class="featured-slider">
+        @foreach (var item in Model.UpcomingEvents)
+        {
+            <article class="featured-card">
+                <img src="@(item.ImageUrl ?? "/images/no-image.jpg")"
+                     alt="@item.Title" />
 
-        <div class="ticket-box">
-            <span>Available tickets</span>
-            <strong>248</strong>
-        </div>
+                <div class="featured-overlay">
+                    <div class="featured-info">
 
-        <a href="#" class="card-btn">View Details</a>
+                        <span class="event-category">
+                            @item.CategoryName
+                        </span>
+
+                        <h3>@item.Title</h3>
+
+                        <p>
+                            @item.StartTime.ToString("dd/MM/yyyy")
+                        </p>
+
+                        <a class="featured-btn"
+                           asp-controller="Event"
+                           asp-action="Details"
+                           asp-route-id="@item.Id">
+                            Xem chi tiết
+                        </a>
+
+                    </div>
+                </div>
+            </article>
+        }
     </div>
 </section>
 
-<section class="features">
-    <div class="feature-card">
-        <h3>Easy Booking</h3>
-        <p>Book tickets in just a few steps with a simple and secure process.</p>
+
+<section class="home-section">
+
+    <div class="section-header">
+        <span>Trending</span>
+        <h2>Most Viewed Events</h2>
+        <p>Popular events based on audience interest.</p>
     </div>
 
-    <div class="feature-card">
-        <h3>Smart Management</h3>
-        <p>Organizers can manage events, venues, ticket types and bookings.</p>
+    <div class="slider-wrapper">
+
+        <button class="slider-btn prev" onclick="scrollSlider('trendingSlider', -1)">
+            ❮
+        </button>
+
+        <div class="event-slider" id="trendingSlider">
+
+            @foreach (var item in Model.TrendingEvents)
+            {
+                <a class="event-card"
+                   asp-controller="Event"
+                   asp-action="Details"
+                   asp-route-id="@item.Id">
+                    <img src="@item.ImageUrl" alt="@item.Title" />
+
+                    <div class="event-card-body">
+                        <span>@item.CategoryName</span>
+                        <h3>@item.Title</h3>
+                        <p>@item.StartTime.ToString("dd/MM/yyyy")</p>
+
+                        <p class="event-price">
+                            From @item.MinPrice?.ToString("N0") VND
+                        </p>
+                    </div>
+                </a>
+            }
+
+        </div>
+
+        <button class="slider-btn next" onclick="scrollSlider('trendingSlider', 1)">
+            ❯
+        </button>
+
     </div>
 
-    <div class="feature-card">
-        <h3>Fast Check-in</h3>
-        <p>Support ticket verification and attendee management at the event.</p>
-    </div>
 </section>
+
+<section class="home-section">
+
+    <div class="section-header">
+        <span>Featured</span>
+        <h2>Featured Events</h2>
+        <p>Highlighted events selected by our team.</p>
+    </div>
+
+    <div class="slider-wrapper">
+
+        <button class="slider-btn prev" onclick="scrollSlider('featuredSlider', -1)">
+            ❮
+        </button>
+
+        <div class="event-slider" id="featuredSlider">
+
+            @foreach (var item in Model.FeaturedEvents)
+            {
+                <a class="event-card"
+                   asp-controller="Event"
+                   asp-action="Details"
+                   asp-route-id="@item.Id">
+                    <img src="@item.ImageUrl" alt="@item.Title" />
+
+                    <div class="event-card-body">
+                        <span>@item.CategoryName</span>
+                        <h3>@item.Title</h3>
+                        <p>@item.StartTime.ToString("dd/MM/yyyy")</p>
+
+                        @if (item.MinPrice.HasValue)
+                        {
+                            <p class="event-price">
+                                From @item.MinPrice.Value.ToString("N0") đ
+                            </p>
+                        }
+                    </div>
+                </a>
+            }
+
+        </div>
+
+        <button class="slider-btn next" onclick="scrollSlider('featuredSlider', 1)">
+            ❯
+        </button>
+
+    </div>
+
+</section>
+<section class="home-section">
+
+    <div class="section-header section-header-row">
+        <div>
+            <span>Events</span>
+            <h2>Explore Events</h2>
+            <p>Discover more events across all categories.</p>
+        </div>
+
+        <a class="view-all-btn"
+           asp-controller="Event"
+           asp-action="Index">
+            View all
+        </a>
+    </div>
+
+    <div class="event-grid">
+        @foreach (var item in Model.Events.Take(8))
+        {
+            <a class="event-card"
+               asp-controller="Event"
+               asp-action="Details"
+               asp-route-id="@item.Id">
+
+                <img src="@(item.ImageUrl ?? "/images/no-image.jpg")"
+                     alt="@item.Title" />
+
+                <div class="event-card-body">
+                    <span>@item.CategoryName</span>
+
+                    <h3>@item.Title</h3>
+
+                    <p>@item.StartTime.ToString("dd/MM/yyyy")</p>
+
+                    @if (item.MinPrice.HasValue)
+                    {
+                        <p class="event-price">
+                            From @item.MinPrice.Value.ToString("N0") VND
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="event-price">
+                            Contact organizer
+                        </p>
+                    }
+                </div>
+            </a>
+        }
+    </div>
+
+</section>
+
+<script>
+    function scrollSlider(id, direction) {
+        const slider = document.getElementById(id);
+
+        slider.scrollBy({
+            left: direction * 320,
+            behavior: 'smooth'
+        });
+
+        setTimeout(() => updateButtons(id), 300);
+    }
+
+    function updateButtons(id) {
+        const slider = document.getElementById(id);
+
+        const wrapper = slider.parentElement;
+        const prevBtn = wrapper.querySelector('.prev');
+        const nextBtn = wrapper.querySelector('.next');
+
+        // Đang ở đầu
+        if (slider.scrollLeft <= 5) {
+            prevBtn.style.display = 'none';
+        } else {
+            prevBtn.style.display = 'flex';
+        }
+
+        // Đang ở cuối
+        if (
+            slider.scrollLeft + slider.clientWidth >=
+            slider.scrollWidth - 5
+        ) {
+            nextBtn.style.display = 'none';
+        } else {
+            nextBtn.style.display = 'flex';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.event-slider').forEach(slider => {
+
+            updateButtons(slider.id);
+
+            slider.addEventListener('scroll', () => {
+                updateButtons(slider.id);
+            });
+
+        });
+    });
+</script>

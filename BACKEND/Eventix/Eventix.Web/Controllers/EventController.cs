@@ -1,5 +1,6 @@
 ﻿using Eventix.Share.Common.Models;
 using Eventix.Share.Event;
+using Eventix.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 
@@ -27,6 +28,14 @@ namespace Eventix.Web.Controllers
                 new Dictionary<string, string?>
                 {
                     ["Search"] = request.Search,
+                    ["CategoryId"] = request.CategoryId?.ToString(),
+                    ["VenueId"] = request.VenueId?.ToString(),
+                    ["FromDate"] = request.FromDate?.ToString("yyyy-MM-dd"),
+                    ["ToDate"] = request.ToDate?.ToString("yyyy-MM-dd"),
+                    ["MinPrice"] = request.MinPrice?.ToString(),
+                    ["MaxPrice"] = request.MaxPrice?.ToString(),
+                    ["Status"] = request.Status,
+                    ["SortBy"] = request.SortBy,
                     ["CurrentPage"] = request.CurrentPage.ToString(),
                     ["PageSize"] = request.PageSize.ToString()
                 });
@@ -36,10 +45,25 @@ namespace Eventix.Web.Controllers
             var result = await response.Content
                 .ReadFromJsonAsync<ApiResponseModel<PaginationResponse<EventResponse>>>();
 
-            if (!response.IsSuccessStatusCode || result == null || !result.IsSuccess)
+            var model = new EventViewModel
             {
-                ViewBag.Error = result?.Message ?? "Cannot load events";
-                return View(new PaginationResponse<EventResponse>());
+                Filter = request,
+                Events = result?.Data ?? new PaginationResponse<EventResponse>()
+            };
+
+            return View(model);
+        }
+        public async Task<IActionResult> Details(Guid id)
+        {
+            var client = _httpClientFactory.CreateClient("Eventix");
+
+            var result = await client.GetFromJsonAsync<
+                ApiResponseModel<EventDetailResponse>>(
+                $"api/events/{id}");
+
+            if (result == null || !result.IsSuccess || result.Data == null)
+            {
+                return NotFound();
             }
 
             return View(result.Data);

@@ -1,4 +1,5 @@
 ﻿using Eventix.Share.Common.Models;
+using Eventix.Share.DTOs.User;
 using Eventix.Share.User;
 
 namespace Eventix.Modules.UserModule.Interfaces
@@ -12,6 +13,8 @@ namespace Eventix.Modules.UserModule.Interfaces
         public Task<PaginationRequest<UserResponse>> GetAllUsersAsync();
 
         public Task<UserResponse> UpdateProfileAsync(Guid userId, UpdateProfileRequest request);
+
+        Task<UserResponse> UploadAvatarAsync(Guid userId, UploadAvatarRequest request);
 
         public Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request);
 

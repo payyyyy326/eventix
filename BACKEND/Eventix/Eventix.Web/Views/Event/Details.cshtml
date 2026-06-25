@@ -1,0 +1,158 @@
+﻿@model Eventix.Share.Event.EventDetailResponse
+
+<section class="event-banner">
+    <img src="@Model.BannerUrl"
+         alt="@Model.Title" />
+</section>
+
+<section class="event-detail-container">
+
+    <div class="event-main">
+
+        <span class="event-category">
+            @Model.Category?.Name
+        </span>
+
+        <h1>@Model.Title</h1>
+
+        <p class="event-summary">
+            @Model.Summary
+        </p>
+
+        <div class="event-meta-card">
+
+            <div class="meta-item">
+                <span class="meta-label">
+                    Start Time
+                </span>
+
+                <span class="meta-value">
+                    @Model.StartTime.ToString("dd/MM/yyyy HH:mm")
+                </span>
+            </div>
+
+            <div class="meta-item">
+                <span class="meta-label">
+                    End Time
+                </span>
+
+                <span class="meta-value">
+                    @Model.EndTime.ToString("dd/MM/yyyy HH:mm")
+                </span>
+            </div>
+
+            <div class="meta-item">
+                <span class="meta-label">
+                    Venue
+                </span>
+
+                <span class="meta-value">
+                    @Model.Venue?.Name
+                </span>
+            </div>
+
+            <div class="meta-item">
+                <span class="meta-label">
+                    Organizer
+                </span>
+
+                <span class="meta-value">
+                    @Model.Organizer?.OrganizationName
+                </span>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<section class="ticket-section">
+    <h2>Ticket Types</h2>
+
+    @if (Model.TicketTypes.Any())
+    {
+        @foreach (var ticket in Model.TicketTypes.OrderBy(t => t.Price))
+        {
+            <div class="ticket-item">
+
+                <div class="ticket-left">
+
+                    <div class="ticket-header">
+                        <h3>@ticket.Name</h3>
+
+                        @if (!string.IsNullOrWhiteSpace(ticket.Section))
+                        {
+                            <span class="ticket-section-badge">
+                                @ticket.Section
+                            </span>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(ticket.Description))
+                    {
+                        <p class="ticket-description">
+                            @ticket.Description
+                        </p>
+                    }
+
+                <div class="ticket-meta">
+
+                    <span>
+                        Available:
+                        @(ticket.Quantity -
+                                            ticket.SoldQuantity -
+                                            ticket.ReservedQuantity)
+                </span>
+
+                        <span>
+                            Sale:
+                            @ticket.SaleStartTime.ToString("dd/MM")
+                            -
+                            @ticket.SaleEndTime.ToString("dd/MM")
+                        </span>
+
+                @if (ticket.IsSeatRequired)
+                        {
+                            <span>
+                                Reserved Seat
+                            </span>
+                        }
+
+                    </div>
+
+                </div>
+
+                <div class="ticket-right">
+
+                    <div class="ticket-price">
+                        @ticket.Price.ToString("N0") VND
+                    </div>
+
+                    <button class="ticket-buy-btn">
+                        Buy Ticket
+                    </button>
+
+                </div>
+
+            </div>
+        }
+    }
+    else
+    {
+        <p class="empty-text">
+            No ticket types available.
+        </p>
+    }
+</section>
+
+<section class="event-description">
+
+    <h2>About Event</h2>
+
+    <div class="description-content">
+        @Html.Raw(Model.Description)
+    </div>
+
+</section>
+

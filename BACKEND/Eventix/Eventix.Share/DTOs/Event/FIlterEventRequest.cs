@@ -12,6 +12,8 @@ namespace Eventix.Share.Event
         public string? Search { get; set; } = null!;
         public DateTime? FromDate { get; set; }
 
+        public string? SortBy { get; set; }
+
         public DateTime? ToDate { get; set; }
 
         public decimal? MinPrice { get; set; }
