@@ -1,0 +1,88 @@
+﻿.events-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 32px;
+    align-items: start;
+}
+
+.filter-panel {
+    position: sticky;
+    top: 100px;
+    padding: 22px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+    .filter-panel h2 {
+        margin: 0 0 20px;
+        font-size: 22px;
+    }
+
+.filter-group {
+    margin-bottom: 18px;
+}
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #c9cce0;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        height: 44px;
+        padding: 0 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        outline: none;
+        background: #11162a;
+        color: #ffffff;
+    }
+
+.filter-btn {
+    width: 100%;
+    height: 46px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #8a25ff, #2563ff);
+    color: #ffffff;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.clear-filter-btn {
+    display: block;
+    margin-top: 14px;
+    text-align: center;
+    color: #c9cce0;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.events-title-row {
+    margin-bottom: 24px;
+}
+
+    .events-title-row h1 {
+        margin: 0;
+        font-size: 38px;
+    }
+
+    .events-title-row p {
+        margin: 8px 0 0;
+        color: #aeb4ca;
+    }
+
+@media (max-width: 900px) {
+    .events-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-panel {
+        position: static;
+    }
+}

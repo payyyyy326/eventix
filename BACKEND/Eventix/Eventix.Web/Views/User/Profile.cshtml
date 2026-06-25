@@ -1,0 +1,72 @@
+﻿@model Eventix.Share.User.UserResponse
+
+@{
+    ViewData["Title"] = "Profile";
+    Layout = "_Layout";
+}
+
+<section class="profile-page">
+
+    <div class="profile-card">
+
+        <div class="profile-top">
+            <img src="@(Model.AvatarUrl ?? "/images/default-avatar.png")"
+                 class="profile-avatar"
+                 alt="Avatar" />
+
+            <div>
+                <h1>@Model.FullName</h1>
+                <p>@Model.Email</p>
+            </div>
+        </div>
+
+        <form asp-controller="User"
+              asp-action="UploadAvatar"
+              method="post"
+              enctype="multipart/form-data"
+              class="avatar-form">
+
+            <input type="file"
+                   name="avatar"
+                   accept="image/*" />
+
+            <button type="submit">
+                Upload Avatar
+            </button>
+        </form>
+
+        <div class="profile-info">
+
+            <div>
+                <span>Phone Number</span>
+                <strong>@Model.PhoneNumber</strong>
+            </div>
+
+            <div>
+                <span>Status</span>
+                <strong>@Model.Status</strong>
+            </div>
+
+            <div>
+                <span>Email Verified</span>
+                <strong>
+                    @(Model.EmailVerified ? "Verified" : "Not verified")
+                </strong>
+            </div>
+
+            <div>
+                <span>Joined</span>
+                <strong>@Model.CreatedAt.ToString("dd/MM/yyyy")</strong>
+            </div>
+
+        </div>
+
+        <a class="profile-btn"
+           asp-controller="User"
+           asp-action="EditProfile">
+            Edit Profile
+        </a>
+
+    </div>
+
+</section>

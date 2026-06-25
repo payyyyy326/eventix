@@ -2,6 +2,7 @@ using Eventix.Common.Constants.SystemData;
 using Eventix.Controllers;
 using Eventix.Modules.UserModule.Interfaces;
 using Eventix.Share.Common.Models;
+using Eventix.Share.DTOs.User;
 using Eventix.Share.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,11 +30,24 @@ namespace Eventix.Modules.UserModule.Controllers
         }
 
         [HttpPut("profile")]
-        [Consumes("multipart/form-data")]
-        public async Task<ActionResult<ApiResponseModel<UserResponse>>> UpdateProfile([FromForm] UpdateProfileRequest request)
+        public async Task<ActionResult<ApiResponseModel<UserResponse>>> UpdateProfile([FromBody] UpdateProfileRequest request)
         {
             var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
             var response = await _userService.UpdateProfileAsync(userId, request);
+
+            return SuccessResponse(SystemSuccess.USER_UPDATED, response);
+        }
+
+        [HttpPut("avatar")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<ApiResponseModel<UserResponse>>> UploadAvatar(
+    [FromForm] UploadAvatarRequest request)
+        {
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var response = await _userService.UploadAvatarAsync(userId, request);
+
             return SuccessResponse(SystemSuccess.USER_UPDATED, response);
         }
 

@@ -79,6 +79,11 @@ namespace Eventix.Modules.EventModule.Services
                 return new EventDetailResponse
                 {
                     Id = createdEvent.Id,
+                    Category = new CategoryResponse
+                    {
+                        Id = createdEvent.CategoryId,
+                        Name = createdEvent.Category.Name,
+                    },
                     Title = createdEvent.Title,
                     Slug = createdEvent.Slug,
                     Description = createdEvent.Description,
@@ -173,7 +178,12 @@ namespace Eventix.Modules.EventModule.Services
 
         public async Task<EventDetailResponse> GetEventByIdAsync(Guid eventId)
         {
-            var eventEntity = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+            var eventEntity = await _context.Events
+                .Include(e => e.Category)
+                .Include(e => e.Venue)
+                .Include(e => e.Organizer)
+                .Include(e => e.TicketTypes)
+                .FirstOrDefaultAsync(e => e.Id == eventId);
             if (eventEntity == null)
                 throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
 
@@ -225,13 +235,26 @@ namespace Eventix.Modules.EventModule.Services
                 Organizer = new OrganizerProfileResponse
                 {
                     OrganizationName = eventEntity.Organizer.OrganizationName,
-                }
+                },
+                TicketTypes = eventEntity.TicketTypes
+                    .OrderBy(t => t.Price)
+                    .Select(t => new TicketTypeResponse
+                    {
+                        Id = t.Id,
+                        Name = t.Name,
+                        Price = t.Price,
+                        Quantity = t.Quantity,
+                        Description = t.Description,
+                        SaleStartTime = t.SaleStartTime,
+                        SaleEndTime = t.SaleEndTime,
+                    })
+                    .ToList(),
             };
         }
 
         public async Task<PaginationResponse<EventResponse>> GetEventsAsync(FilterEventRequest request)
         {
-            var events = _context.Events.AsQueryable();
+            var events = _context.Events.Where(e => e.EndTime > DateTime.UtcNow).AsQueryable();
 
             if (request.CategoryId.HasValue)
                 events = events.Where(e => e.CategoryId == request.CategoryId.Value);
@@ -240,7 +263,7 @@ namespace Eventix.Modules.EventModule.Services
                 events = events.Where(e => e.VenueId == request.VenueId.Value);
 
             if (!string.IsNullOrEmpty(request.Search))
-                events = events.Where(e => e.Title.Contains(request.Search.Trim().ToLower()));
+                events = events.Where(e => e.Title.Trim().ToLower().Contains(request.Search.Trim().ToLower()));
 
             if (request.MinPrice != null || request.MaxPrice != null)
             {
@@ -263,10 +286,40 @@ namespace Eventix.Modules.EventModule.Services
 
                 events = events.Where(e => (startOfDay == null || e.StartTime >= startOfDay) && (e.EndTime <= endOfDay || endOfDay == null));
             }
+
             if (!string.IsNullOrEmpty(request.Status))
                 events = events.Where(e => e.Status == request.Status);
+
             if (request.IsFeatured.HasValue)
                 events = events.Where(e => e.IsFeatured == request.IsFeatured.Value);
+
+            if (!string.IsNullOrWhiteSpace(request.SortBy))
+            {
+                switch (request.SortBy.ToLower())
+                {
+                    case "view":
+                        events = events.OrderByDescending(e => e.ViewCount);
+                        break;
+
+                    case "upcoming":
+                        events = events
+                            .Where(e => e.StartTime > DateTime.UtcNow)
+                            .OrderBy(e => e.StartTime);
+                        break;
+
+                    case "latest":
+                        events = events.OrderByDescending(e => e.CreatedAt);
+                        break;
+
+                    default:
+                        events = events.OrderByDescending(e => e.CreatedAt);
+                        break;
+                }
+            }
+            else
+            {
+                events = events.OrderByDescending(e => e.CreatedAt);
+            }
 
             var response = events.Select(e => new EventResponse
             {
@@ -278,6 +331,9 @@ namespace Eventix.Modules.EventModule.Services
                 Summary = e.Summary,
                 ImageUrl = e.ImageUrl,
 
+                MinPrice = e.TicketTypes
+                .Select(t => (decimal?)t.Price)
+                .Min(),
                 StartTime = e.StartTime,
                 EndTime = e.EndTime,
 
@@ -298,6 +354,11 @@ namespace Eventix.Modules.EventModule.Services
 
 
             return responseList;
+        }
+
+        public Task<PaginationResponse<EventResponse>> GetEventsByFeatureAsync(FilterEventRequest request)
+        {
+            throw new NotImplementedException();
         }
 
         public async Task<PaginationResponse<OrganizerEventResponse>> GetEventsByOrganizerAsync(Guid organizerId, PaginationRequest<OrganizerEventResponse> request)

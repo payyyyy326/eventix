@@ -1,6 +1,6 @@
 ﻿using Eventix.Common.Constants.SystemData;
 using Eventix.Share.Auth;
-using Eventix.Web.Models;
+using Eventix.Share.Common.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Eventix.Web.Controllers
