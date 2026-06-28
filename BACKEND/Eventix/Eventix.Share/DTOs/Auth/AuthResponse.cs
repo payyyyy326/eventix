@@ -15,8 +15,7 @@
         public string Email { get; set; } = string.Empty;
         public string? FullName { get; set; }
         public string? AvatarUrl { get; set; }
-        public int? RoleID { get; set; }
+        public List<string> Roles { get; set; } = new();
         public bool EmailVerified { get; set; }
-
     }
 }

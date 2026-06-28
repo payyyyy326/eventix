@@ -1,4 +1,11 @@
-﻿<!DOCTYPE html>
+﻿@{
+    var roles = (Context.Request.Cookies["roles"] ?? "")
+        .Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+    var isOrganizer = roles.Any(r =>
+        r.Equals("Organizer", StringComparison.OrdinalIgnoreCase));
+}
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -8,6 +15,7 @@
     <link rel="stylesheet" href="~/css/event-detail.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/event.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/user.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/organizer.css" asp-append-version="true" />
 </head>
 <body>
     <header class="topbar">
@@ -43,6 +51,14 @@
             <div class="auth-actions">
                 @if (Context.Request.Cookies["token"] != null)
                 {
+                    @if (isOrganizer)
+                    {
+                        <a asp-controller="Organizer"
+                           asp-action="Dashboard">
+                            Sự kiện của tôi
+                        </a>
+                    }
+
                     <a class="user-profile" asp-controller="User" asp-action="Profile">
                         <img src="@(Context.Request.Cookies["avatarUrl"] ?? "/images/default-avatar.png")"
                              alt="User avatar"
@@ -53,17 +69,10 @@
                         </span>
                     </a>
 
-                    <a asp-controller="User"
-                       asp-action="EditProfile">
-                        Hồ sơ
-                    </a>
+                    <a asp-controller="User" asp-action="EditProfile">Hồ sơ</a>
 
-                    <form asp-controller="Auth"
-                          asp-action="Logout"
-                          method="post">
-                        <button type="submit">
-                            Đăng xuất
-                        </button>
+                    <form asp-controller="Auth" asp-action="Logout" method="post">
+                        <button type="submit">Đăng xuất</button>
                     </form>
                 }
                 else
@@ -86,6 +95,36 @@
 
     @RenderBody()
 
+    @if (Context.Request.Cookies["token"] != null && isOrganizer)
+    {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+
+        <script>
+            const eventConnection = new signalR.HubConnectionBuilder()
+                .withUrl("https://localhost:7162/hubs/events")
+                .withAutomaticReconnect()
+                .build();
+
+            eventConnection.on("EventStatusChanged", function (data) {
+                console.log("Event status changed:", data);
+
+                const message = `${data.title}: ${data.oldStatus} → ${data.newStatus}`;
+
+                const box = document.createElement("div");
+                box.className = "realtime-toast";
+                box.innerText = message;
+
+                document.body.appendChild(box);
+
+                setTimeout(() => {
+                    box.remove();
+                }, 4000);
+            });
+
+            eventConnection.start()
+                .catch(err => console.error(err));
+        </script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

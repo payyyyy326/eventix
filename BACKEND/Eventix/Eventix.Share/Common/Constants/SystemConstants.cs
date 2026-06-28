@@ -2,12 +2,21 @@
 {
     public static class SystemConstants
     {
+        public static class CookieNames
+        {
+            public const string Token = "token";
+            public const string RefreshToken = "refreshToken";
+            public const string UserName = "userName";
+            public const string AvatarUrl = "avatarUrl";
+            public const string Roles = "roles";
+        }
         public static class RoleConstants
         {
             public const string ROLE = "Role";
             public const string ADMIN = "Admin";
             public const string USER = "User";
             public const string CUSTOMER = "Customer";
+            public const string ORGANIZER = "Organizer";
         }
 
         public static class PurposeEmail
