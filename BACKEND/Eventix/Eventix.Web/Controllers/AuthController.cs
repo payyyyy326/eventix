@@ -2,6 +2,7 @@
 using Eventix.Share.Auth;
 using Eventix.Share.Common.Models;
 using Microsoft.AspNetCore.Mvc;
+using static Eventix.Share.Common.Constants.SystemConstants;
 
 namespace Eventix.Web.Controllers
 {
@@ -42,10 +43,11 @@ namespace Eventix.Web.Controllers
 
             if (result.Data != null)
             {
-                Response.Cookies.Append("token", result.Data.Token);
-                Response.Cookies.Append("refreshToken", result.Data.RefreshToken);
-                Response.Cookies.Append("userName", result.Data.User.FullName ?? result.Data.User.Email);
-                Response.Cookies.Append("avatarUrl", result.Data.User.AvatarUrl ?? "/images/default-avatar.png");
+                Response.Cookies.Append(CookieNames.Token, result.Data.Token);
+                Response.Cookies.Append(CookieNames.RefreshToken, result.Data.RefreshToken);
+                Response.Cookies.Append(CookieNames.UserName, result.Data.User.FullName ?? result.Data.User.Email);
+                Response.Cookies.Append(CookieNames.AvatarUrl, result.Data.User.AvatarUrl ?? "/images/default-avatar.png");
+                Response.Cookies.Append(CookieNames.Roles, string.Join(",", result.Data.User.Roles));
             }
 
             TempData["Success"] = result.Message;
@@ -178,10 +180,11 @@ namespace Eventix.Web.Controllers
                     });
             }
 
-            Response.Cookies.Delete("token");
-            Response.Cookies.Delete("refreshToken");
-            Response.Cookies.Delete("userName");
-            Response.Cookies.Delete("avatarUrl");
+            Response.Cookies.Delete(CookieNames.Token);
+            Response.Cookies.Delete(CookieNames.RefreshToken);
+            Response.Cookies.Delete(CookieNames.UserName);
+            Response.Cookies.Delete(CookieNames.AvatarUrl);
+            Response.Cookies.Delete(CookieNames.Roles);
 
             TempData["Success"] = SystemSuccess.LOGOUT_SUCCESS.Message;
 
@@ -255,10 +258,11 @@ namespace Eventix.Web.Controllers
                 return View(model);
             }
 
-            Response.Cookies.Append("token", verifyResult.Data.Token);
-            Response.Cookies.Append("refreshToken", verifyResult.Data.RefreshToken);
-            Response.Cookies.Append("userName", verifyResult.Data.User.FullName ?? verifyResult.Data.User.Email);
-            Response.Cookies.Append("avatarUrl", verifyResult.Data.User.AvatarUrl ?? "/images/default-avatar.png");
+            Response.Cookies.Append(CookieNames.Token, verifyResult.Data.Token);
+            Response.Cookies.Append(CookieNames.RefreshToken, verifyResult.Data.RefreshToken);
+            Response.Cookies.Append(CookieNames.UserName, verifyResult.Data.User.FullName ?? verifyResult.Data.User.Email);
+            Response.Cookies.Append(CookieNames.AvatarUrl, verifyResult.Data.User.AvatarUrl ?? "/images/default-avatar.png");
+            Response.Cookies.Append(CookieNames.Roles, string.Join(",", verifyResult.Data.User.Roles));
 
             TempData["Success"] = SystemSuccess.LOGIN_SUCCESS.Message;
             return RedirectToAction("Index", "Home");

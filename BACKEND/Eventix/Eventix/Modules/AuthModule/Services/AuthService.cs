@@ -122,6 +122,9 @@ namespace Eventix.Modules.Auth.Services
                 AvatarUrl = string.IsNullOrWhiteSpace(user.AvatarUrl)
                     ? null
                     : $"{_apiSettings.BaseUrl}{user.AvatarUrl}",
+                Roles = user.Roles
+                .Select(r => r.Name)
+                .ToList()
             };
         }
 
@@ -262,6 +265,7 @@ namespace Eventix.Modules.Auth.Services
                     AvatarUrl = string.IsNullOrWhiteSpace(user.AvatarUrl)
                         ? null
                         : $"{_apiSettings.BaseUrl}{user.AvatarUrl}",
+                    Roles = user.Roles.Select(r => r.Name).ToList()
                 }
             };
         }

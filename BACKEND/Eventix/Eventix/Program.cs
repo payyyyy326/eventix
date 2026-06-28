@@ -3,6 +3,8 @@ using Eventix.Common.Settings;
 using Eventix.Data;
 using Eventix.Extensions;
 using Eventix.Infrastructure.Email;
+using Eventix.Infrastructure.Hubs;
+using Eventix.Infrastructure.Jobs;
 using Eventix.Modules.Auth.Interfaces;
 using Eventix.Modules.Auth.Services;
 using Eventix.Modules.CategoryModule.Interfaces;
@@ -24,6 +26,7 @@ using EventTicketingSystem.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Quartz;
 using System.Text;
 
 namespace Eventix
@@ -120,6 +123,28 @@ namespace Eventix
 
             builder.Services.AddApplicationHealthChecks(builder.Configuration);
 
+            builder.Services.AddQuartz(q =>
+            {
+                var jobKey = new JobKey("EventStatusJob");
+
+                q.AddJob<EventStatusJob>(opts =>
+                    opts.WithIdentity(jobKey));
+
+                q.AddTrigger(opts => opts
+                    .ForJob(jobKey)
+                    .WithIdentity("EventStatusJob-trigger")
+                    .WithSimpleSchedule(x => x
+                        .WithIntervalInMinutes(1)
+                        .RepeatForever()));
+            });
+
+            builder.Services.AddQuartzHostedService(options =>
+            {
+                options.WaitForJobsToComplete = true;
+            });
+
+            builder.Services.AddSignalR();
+
             // Configure Database
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DB")));
@@ -176,6 +201,18 @@ namespace Eventix
                         .AllowAnyMethod();
                 });
             });
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowWebApp", policy =>
+                {
+                    policy
+                        .WithOrigins("https://localhost:7240")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                });
+            });
             builder.Services.AddControllersWithViews();
 
             var app = builder.Build();
@@ -200,6 +237,7 @@ namespace Eventix
             app.UseAuthentication();
             app.UseAuthorization();
 
+            app.MapHub<EventHub>("/hubs/events");
             app.MapControllers();
 
             app.UseApplicationHealthChecks();
