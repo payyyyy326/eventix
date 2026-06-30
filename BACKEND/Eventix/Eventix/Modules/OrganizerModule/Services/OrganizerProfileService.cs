@@ -6,6 +6,7 @@ using Eventix.Extensions;
 using Eventix.Modules.OrganizerModule.Interfaces;
 using Eventix.Share.Common.Constants;
 using Eventix.Share.Common.Models;
+using Eventix.Share.Event;
 using Eventix.Share.Organizer;
 using Eventix.Share.User;
 using Microsoft.EntityFrameworkCore;
@@ -95,7 +96,43 @@ namespace Eventix.Modules.OrganizerModule.Services
             };
             return response;
         }
+        public async Task<PaginationResponse<OrganizerEventResponse>> GetEventsByOrganizerAsync(Guid userId, PaginationRequest<OrganizerEventResponse> request)
+        {
+            var organizer = await _context.OrganizerProfiles.FirstOrDefaultAsync(o => o.UserId == userId);
+            if (organizer == null) throw new BadRequestException(SystemError.ORGANIZER_NOT_FOUND);
 
+            var events = _context.Events
+                .Where(e => e.OrganizerId == organizer.Id);
+
+            var eventResponse = events
+                .OrderByDescending(e => e.CreatedAt)
+                .Select(e => new OrganizerEventResponse
+                {
+                    Id = e.Id,
+                    Title = e.Title,
+                    Slug = e.Slug,
+                    ImageUrl = e.ImageUrl,
+
+                    StartTime = e.StartTime,
+                    EndTime = e.EndTime,
+
+                    Status = e.Status,
+                    ViewCount = e.ViewCount,
+                    IsFeatured = e.IsFeatured,
+
+                    CategoryName = e.Category.Name,
+                    VenueName = e.Venue.Name,
+
+                    TotalTicketTypes = e.TicketTypes.Count(),
+                    TotalTicketsSold = e.TicketTypes.Sum(t => t.SoldQuantity),
+                    TotalRevenue = e.TicketTypes.Sum(t => t.SoldQuantity * t.Price),
+
+                    CreatedAt = e.CreatedAt,
+                    PublishedAt = e.PublishedAt
+                });
+
+            return await eventResponse.GetPaged(request.CurrentPage, request.PageSize);
+        }
         public async Task<PaginationResponse<OrganizerProfileResponse>> GetAllAsync(string? status, PaginationRequest<OrganizerProfileResponse> request)
         {
             var organizers = _context.OrganizerProfiles.AsQueryable();

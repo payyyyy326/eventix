@@ -9,7 +9,6 @@ namespace Eventix.Modules.EventModule.Interfaces
         Task<EventDetailResponse> UpdateEventAsync(Guid eventId, UpdateEventRequest request, Guid userId);
         Task<bool> DeleteEventAsync(Guid eventId, Guid organizerId);
         Task<EventDetailResponse> GetEventByIdAsync(Guid eventId);
-        Task<PaginationResponse<OrganizerEventResponse>> GetEventsByOrganizerAsync(Guid organizerId, PaginationRequest<OrganizerEventResponse> request);
         Task<PaginationResponse<EventResponse>> GetEventsAsync(FilterEventRequest request);
         Task<PaginationResponse<EventResponse>> GetEventsByFeatureAsync(FilterEventRequest request);
         Task<EventBookingResponse> GetEventBookingAsync(Guid eventId);

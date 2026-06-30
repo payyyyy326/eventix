@@ -1,4 +1,5 @@
 ﻿using Eventix.Share.Common.Models;
+using Eventix.Share.Event;
 using Eventix.Share.Organizer;
 
 namespace Eventix.Modules.OrganizerModule.Interfaces
@@ -10,5 +11,7 @@ namespace Eventix.Modules.OrganizerModule.Interfaces
         Task<OrganizerProfileResponse> ApproveAsync(Guid organizerProfileId, Guid adminId);
         Task<OrganizerProfileResponse> RejectAsync(Guid organizerProfileId, Guid adminId);
         Task<PaginationResponse<OrganizerProfileResponse>> GetAllAsync(string status, PaginationRequest<OrganizerProfileResponse> request);
+        Task<PaginationResponse<OrganizerEventResponse>> GetEventsByOrganizerAsync(Guid organizerId, PaginationRequest<OrganizerEventResponse> request);
+
     }
 }

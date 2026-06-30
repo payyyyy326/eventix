@@ -1,0 +1,93 @@
+﻿@{
+    ViewData["Title"] = "Organizer Dashboard";
+    Layout = "_OrganizerLayout";
+}
+
+<section class="organizer-dashboard">
+
+    <div class="dashboard-header">
+        <div>
+            <span>Organizer</span>
+            <h1>Dashboard</h1>
+            <p>Overview of your events, ticket sales and revenue.</p>
+        </div>
+
+        <a class="dashboard-create-btn"
+           asp-controller="Organizer"
+           asp-action="CreateEvent">
+            + Create Event
+        </a>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <span>Total Events</span>
+            <strong>12</strong>
+        </div>
+
+        <div class="stat-card">
+            <span>Upcoming Events</span>
+            <strong>4</strong>
+        </div>
+
+        <div class="stat-card">
+            <span>Tickets Sold</span>
+            <strong>1,248</strong>
+        </div>
+
+        <div class="stat-card">
+            <span>Revenue</span>
+            <strong>248,000,000đ</strong>
+        </div>
+    </div>
+
+    <div class="dashboard-panel">
+        <div class="panel-header">
+            <h2>Recent Events</h2>
+
+            <a asp-controller="Organizer"
+               asp-action="Events">
+                View all
+            </a>
+        </div>
+
+        <div class="organizer-event-list">
+            <div class="organizer-event-row">
+                <div>
+                    <h3>Summer Music Festival</h3>
+                    <p>15/08/2026 • Published</p>
+                </div>
+
+                <div class="event-row-stats">
+                    <span>520 sold</span>
+                    <strong>156,000,000đ</strong>
+                </div>
+            </div>
+
+            <div class="organizer-event-row">
+                <div>
+                    <h3>AI Product Workshop</h3>
+                    <p>05/09/2026 • Published</p>
+                </div>
+
+                <div class="event-row-stats">
+                    <span>180 sold</span>
+                    <strong>63,000,000đ</strong>
+                </div>
+            </div>
+
+            <div class="organizer-event-row">
+                <div>
+                    <h3>Rock Việt Summer Fest 2026</h3>
+                    <p>15/08/2026 • Draft</p>
+                </div>
+
+                <div class="event-row-stats">
+                    <span>0 sold</span>
+                    <strong>0đ</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>s

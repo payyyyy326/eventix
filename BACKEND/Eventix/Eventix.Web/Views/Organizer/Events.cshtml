@@ -1,0 +1,116 @@
+﻿@model Eventix.Share.Common.Models.PaginationResponse<Eventix.Share.Event.OrganizerEventResponse>
+
+@{
+    ViewData["Title"] = "My Events";
+    Layout = "_OrganizerLayout";
+}
+
+<section class="organizer-page">
+
+    <div class="dashboard-header">
+        <div>
+            <span>Organizer</span>
+            <h1>My Events</h1>
+            <p>Manage your events, ticket sales and revenue.</p>
+        </div>
+
+        <a class="dashboard-create-btn"
+           asp-controller="Organizer"
+           asp-action="CreateEvent">
+            + Create Event
+        </a>
+    </div>
+
+    <div class="dashboard-panel">
+
+        @if (Model == null || !Model.DataList.Any())
+        {
+            <div class="organizer-empty">
+                <h2>No events yet</h2>
+                <p>Create your first event and start selling tickets.</p>
+
+                <a class="dashboard-create-btn"
+                   asp-controller="Organizer"
+                   asp-action="CreateEvent">
+                    Create Event
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="organizer-table">
+
+                <div class="organizer-table-head">
+                    <span>Event</span>
+                    <span>Status</span>
+                    <span>Start Time</span>
+                    <span>Sold</span>
+                    <span>Revenue</span>
+                    <span>Actions</span>
+                </div>
+
+                @foreach (var item in Model.DataList)
+                {
+                    var statusClass = item.Status?.ToLower() switch
+                    {
+                        "onsale" => "on-sale",
+                        "published" => "published",
+                        "ongoing" => "ongoing",
+                        "soldout" => "sold-out",
+                        "completed" => "completed",
+                        "draft" => "draft",
+                        "cancelled" => "cancelled",
+                        _ => "draft"
+                    };
+
+                    <div class="organizer-table-row">
+
+                        <div class="event-cell">
+                            <img src="@(item.ImageUrl ?? "/images/no-image.jpg")"
+                                 alt="@item.Title" />
+
+                            <div>
+                                <strong>@item.Title</strong>
+                                <p>@item.CategoryName • @item.VenueName</p>
+                            </div>
+                        </div>
+
+                        <span class="status-badge @statusClass">
+                            @item.Status
+                        </span>
+
+                        <span>
+                            @item.StartTime.ToString("dd/MM/yyyy HH:mm")
+                        </span>
+
+                        <span>
+                            @item.TotalTicketsSold
+                        </span>
+
+                        <span class="revenue-text">
+                            @item.TotalRevenue.ToString("N0") đ
+                        </span>
+
+                        <div class="row-actions">
+                            <a asp-controller="Organizer"
+                               asp-action="ManageEvent"
+                               asp-route-id="@item.Id">
+                                Manage
+                            </a>
+
+                            <a asp-controller="Organizer"
+                               asp-action="EditEvent"
+                               asp-route-id="@item.Id">
+                                Edit
+                            </a>
+                        </div>
+
+                    </div>
+                }
+
+            </div>
+        }
+
+    </div>
+
+</section>
