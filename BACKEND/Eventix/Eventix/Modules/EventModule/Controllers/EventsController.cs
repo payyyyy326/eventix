@@ -1,6 +1,7 @@
 ﻿using Eventix.Common.Constants.SystemData;
 using Eventix.Controllers;
 using Eventix.Modules.EventModule.Interfaces;
+using Eventix.Share.Common.Constants;
 using Eventix.Share.Common.Models;
 using Eventix.Share.Event;
 using Microsoft.AspNetCore.Authorization;
@@ -49,6 +50,7 @@ namespace Eventix.Modules.EventModule.Controllers
 
         //POST: api/events/create
         [HttpPost("create")]
+        [Authorize(Policy = SystemConstants.RoleConstants.ORGANIZER)]
         public async Task<ActionResult<ApiResponseModel<EventDetailResponse>>> CreateEvent(
             [FromBody] CreateEventRequest request)
         {

@@ -361,39 +361,6 @@ namespace Eventix.Modules.EventModule.Services
             throw new NotImplementedException();
         }
 
-        public async Task<PaginationResponse<OrganizerEventResponse>> GetEventsByOrganizerAsync(Guid organizerId, PaginationRequest<OrganizerEventResponse> request)
-        {
-            var events = _context.Events.Where(e => e.OrganizerId == organizerId).AsQueryable();
-            if (!events.Any()) throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
-
-            var eventResponse = events.Select(e => new OrganizerEventResponse
-            {
-                Id = e.Id,
-
-                Title = e.Title,
-                Slug = e.Slug,
-
-                ImageUrl = e.ImageUrl,
-
-                StartTime = e.StartTime,
-                EndTime = e.EndTime,
-
-                Status = e.Status,
-
-                ViewCount = e.ViewCount,
-
-                IsFeatured = e.IsFeatured,
-
-                CategoryName = e.Category.Name,
-                VenueName = e.Venue.Name,
-
-                CreatedAt = e.CreatedAt,
-                PublishedAt = e.PublishedAt
-            });
-
-            var response = await eventResponse.GetPaged(request.CurrentPage, request.PageSize);
-            return response;
-        }
 
         public async Task<EventDetailResponse> UpdateEventAsync(Guid eventId, UpdateEventRequest request, Guid organizerId)
         {

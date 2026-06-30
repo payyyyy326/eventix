@@ -1,0 +1,41 @@
+﻿@{
+    Layout = "_Layout";
+}
+
+<div class="organizer-layout">
+
+    <aside class="organizer-sidebar">
+
+        <h2>Organizer</h2>
+
+        <nav>
+
+            <a asp-controller="Organizer"
+               asp-action="Dashboard">
+                Dashboard
+            </a>
+
+            <a asp-controller="Organizer"
+               asp-action="Events">
+                My Events
+            </a>
+
+            <a asp-controller="Organizer"
+               asp-action="CreateEvent">
+                Create Event
+            </a>
+
+            <a asp-controller="Organizer"
+               asp-action="Profile">
+                Organizer Profile
+            </a>
+
+        </nav>
+
+    </aside>
+
+    <section class="organizer-content">
+        @RenderBody()
+    </section>
+
+</div>

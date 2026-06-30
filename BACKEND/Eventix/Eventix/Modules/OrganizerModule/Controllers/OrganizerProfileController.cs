@@ -3,6 +3,7 @@ using Eventix.Controllers;
 using Eventix.Modules.OrganizerModule.Interfaces;
 using Eventix.Share.Common.Constants;
 using Eventix.Share.Common.Models;
+using Eventix.Share.Event;
 using Eventix.Share.Organizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -36,6 +37,22 @@ namespace Eventix.Modules.OrganizerModule.Controllers
             var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var profile = await _organizerProfileService.GetMyProfileAsync(userId);
             return SuccessResponse(SystemSuccess.ORGANIZER_RETRIEVED, profile);
+        }
+
+        [HttpGet("events")]
+        public async Task<ActionResult<ApiResponseModel<PaginationResponse<OrganizerEventResponse>>>> GetEvents([FromQuery] PaginationRequest<OrganizerEventResponse> request)
+        {
+            var userId = Guid.Parse(
+                User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var response =
+                await _organizerProfileService.GetEventsByOrganizerAsync(
+                    userId,
+                    request);
+
+            return SuccessResponse(
+                SystemSuccess.EVENTS_RETRIEVED,
+                response);
         }
 
         //POST: api/Organizer/create
