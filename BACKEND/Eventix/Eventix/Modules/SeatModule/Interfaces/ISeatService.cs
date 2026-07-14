@@ -8,5 +8,6 @@ namespace Eventix.Modules.SeatModule.Interfaces
         public byte[] GenerateSeatTemplateExcel();
         public Task<ImportSeatResult> ImportSeatByExcelAsync(Guid venueId, ImportSeatsRequest request);
         public Task<PaginationResponse<SeatResponse>> GetSeatsByVenueAsync(Guid venueId, PaginationRequest<SeatResponse> request);
+        public Task<List<string>> GetSectionsByVenueAsync(Guid venueId);
     }
 }

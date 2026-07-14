@@ -1,4 +1,8 @@
-﻿.organizer-layout {
+﻿/* =========================
+   Organizer Layout
+========================= */
+
+.organizer-layout {
     width: min(1400px, calc(100% - 48px));
     margin: 40px auto;
     display: grid;
@@ -7,18 +11,34 @@
     align-items: start;
 }
 
+.organizer-content {
+    min-width: 0;
+}
+
+.organizer-page,
+.organizer-dashboard,
+.manage-event-page {
+    display: grid;
+    gap: 28px;
+}
+
+
+/* =========================
+   Sidebar
+========================= */
+
 .organizer-sidebar {
     position: sticky;
     top: 100px;
     padding: 22px;
     border-radius: 20px;
-    background: linear-gradient(180deg, rgba(63,62,112,.78), rgba(28,30,45,.92));
-    border: 1px solid rgba(255,255,255,.12);
+    background: linear-gradient( 180deg, rgba(63, 62, 112, .78), rgba(28, 30, 45, .92) );
+    border: 1px solid rgba(255, 255, 255, .12);
 }
 
     .organizer-sidebar h2 {
         margin: 0 0 24px;
-        color: white;
+        color: #ffffff;
         font-size: 24px;
     }
 
@@ -37,19 +57,14 @@
         }
 
             .organizer-sidebar nav a:hover {
-                color: white;
-                background: linear-gradient(90deg, #8a25ff, #2563ff);
+                color: #ffffff;
+                background: linear-gradient( 90deg, #8a25ff, #2563ff );
             }
 
-.organizer-content {
-    min-width: 0;
-}
 
-.organizer-page,
-.organizer-dashboard {
-    display: grid;
-    gap: 28px;
-}
+/* =========================
+   Header / Page Heading
+========================= */
 
 .dashboard-header {
     display: flex;
@@ -58,59 +73,97 @@
     gap: 24px;
 }
 
-    .dashboard-header span {
+.page-heading {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+    .dashboard-header span,
+    .page-heading > span {
         color: #a78bfa;
         font-weight: 800;
     }
 
-    .dashboard-header h1 {
-        margin: 8px 0;
-        font-size: 42px;
+    .page-heading > span {
+        display: block;
+        margin-bottom: 6px;
     }
 
-    .dashboard-header p {
-        margin: 0;
-        color: #aeb4ca;
+.dashboard-header h1 {
+    margin: 8px 0;
+    font-size: 42px;
+}
+
+.dashboard-header p {
+    margin: 0;
+    color: #aeb4ca;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 14px;
+    color: #a78bfa;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+    .back-link:hover {
+        color: #ffffff;
     }
+
+
+/* =========================
+   Buttons
+========================= */
 
 .dashboard-create-btn {
     flex: 0 0 auto;
     padding: 14px 20px;
+    border: none;
     border-radius: 14px;
-    color: white;
+    color: #ffffff;
     text-decoration: none;
     font-weight: 800;
-    background: linear-gradient(90deg, #8a25ff, #2563ff);
+    background: linear-gradient( 90deg, #8a25ff, #2563ff );
+    cursor: pointer;
+    transition: .2s;
 }
 
-.dashboard-stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 18px;
-}
-
-.stat-card {
-    padding: 22px;
-    border-radius: 20px;
-    background: rgba(255,255,255,.05);
-    border: 1px solid rgba(255,255,255,.1);
-}
-
-    .stat-card span {
-        display: block;
-        margin-bottom: 12px;
-        color: #aeb4ca;
+    .dashboard-create-btn:hover {
+        transform: translateY(-2px);
     }
 
-    .stat-card strong {
-        font-size: 28px;
+.secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 20px;
+    border-radius: 14px;
+    color: #d4d7ee;
+    text-decoration: none;
+    font-weight: 800;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .1);
+}
+
+    .secondary-btn:hover {
+        color: #ffffff;
     }
+
+
+/* =========================
+   Shared Panel
+========================= */
 
 .dashboard-panel {
     padding: 24px;
+    overflow: hidden;
     border-radius: 22px;
-    background: linear-gradient(180deg, rgba(63,62,112,.72), rgba(28,30,45,.9));
-    border: 1px solid rgba(255,255,255,.1);
+    background: linear-gradient( 180deg, rgba(63, 62, 112, .72), rgba(28, 30, 45, .9) );
+    border: 1px solid rgba(255, 255, 255, .1);
 }
 
 .panel-header {
@@ -126,8 +179,51 @@
 
     .panel-header a {
         color: #a78bfa;
-        font-weight: 800;
         text-decoration: none;
+        font-weight: 800;
+    }
+
+.organizer-empty {
+    padding: 36px;
+    text-align: center;
+}
+
+    .organizer-empty h2 {
+        margin: 0 0 10px;
+        font-size: 30px;
+    }
+
+    .organizer-empty p {
+        margin-bottom: 24px;
+        color: #aeb4ca;
+    }
+
+
+/* =========================
+   Dashboard
+========================= */
+
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+}
+
+.stat-card {
+    padding: 22px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .1);
+}
+
+    .stat-card span {
+        display: block;
+        margin-bottom: 12px;
+        color: #aeb4ca;
+    }
+
+    .stat-card strong {
+        font-size: 28px;
     }
 
 .organizer-event-list {
@@ -141,8 +237,8 @@
     gap: 20px;
     padding: 18px;
     border-radius: 16px;
-    background: rgba(255,255,255,.05);
-    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .08);
 }
 
     .organizer-event-row h3 {
@@ -168,20 +264,10 @@
         color: #22c55e;
     }
 
-.organizer-empty {
-    padding: 36px;
-    text-align: center;
-}
 
-    .organizer-empty h2 {
-        margin: 0 0 10px;
-        font-size: 30px;
-    }
-
-    .organizer-empty p {
-        margin-bottom: 24px;
-        color: #aeb4ca;
-    }
+/* =========================
+   My Events Table
+========================= */
 
 .organizer-table {
     display: grid;
@@ -206,8 +292,8 @@
 .organizer-table-row {
     padding: 16px 18px;
     border-radius: 18px;
-    background: rgba(255,255,255,.05);
-    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .08);
 }
 
 .event-cell {
@@ -215,6 +301,7 @@
     align-items: center;
     gap: 14px;
     min-width: 0;
+    overflow: hidden;
 }
 
     .event-cell img {
@@ -239,49 +326,6 @@
         font-size: 14px;
     }
 
-.status-badge {
-    width: fit-content;
-    padding: 7px 12px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 900;
-}
-
-    .status-badge.on-sale {
-        color: #22c55e;
-        background: rgba(34,197,94,.12);
-    }
-
-    .status-badge.published {
-        color: #60a5fa;
-        background: rgba(96,165,250,.12);
-    }
-
-    .status-badge.ongoing {
-        color: #facc15;
-        background: rgba(250,204,21,.12);
-    }
-
-    .status-badge.sold-out {
-        color: #fb7185;
-        background: rgba(251,113,133,.12);
-    }
-
-    .status-badge.completed {
-        color: #c4b5fd;
-        background: rgba(196,181,253,.12);
-    }
-
-    .status-badge.draft {
-        color: #9ca3af;
-        background: rgba(156,163,175,.12);
-    }
-
-    .status-badge.cancelled {
-        color: #ef4444;
-        background: rgba(239,68,68,.12);
-    }
-
 .revenue-text {
     color: #22c55e;
     font-weight: 900;
@@ -301,6 +345,264 @@
         .row-actions a:hover {
             color: #ffffff;
         }
+
+
+/* =========================
+   Status Badge
+========================= */
+
+.status-badge {
+    width: fit-content;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+    .status-badge.on-sale {
+        color: #22c55e;
+        background: rgba(34, 197, 94, .12);
+    }
+
+    .status-badge.published {
+        color: #60a5fa;
+        background: rgba(96, 165, 250, .12);
+    }
+
+    .status-badge.ongoing {
+        color: #facc15;
+        background: rgba(250, 204, 21, .12);
+    }
+
+    .status-badge.sold-out {
+        color: #fb7185;
+        background: rgba(251, 113, 133, .12);
+    }
+
+    .status-badge.completed {
+        color: #c4b5fd;
+        background: rgba(196, 181, 253, .12);
+    }
+
+    .status-badge.draft {
+        color: #9ca3af;
+        background: rgba(156, 163, 175, .12);
+    }
+
+    .status-badge.cancelled {
+        color: #ef4444;
+        background: rgba(239, 68, 68, .12);
+    }
+
+
+/* =========================
+   Manage Event
+========================= */
+
+.manage-event-hero {
+    position: relative;
+    height: 360px;
+    overflow: hidden;
+    border-radius: 24px;
+    background: #11162a;
+    border: 1px solid rgba(255, 255, 255, .1);
+}
+
+    .manage-event-hero img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+.manage-event-overlay {
+    position: absolute;
+    inset: 0;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: linear-gradient( to top, rgba(0, 0, 0, .85), rgba(0, 0, 0, .1) );
+}
+
+    .manage-event-overlay h1 {
+        margin: 14px 0 8px;
+        font-size: 42px;
+    }
+
+    .manage-event-overlay p {
+        margin: 0;
+        color: #d4d7ee;
+    }
+
+.manage-tabs {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+    .manage-tabs a {
+        padding: 12px 16px;
+        border-radius: 999px;
+        color: #d4d7ee;
+        text-decoration: none;
+        font-weight: 800;
+        background: rgba(255, 255, 255, .05);
+        border: 1px solid rgba(255, 255, 255, .08);
+    }
+
+        .manage-tabs a.active,
+        .manage-tabs a:hover {
+            color: #ffffff;
+            background: linear-gradient( 90deg, #8a25ff, #2563ff );
+        }
+
+.manage-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+}
+
+    .manage-info-grid div {
+        padding: 18px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, .05);
+        border: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .manage-info-grid span {
+        display: block;
+        margin-bottom: 8px;
+        color: #9ca3af;
+    }
+
+    .manage-info-grid strong {
+        color: #ffffff;
+    }
+
+.manage-description {
+    margin-top: 28px;
+    color: #d4d7ee;
+    line-height: 1.8;
+}
+
+    .manage-description h3 {
+        margin-top: 24px;
+        color: #ffffff;
+    }
+
+
+/* =========================
+   Ticket Types
+========================= */
+
+
+
+
+/*.ticket-admin-meta {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    color: #c9cce0;
+    font-size: 14px;
+}*/
+
+
+
+
+/* =========================
+   Forms
+========================= */
+
+.ticket-form {
+    display: grid;
+    gap: 28px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+    .form-group label {
+        color: #d4d7ee;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 14px 16px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, .08);
+        background: #11162a;
+        color: #ffffff;
+        font-size: 15px;
+        outline: none;
+        transition: .2s;
+    }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: #8a25ff;
+            box-shadow: 0 0 0 3px rgba(138, 37, 255, .18);
+        }
+
+    .form-group textarea {
+        min-height: 140px;
+        resize: vertical;
+    }
+
+    .form-group span {
+        color: #ef4444;
+        font-size: 13px;
+    }
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+    .checkbox-group input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+    }
+
+    .checkbox-group label {
+        margin: 0;
+        color: #d4d7ee;
+        font-weight: 600;
+    }
+
+.form-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.validation {
+    padding: 14px 18px;
+    border-radius: 12px;
+    color: #fca5a5;
+    background: rgba(239, 68, 68, .12);
+    border: 1px solid rgba(239, 68, 68, .2);
+}
+
+
+/* =========================
+   Responsive
+========================= */
 
 @media (max-width: 1100px) {
     .organizer-layout {
@@ -329,6 +631,33 @@
     }
 }
 
+@media (max-width: 800px) {
+    .ticket-admin-card {
+        flex-direction: column;
+    }
+
+    .ticket-admin-side {
+        width: 100%;
+        align-items: flex-start;
+    }
+
+    .form-grid,
+    .manage-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+        .form-actions a,
+        .form-actions button {
+            width: 100%;
+            text-align: center;
+        }
+}
+
 @media (max-width: 640px) {
     .dashboard-header,
     .organizer-event-row {
@@ -342,4 +671,12 @@
     .event-row-stats {
         text-align: left;
     }
+}
+.warning-box {
+    padding: 14px 18px;
+    border-radius: 12px;
+    color: #facc15;
+    background: rgba(250, 204, 21, .12);
+    border: 1px solid rgba(250, 204, 21, .25);
+    font-weight: 700;
 }

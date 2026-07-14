@@ -20,6 +20,8 @@
 
         public string? Section { get; set; }
 
+        public string Status { get; set; } = null!;
+
         public DateTime SaleStartTime { get; set; }
 
         public DateTime SaleEndTime { get; set; }

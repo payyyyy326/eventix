@@ -1,0 +1,97 @@
+﻿@model Eventix.Share.Event.OrganizerEventDetailResponse
+
+@{
+    ViewData["Title"] = "Manage Event";
+    Layout = "_OrganizerLayout";
+}
+
+<section class="manage-event-page">
+
+    <div class="manage-event-hero">
+        <img src="@(Model.BannerUrl ?? Model.ImageUrl ?? "/images/no-image.jpg")"
+             alt="@Model.Title" />
+
+        <div class="manage-event-overlay">
+            <span class="status-badge @Model.Status.ToLower()">
+                @Model.Status
+            </span>
+
+            <h1>@Model.Title</h1>
+
+            <p>@Model.CategoryName • @Model.VenueName</p>
+        </div>
+    </div>
+
+    <div class="manage-tabs">
+        <a class="active" href="#">General</a>
+        <a asp-controller="Organizer" asp-action="TicketTypes" asp-route-eventId="@Model.Id">Ticket Types</a>
+        <a href="#">Seats</a>
+        <a href="#">Orders</a>
+        <a href="#">Statistics</a>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <span>Total Tickets</span>
+            <strong>@Model.TotalTickets</strong>
+        </div>
+
+        <div class="stat-card">
+            <span>Tickets Sold</span>
+            <strong>@Model.TicketsSold</strong>
+        </div>
+
+        <div class="stat-card">
+            <span>Ticket Types</span>
+            <strong>@Model.TicketTypeCount</strong>
+        </div>
+
+        <div class="stat-card">
+            <span>Revenue</span>
+            <strong>@Model.Revenue.ToString("N0")đ</strong>
+        </div>
+    </div>
+
+    <div class="dashboard-panel">
+        <div class="panel-header">
+            <h2>General Information</h2>
+
+            <a asp-controller="Organizer"
+               asp-action="EditEvent"
+               asp-route-id="@Model.Id">
+                Edit
+            </a>
+        </div>
+
+        <div class="manage-info-grid">
+            <div>
+                <span>Start Time</span>
+                <strong>@Model.StartTime.ToString("dd/MM/yyyy HH:mm")</strong>
+            </div>
+
+            <div>
+                <span>End Time</span>
+                <strong>@Model.EndTime.ToString("dd/MM/yyyy HH:mm")</strong>
+            </div>
+
+            <div>
+                <span>Category</span>
+                <strong>@Model.CategoryName</strong>
+            </div>
+
+            <div>
+                <span>Venue</span>
+                <strong>@Model.VenueName</strong>
+            </div>
+        </div>
+
+        <div class="manage-description">
+            <h3>Summary</h3>
+            <p>@Model.Summary</p>
+
+            <h3>Description</h3>
+            <div>@Html.Raw(Model.Description)</div>
+        </div>
+    </div>
+
+</section>

@@ -25,6 +25,11 @@
             public const string RESET_PASSWORD = "ResetPassword";
 
         }
+        public static class TicketTypeStatus
+        {
+            public const string Active = "Active";
+            public const string Inactive = "Inactive";
+        }
         public static class PolicyConstants
         {
             public const string AdminOnly = "AdminOnly";

@@ -33,6 +33,7 @@ public partial class TicketType
     public DateTime? UpdatedAt { get; set; }
 
     public Guid? UpdatedBy { get; set; }
+    public string Status { get; set; } = null!;
 
     public virtual Event Event { get; set; } = null!;
 

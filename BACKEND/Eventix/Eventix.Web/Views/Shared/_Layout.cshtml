@@ -16,6 +16,8 @@
     <link rel="stylesheet" href="~/css/event.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/user.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/organizer.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ticket-type.css" asp-append-version="true" />
+
 </head>
 <body>
     <header class="topbar">
@@ -92,6 +94,45 @@
 
         </div>
     </header>
+    <div id="toast-container"></div>
+
+    <script>
+        function showToast(type, message) {
+            if (!message) return;
+
+            document.querySelectorAll(".app-toast")
+                .forEach(t => t.remove());
+
+            const container = document.getElementById("toast-container");
+
+            const toast = document.createElement("div");
+            toast.className = `app-toast ${type}`;
+            toast.innerText = message;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add("hide");
+
+                setTimeout(() => {
+                    toast.remove();
+                }, 350);
+            }, 3000);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const errorMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["Error"]));
+            const successMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["Success"]));
+
+            if (errorMessage) {
+                showToast("error", errorMessage);
+            }
+
+            if (successMessage) {
+                showToast("success", successMessage);
+            }
+        });
+    </script>
 
     @RenderBody()
 
@@ -106,19 +147,8 @@
                 .build();
 
             eventConnection.on("EventStatusChanged", function (data) {
-                console.log("Event status changed:", data);
-
                 const message = `${data.title}: ${data.oldStatus} → ${data.newStatus}`;
-
-                const box = document.createElement("div");
-                box.className = "realtime-toast";
-                box.innerText = message;
-
-                document.body.appendChild(box);
-
-                setTimeout(() => {
-                    box.remove();
-                }, 4000);
+                showToast("info", message);
             });
 
             eventConnection.start()
