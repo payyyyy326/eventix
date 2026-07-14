@@ -29,6 +29,7 @@ namespace Eventix.Modules.TicketTypeModule.Controllers
             var reponse = await _ticketTypeService.GetTicketTypesByEventIdAsync(eventId, request);
             return SuccessResponse(SystemSuccess.TICKET_TYPES_RETRIEVED, reponse);
         }
+
         [HttpGet("{id}")]
         [AllowAnonymous]
         //GET: api/ticketType/{id}
@@ -36,15 +37,6 @@ namespace Eventix.Modules.TicketTypeModule.Controllers
         {
             var response = await _ticketTypeService.GetTicketTypeByIdAsync(ticketTypeId);
             return SuccessResponse(SystemSuccess.TICKET_TYPE_RETRIEVED, response);
-        }
-
-        [HttpPost("create")]
-        //POST: api/ticketType/create
-        public async Task<ActionResult<ApiResponseModel<TicketTypeResponse>>> CreateTicketType([FromBody] CreateTicketTypeRequest request, [FromQuery] Guid eventId)
-        {
-            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var response = await _ticketTypeService.CreateTicketTypeAsync(eventId, request, userId);
-            return SuccessResponse(SystemSuccess.TICKET_TYPES_RETRIEVED, response);
         }
 
         [HttpPut("update/{id}")]

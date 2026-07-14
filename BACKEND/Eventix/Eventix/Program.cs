@@ -193,17 +193,6 @@ namespace Eventix
             });
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowNextApp", policy =>
-                {
-                    policy
-                        .WithOrigins("http://localhost:3000")
-                        .AllowAnyHeader()
-                        .AllowAnyMethod();
-                });
-            });
-
-            builder.Services.AddCors(options =>
-            {
                 options.AddPolicy("AllowWebApp", policy =>
                 {
                     policy

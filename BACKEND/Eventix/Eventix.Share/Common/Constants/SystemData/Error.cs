@@ -42,6 +42,8 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage INVALID_FILE_TYPE = new("455", "Only jpg, jpeg, png, webp files are allowed", false);
         public static readonly SystemMessage INVALID_SALE_TIME = new("456", "Sale start time must be before sale end time", false);
         public static readonly SystemMessage SECTION_REQUIRED = new("457", "Section is required when seat is required", false);
+        public static readonly SystemMessage QUANTITY_LESS_THAN_USED = new("458", "Quantity cannot be less than sold or reserved tickets.", false);
+        public static readonly SystemMessage QUANTITY_EXCEEDS_SECTION_SEATS = new("459", "Quantity cannot exceed the number of seats in this section.", false);
 
 
 
@@ -74,6 +76,7 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage ORGANIZER_NOT_FOUND = new("493", "Organizer not found", false);
         public static readonly SystemMessage EVENT_NOT_FOUND = new("494", "Event not found", false);
         public static readonly SystemMessage TICKET_TYPE_NOT_FOUND = new("495", "Ticket type not found", false);
+        public static readonly SystemMessage SECTION_NOT_FOUND = new("496", "Section not found", false);
 
 
 
@@ -87,6 +90,7 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage ORGANIZER_NOT_APPROVED = new("511", "Organizer profile is not approved yet", false);
         public static readonly SystemMessage INVALID_PRICE_RANGE = new("512", "Price must be greater than or equal to 0", false);
         public static readonly SystemMessage SALE_END_TIME_INVALID = new("513", "Sale end time must be before event start time", false);
+        public static readonly SystemMessage TICKET_TYPE_CANNOT_DELETE = new("514", "Ticket type cannot be deleted because there are tickets sold or reserved for this ticket type.", false);
 
 
 

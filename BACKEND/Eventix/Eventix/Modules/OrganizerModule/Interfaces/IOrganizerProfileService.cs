@@ -12,6 +12,7 @@ namespace Eventix.Modules.OrganizerModule.Interfaces
         Task<OrganizerProfileResponse> RejectAsync(Guid organizerProfileId, Guid adminId);
         Task<PaginationResponse<OrganizerProfileResponse>> GetAllAsync(string status, PaginationRequest<OrganizerProfileResponse> request);
         Task<PaginationResponse<OrganizerEventResponse>> GetEventsByOrganizerAsync(Guid organizerId, PaginationRequest<OrganizerEventResponse> request);
-
+        Task<OrganizerEventDetailResponse> GetOrganizerEventDetailAsync(Guid userId, Guid eventId);
+        Task<List<string>> GetEventSectionsAsync(Guid userId, Guid eventId);
     }
 }

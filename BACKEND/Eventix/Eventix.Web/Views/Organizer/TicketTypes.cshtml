@@ -1,0 +1,113 @@
+﻿@using Eventix.Share.Common.Models
+@using Eventix.Share.TicketType
+@model PaginationResponse<TicketTypeResponse>
+
+@{
+    var eventId = (Guid)ViewBag.EventId;
+    ViewData["Title"] = "Ticket Types";
+    Layout = "_OrganizerLayout";
+}
+
+<section class="organizer-page">
+
+    <div class="dashboard-header">
+        <div class="page-heading">
+            <a class="back-link"
+               asp-controller="Organizer"
+               asp-action="ManageEvent"
+               asp-route-id="@Model.DataList.FirstOrDefault()?.EventId">
+                ← Back to Event
+            </a>
+
+            <span>Event Management</span>
+
+            <h1>Ticket Types</h1>
+
+            <p>Manage ticket prices, quantity and sales.</p>
+        </div>  
+
+        <a class="dashboard-create-btn"
+           asp-controller="TicketType"
+           asp-action="Create"
+           asp-route-eventId="@eventId">
+            + Add Ticket Type
+        </a>
+    </div>
+
+    <div class="dashboard-panel">
+
+        @if (Model == null || Model.DataList == null || !Model.DataList.Any())
+        {
+            <div class="organizer-empty">
+                <h2>No ticket types yet</h2>
+                <p>Create ticket types to start selling tickets.</p>
+            </div>
+        }
+        else
+        {
+            <div class="ticket-admin-list">
+                @foreach (var ticket in Model.DataList.OrderBy(t => t.Price))
+                {
+                    var remaining = ticket.Quantity - ticket.SoldQuantity - ticket.ReservedQuantity;
+                    var revenue = ticket.Price * ticket.SoldQuantity;
+                    var soldPercent = ticket.Quantity == 0
+                    ? 0
+                    : (int)Math.Round((double)ticket.SoldQuantity / ticket.Quantity * 100);
+
+                    <div class="ticket-admin-card">
+                        <div class="ticket-main">
+                            <div class="ticket-title-row">
+                                <h3>@ticket.Name</h3>
+
+                                <span class="ticket-status active">
+                                    @ticket.Status
+                                </span>
+                            </div>
+
+                            <p>@ticket.Description</p>
+
+                            <div class="ticket-admin-meta">
+                                <span>Section: @(ticket.Section ?? "N/A")</span>
+                                <span>Total: @ticket.Quantity</span>
+                                <span>Sold: @ticket.SoldQuantity</span>
+                                <span>Reserved: @ticket.ReservedQuantity</span>
+                                <span>Remaining: @remaining</span>
+                            </div>
+
+                            <div class="ticket-progress">
+                                <div style="width:@soldPercent%"></div>
+                            </div>
+                        </div>
+
+                        <div class="ticket-admin-side">
+                            <strong>@ticket.Price.ToString("N0") đ</strong>
+                            <span>Revenue: @revenue.ToString("N0") đ</span>
+
+                            <div class="ticket-actions">
+                                <a class="ticket-action edit"
+                                   asp-controller="TicketType"
+                                   asp-action="Edit"
+                                   asp-route-id="@ticket.Id">
+                                    Edit
+                                </a>
+
+                                <form asp-controller="TicketType"
+                                      asp-action="Deactivate"
+                                      asp-route-id="@ticket.Id"
+                                      asp-route-eventId="@ticket.EventId"
+                                      method="post"
+                                      onsubmit="return confirm('Deactivate this ticket type?');">
+                                    <button type="submit" class="ticket-action danger">
+                                        Deactivate
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+    </div>
+
+</section>

@@ -4,9 +4,11 @@ using Eventix.Data;
 using Eventix.Entities;
 using Eventix.Extensions;
 using Eventix.Modules.TicketTypeModule.Interfaces;
+using Eventix.Share.Common.Constants;
 using Eventix.Share.Common.Models;
 using Eventix.Share.TicketType;
 using Microsoft.EntityFrameworkCore;
+using static Eventix.Share.Common.Constants.SystemConstants;
 
 namespace Eventix.Modules.TicketTypeModule.Services
 {
@@ -47,8 +49,22 @@ namespace Eventix.Modules.TicketTypeModule.Services
                     SystemError.SALE_END_TIME_INVALID);
             }
 
-            if (request.IsSeatRequired && string.IsNullOrWhiteSpace(request.Section))
-                throw new BadRequestException(SystemError.SECTION_REQUIRED);
+            if (request.IsSeatRequired)
+            {
+                if (string.IsNullOrWhiteSpace(request.Section))
+                    throw new BadRequestException(SystemError.SECTION_REQUIRED);
+
+                var sectionSeatCount = await _context.Seats.CountAsync(s =>
+                    s.VenueId == eventExist.VenueId &&
+                    s.Section == request.Section);
+
+                if (sectionSeatCount <= 0)
+                    throw new BadRequestException(SystemError.SECTION_NOT_FOUND);
+
+                if (request.Quantity > sectionSeatCount)
+                    throw new BadRequestException(SystemError.INVALID_QUANTITY);
+            }
+
 
             var ticketType = new TicketType
             {
@@ -58,6 +74,7 @@ namespace Eventix.Modules.TicketTypeModule.Services
                 Description = request.Description,
                 Price = request.Price,
                 Quantity = request.Quantity,
+                Status = TicketTypeStatus.Active,
                 SoldQuantity = 0,
                 ReservedQuantity = 0,
                 Section = request.IsSeatRequired ? request.Section : null,
@@ -121,6 +138,52 @@ namespace Eventix.Modules.TicketTypeModule.Services
             return response;
         }
 
+        public async Task<TicketTypeResponse> GetTicketTypeByIdForOrganizerAsync(Guid userId, Guid ticketTypeId)
+        {
+            var organizer = await _context.OrganizerProfiles
+                .FirstOrDefaultAsync(o => o.UserId == userId);
+
+            if (organizer == null)
+                throw new BadRequestException(SystemError.ORGANIZER_NOT_FOUND);
+
+            var ticketType = await _context.TicketTypes
+                .Include(tt => tt.Event)
+                .FirstOrDefaultAsync(tt =>
+                    tt.Id == ticketTypeId &&
+                    tt.Event.OrganizerId == organizer.Id);
+
+            if (ticketType == null)
+                throw new BadRequestException(SystemError.TICKET_TYPE_NOT_FOUND);
+
+            return new TicketTypeResponse
+            {
+                Id = ticketType.Id,
+                EventId = ticketType.EventId,
+
+                Name = ticketType.Name,
+                Description = ticketType.Description,
+
+                Price = ticketType.Price,
+
+                Quantity = ticketType.Quantity,
+                SoldQuantity = ticketType.SoldQuantity,
+                ReservedQuantity = ticketType.ReservedQuantity,
+
+                Section = ticketType.Section,
+
+                SaleStartTime = ticketType.SaleStartTime,
+                SaleEndTime = ticketType.SaleEndTime,
+
+                IsSeatRequired = ticketType.IsSeatRequired,
+
+                CreatedAt = ticketType.CreatedAt,
+                CreatedBy = ticketType.CreatedBy,
+
+                UpdatedAt = ticketType.UpdatedAt,
+                UpdatedBy = ticketType.UpdatedBy
+            };
+        }
+
         public async Task<PaginationResponse<TicketTypeResponse>> GetTicketTypesByEventIdAsync(Guid eventId, PaginationRequest<TicketTypeResponse> request)
         {
             var eventExist = await _context.Events
@@ -152,11 +215,59 @@ namespace Eventix.Modules.TicketTypeModule.Services
             return response;
         }
 
+        public async Task<PaginationResponse<TicketTypeResponse>> GetTicketTypesByOrganizerEventAsync(Guid userId, Guid eventId, PaginationRequest<TicketTypeResponse> request)
+        {
+            var organizer = await _context.OrganizerProfiles
+                .FirstOrDefaultAsync(o => o.UserId == userId);
+
+            if (organizer == null)
+                throw new BadRequestException(SystemError.ORGANIZER_NOT_FOUND);
+
+            var eventExist = await _context.Events
+                .FirstOrDefaultAsync(e =>
+                    e.Id == eventId &&
+                    e.OrganizerId == organizer.Id);
+
+            if (eventExist == null)
+                throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
+
+            var ticketTypeResponse = _context.TicketTypes
+                .Where(tt => tt.EventId == eventId && tt.Status == TicketTypeStatus.Active)
+                .OrderBy(tt => tt.Price)
+                .Select(tt => new TicketTypeResponse
+                {
+                    Id = tt.Id,
+                    EventId = tt.EventId,
+                    Name = tt.Name,
+                    Description = tt.Description,
+                    Price = tt.Price,
+                    Quantity = tt.Quantity,
+                    SoldQuantity = tt.SoldQuantity,
+                    ReservedQuantity = tt.ReservedQuantity,
+                    Section = tt.Section,
+                    SaleStartTime = tt.SaleStartTime,
+                    SaleEndTime = tt.SaleEndTime,
+                    IsSeatRequired = tt.IsSeatRequired
+                });
+
+            return await ticketTypeResponse.GetPaged(
+                request.CurrentPage,
+                request.PageSize);
+        }
+
         public async Task<TicketTypeResponse> UpdateTicketTypeAsync(Guid id, UpdateTicketTypeRequest request, Guid userId)
         {
+            var organizer = await _context.OrganizerProfiles
+                .FirstOrDefaultAsync(o => o.UserId == userId);
+
+            if (organizer == null)
+                throw new BadRequestException(SystemError.ORGANIZER_NOT_FOUND);
+
             var ticketType = await _context.TicketTypes
                 .Include(tt => tt.Event)
-                .FirstOrDefaultAsync(tt => tt.Id == id);
+                .FirstOrDefaultAsync(tt =>
+                    tt.Id == id &&
+                    tt.Event.OrganizerId == organizer.Id);
             if (ticketType == null) throw new BadRequestException(SystemError.TICKET_TYPE_NOT_FOUND);
 
             if (request.Price < 0)
@@ -164,6 +275,21 @@ namespace Eventix.Modules.TicketTypeModule.Services
 
             if (request.Quantity <= 0)
                 throw new BadRequestException(SystemError.INVALID_QUANTITY);
+
+            var usedQuantity = ticketType.SoldQuantity + ticketType.ReservedQuantity;
+
+            if (request.Quantity < usedQuantity)
+                throw new BadRequestException(SystemError.QUANTITY_LESS_THAN_USED);
+
+            if (ticketType.IsSeatRequired && !string.IsNullOrWhiteSpace(ticketType.Section))
+            {
+                var sectionSeatCount = await _context.Seats.CountAsync(s =>
+                    s.VenueId == ticketType.Event.VenueId &&
+                    s.Section == ticketType.Section);
+
+                if (request.Quantity > sectionSeatCount)
+                    throw new BadRequestException(SystemError.QUANTITY_EXCEEDS_SECTION_SEATS);
+            }
 
             if (request.SaleStartTime >= request.SaleEndTime)
                 throw new BadRequestException(SystemError.INVALID_SALE_TIME);
@@ -211,6 +337,50 @@ namespace Eventix.Modules.TicketTypeModule.Services
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+
+        public async Task<TicketTypeResponse> DeactivateTicketTypeAsync(Guid id, Guid userId)
+        {
+            var organizer = await _context.OrganizerProfiles
+                .FirstOrDefaultAsync(o => o.UserId == userId);
+
+            if (organizer == null)
+                throw new BadRequestException(SystemError.ORGANIZER_NOT_FOUND);
+
+            var ticketType = await _context.TicketTypes
+                .Include(tt => tt.Event)
+                .FirstOrDefaultAsync(tt =>
+                    tt.Id == id &&
+                    tt.Event.OrganizerId == organizer.Id);
+
+            if (ticketType == null)
+                throw new BadRequestException(SystemError.TICKET_TYPE_NOT_FOUND);
+
+            if (ticketType.SoldQuantity > 0 || ticketType.ReservedQuantity > 0)
+                throw new BadRequestException(SystemError.TICKET_TYPE_CANNOT_DELETE);
+
+            ticketType.Status = SystemConstants.TicketTypeStatus.Inactive;
+            ticketType.UpdatedAt = DateTime.UtcNow;
+            ticketType.UpdatedBy = userId;
+
+            await _context.SaveChangesAsync();
+
+            return new TicketTypeResponse
+            {
+                Id = ticketType.Id,
+                EventId = ticketType.EventId,
+                Name = ticketType.Name,
+                Description = ticketType.Description,
+                Price = ticketType.Price,
+                Quantity = ticketType.Quantity,
+                SoldQuantity = ticketType.SoldQuantity,
+                ReservedQuantity = ticketType.ReservedQuantity,
+                Section = ticketType.Section,
+                SaleStartTime = ticketType.SaleStartTime,
+                SaleEndTime = ticketType.SaleEndTime,
+                IsSeatRequired = ticketType.IsSeatRequired,
+                Status = ticketType.Status
+            };
         }
     }
 }

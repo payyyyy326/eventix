@@ -271,5 +271,16 @@ namespace Eventix.Modules.SeatModule.Services
                 throw;
             }
         }
+
+        public async Task<List<string>> GetSectionsByVenueAsync(Guid venueId)
+        {
+            return await _context.Seats
+                .Where(s => s.VenueId == venueId)
+                .Where(s => !string.IsNullOrWhiteSpace(s.Section))
+                .Select(s => s.Section!)
+                .Distinct()
+                .OrderBy(s => s)
+                .ToListAsync();
+        }
     }
 }

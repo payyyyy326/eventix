@@ -133,6 +133,67 @@ namespace Eventix.Modules.OrganizerModule.Services
 
             return await eventResponse.GetPaged(request.CurrentPage, request.PageSize);
         }
+        public async Task<OrganizerEventDetailResponse> GetOrganizerEventDetailAsync(Guid userId, Guid eventId)
+        {
+            var organizer = await _context.OrganizerProfiles
+                .FirstOrDefaultAsync(o => o.UserId == userId);
+
+            if (organizer == null)
+                throw new BadRequestException(SystemError.ORGANIZER_NOT_FOUND);
+
+            var eventEntity = await _context.Events
+                .Include(e => e.Category)
+                .Include(e => e.Venue)
+                .Include(e => e.TicketTypes)
+                .FirstOrDefaultAsync(e =>
+                    e.Id == eventId &&
+                    e.OrganizerId == organizer.Id);
+
+            if (eventEntity == null)
+                throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
+
+            var totalTickets = eventEntity.TicketTypes.Sum(t => t.Quantity);
+            var ticketsSold = eventEntity.TicketTypes.Sum(t => t.SoldQuantity);
+            var ticketsReserved = eventEntity.TicketTypes.Sum(t => t.ReservedQuantity);
+
+            return new OrganizerEventDetailResponse
+            {
+                Id = eventEntity.Id,
+
+                Title = eventEntity.Title,
+                Slug = eventEntity.Slug,
+
+                Summary = eventEntity.Summary,
+                Description = eventEntity.Description,
+
+                ImageUrl = eventEntity.ImageUrl,
+                BannerUrl = eventEntity.BannerUrl,
+
+                StartTime = eventEntity.StartTime,
+                EndTime = eventEntity.EndTime,
+
+                Status = eventEntity.Status,
+
+                IsFeatured = eventEntity.IsFeatured,
+                ViewCount = eventEntity.ViewCount,
+
+                CategoryName = eventEntity.Category.Name,
+                VenueName = eventEntity.Venue.Name,
+                VenueCity = eventEntity.Venue.City,
+
+                TicketTypeCount = eventEntity.TicketTypes.Count,
+                TotalTickets = totalTickets,
+                TicketsSold = ticketsSold,
+                TicketsReserved = ticketsReserved,
+                TicketsRemaining = totalTickets - ticketsSold - ticketsReserved,
+
+                Revenue = eventEntity.TicketTypes
+                    .Sum(t => t.Price * t.SoldQuantity),
+
+                CreatedAt = eventEntity.CreatedAt,
+                PublishedAt = eventEntity.PublishedAt
+            };
+        }
         public async Task<PaginationResponse<OrganizerProfileResponse>> GetAllAsync(string? status, PaginationRequest<OrganizerProfileResponse> request)
         {
             var organizers = _context.OrganizerProfiles.AsQueryable();
@@ -212,6 +273,30 @@ namespace Eventix.Modules.OrganizerModule.Services
                 ApprovedAt = organizer.ApprovedAt
             };
             return response;
+        }
+        public async Task<List<string>> GetEventSectionsAsync(Guid userId, Guid eventId)
+        {
+            var organizer = await _context.OrganizerProfiles
+                .FirstOrDefaultAsync(o => o.UserId == userId);
+
+            if (organizer == null)
+                throw new BadRequestException(SystemError.ORGANIZER_NOT_FOUND);
+
+            var eventEntity = await _context.Events
+                .FirstOrDefaultAsync(e =>
+                    e.Id == eventId &&
+                    e.OrganizerId == organizer.Id);
+
+            if (eventEntity == null)
+                throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
+
+            return await _context.Seats
+                .Where(s => s.VenueId == eventEntity.VenueId)
+                .Where(s => !string.IsNullOrWhiteSpace(s.Section))
+                .Select(s => s.Section!)
+                .Distinct()
+                .OrderBy(s => s)
+                .ToListAsync();
         }
     }
 }
