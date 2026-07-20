@@ -1,5 +1,7 @@
 ﻿using Eventix.Share.Common.Models;
+using Eventix.Share.Event;
 using Eventix.Share.TicketType;
+using Eventix.Share.VenueZone;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Headers;
 using static Eventix.Share.Common.Constants.SystemConstants;
@@ -24,12 +26,28 @@ namespace Eventix.Web.Controllers
                 return RedirectToAction("Login", "Auth");
 
             var client = _httpClientFactory.CreateClient("Eventix");
-
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
 
+            // Lấy thông tin event để có VenueId
+            var eventResponse = await client.GetFromJsonAsync<
+                ApiResponseModel<OrganizerEventDetailResponse>>(
+                $"api/OrganizerProfile/events/{eventId}");
+
+            if (eventResponse?.Data == null)
+                return RedirectToAction("Events", "Organizer");
+
+            var venueId = eventResponse.Data.VenueId;
+
             ViewBag.EventId = eventId;
-            ViewBag.Sections = await LoadSectionsAsync(client, eventId);
+            ViewBag.Zones = await LoadZonesAsync(client, venueId);
+
+            // Load zone available capacity cho event này (slots còn trống)
+            var capacityResponse = await client.GetFromJsonAsync<
+                ApiResponseModel<List<ZoneAvailableCapacityResponse>>>(
+                $"api/VenueZone/event/{eventId}/zone-capacity");
+
+            ViewBag.ZoneCapacity = capacityResponse?.Data ?? new List<ZoneAvailableCapacityResponse>();
 
             return View(new CreateTicketTypeRequest());
         }
@@ -37,21 +55,31 @@ namespace Eventix.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(Guid eventId, CreateTicketTypeRequest model)
         {
-            if (!ModelState.IsValid)
-            {
-                ViewBag.EventId = eventId;
-                return View(model);
-            }
-
             var token = Request.Cookies[CookieNames.Token];
 
             if (string.IsNullOrWhiteSpace(token))
                 return RedirectToAction("Login", "Auth");
 
             var client = _httpClientFactory.CreateClient("Eventix");
-
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
+
+            if (!ModelState.IsValid)
+            {
+                var eventResp = await client.GetFromJsonAsync<
+                    ApiResponseModel<OrganizerEventDetailResponse>>(
+                    $"api/OrganizerProfile/events/{eventId}");
+
+                ViewBag.EventId = eventId;
+                ViewBag.Zones = await LoadZonesAsync(client, eventResp?.Data?.VenueId ?? Guid.Empty);
+
+                var capResp = await client.GetFromJsonAsync<
+                    ApiResponseModel<List<ZoneAvailableCapacityResponse>>>(
+                    $"api/VenueZone/event/{eventId}/zone-capacity");
+                ViewBag.ZoneCapacity = capResp?.Data ?? new List<ZoneAvailableCapacityResponse>();
+
+                return View(model);
+            }
 
             var response = await client.PostAsJsonAsync(
                 $"api/OrganizerProfile/events/{eventId}/ticket-types",
@@ -62,21 +90,23 @@ namespace Eventix.Web.Controllers
 
             if (!response.IsSuccessStatusCode || result == null || !result.IsSuccess)
             {
+                var eventResp = await client.GetFromJsonAsync<
+                    ApiResponseModel<OrganizerEventDetailResponse>>(
+                    $"api/OrganizerProfile/events/{eventId}");
+
                 ViewBag.EventId = eventId;
+                ViewBag.Zones = await LoadZonesAsync(client, eventResp?.Data?.VenueId ?? Guid.Empty);
 
-                ViewBag.Sections = await LoadSectionsAsync(client, eventId);
+                var capResp = await client.GetFromJsonAsync<
+                    ApiResponseModel<List<ZoneAvailableCapacityResponse>>>(
+                    $"api/VenueZone/event/{eventId}/zone-capacity");
+                ViewBag.ZoneCapacity = capResp?.Data ?? new List<ZoneAvailableCapacityResponse>();
 
-                ModelState.AddModelError(
-                    "",
-                    result?.Message ?? "Cannot create ticket type.");
-
+                ModelState.AddModelError("", result?.Message ?? "Cannot create ticket type.");
                 return View(model);
             }
 
-            return RedirectToAction(
-                "TicketTypes",
-                "Organizer",
-                new { eventId });
+            return RedirectToAction("TicketTypes", "Organizer", new { eventId });
         }
 
         [HttpGet]
@@ -88,7 +118,6 @@ namespace Eventix.Web.Controllers
                 return RedirectToAction("Login", "Auth");
 
             var client = _httpClientFactory.CreateClient("Eventix");
-
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
 
@@ -96,30 +125,26 @@ namespace Eventix.Web.Controllers
                 ApiResponseModel<TicketTypeResponse>>(
                 $"api/OrganizerProfile/ticket-types/{id}");
 
-            if (response == null || response.Data == null)
+            if (response?.Data == null)
                 return RedirectToAction("Events", "Organizer");
 
             var ticket = response.Data;
 
-            ViewBag.EventId = ticket.EventId;
-            ViewBag.Sections = await LoadSectionsAsync(client, ticket.EventId);
-
             var model = new UpdateTicketTypeRequest
             {
-                Name = ticket.Name,
+                Name        = ticket.Name,
                 Description = ticket.Description,
-                Price = ticket.Price,
-                Quantity = ticket.Quantity,
+                Price       = ticket.Price,
+                Quantity    = ticket.Quantity,
                 SaleStartTime = ticket.SaleStartTime,
-                SaleEndTime = ticket.SaleEndTime
+                SaleEndTime   = ticket.SaleEndTime
             };
 
-            ViewBag.TicketTypeId = ticket.Id;
-            ViewBag.EventId = ticket.EventId;
-            ViewBag.Section = ticket.Section;
+            ViewBag.TicketTypeId  = ticket.Id;
+            ViewBag.EventId       = ticket.EventId;
+            ViewBag.ZoneName      = ticket.ZoneName ?? ticket.Section ?? "N/A";
+            ViewBag.HasSeats      = ticket.HasSeats;
             ViewBag.IsSeatRequired = ticket.IsSeatRequired;
-
-            return View(model);
 
             return View(model);
         }
@@ -130,7 +155,7 @@ namespace Eventix.Web.Controllers
             if (!ModelState.IsValid)
             {
                 ViewBag.TicketTypeId = id;
-                ViewBag.EventId = eventId;
+                ViewBag.EventId      = eventId;
                 return View(model);
             }
 
@@ -140,7 +165,6 @@ namespace Eventix.Web.Controllers
                 return RedirectToAction("Login", "Auth");
 
             var client = _httpClientFactory.CreateClient("Eventix");
-
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
 
@@ -154,18 +178,12 @@ namespace Eventix.Web.Controllers
             if (!response.IsSuccessStatusCode || result == null || !result.IsSuccess)
             {
                 ViewBag.TicketTypeId = id;
-                ViewBag.EventId = eventId;
-                ViewBag.Sections = await LoadSectionsAsync(client, eventId);
-
+                ViewBag.EventId      = eventId;
                 ModelState.AddModelError("", result?.Message ?? "Cannot update ticket type.");
-
                 return View(model);
             }
 
-            return RedirectToAction(
-                "TicketTypes",
-                "Organizer",
-                new { eventId });
+            return RedirectToAction("TicketTypes", "Organizer", new { eventId });
         }
 
         [HttpPost]
@@ -177,7 +195,6 @@ namespace Eventix.Web.Controllers
                 return RedirectToAction("Login", "Auth");
 
             var client = _httpClientFactory.CreateClient("Eventix");
-
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
 
@@ -185,35 +202,33 @@ namespace Eventix.Web.Controllers
                 $"api/OrganizerProfile/ticket-types/{id}/deactivate",
                 null);
 
-            var result = await response.Content.ReadFromJsonAsync<ApiResponseModel<TicketTypeResponse>>();
+            var result = await response.Content
+                .ReadFromJsonAsync<ApiResponseModel<TicketTypeResponse>>();
 
             if (!response.IsSuccessStatusCode || result == null || !result.IsSuccess)
-            {
-                TempData["Error"] = result?.Message ?? "Cannot deactivate ticket type.";
-            }
+                TempData["Error"]   = result?.Message ?? "Cannot deactivate ticket type.";
             else
-            {
                 TempData["Success"] = result.Message ?? "Ticket type deactivated successfully.";
-            }
 
-            return RedirectToAction(
-                "TicketTypes",
-                "Organizer",
-                new { eventId });
+            return RedirectToAction("TicketTypes", "Organizer", new { eventId });
         }
 
-        private async Task<List<string>> LoadSectionsAsync(HttpClient client, Guid eventId)
+        // ─── Helpers ────────────────────────────────────────────────────────
+
+        private async Task<List<VenueZoneResponse>> LoadZonesAsync(HttpClient client, Guid venueId)
         {
-            var response = await client.GetAsync(
-                $"api/OrganizerProfile/events/{eventId}/sections");
+            if (venueId == Guid.Empty)
+                return new List<VenueZoneResponse>();
+
+            var response = await client.GetAsync($"api/VenueZone/venue/{venueId}");
 
             if (!response.IsSuccessStatusCode)
-                return new List<string>();
+                return new List<VenueZoneResponse>();
 
-            var result = await response.Content.ReadFromJsonAsync<
-                ApiResponseModel<List<string>>>();
+            var result = await response.Content
+                .ReadFromJsonAsync<ApiResponseModel<List<VenueZoneResponse>>>();
 
-            return result?.Data ?? new List<string>();
+            return result?.Data ?? new List<VenueZoneResponse>();
         }
     }
 }

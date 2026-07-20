@@ -70,6 +70,10 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<Venue> Venues { get; set; }
 
+    public virtual DbSet<VenueSectionLayout> VenueSectionLayouts { get; set; }
+
+    public virtual DbSet<VenueZone> VenueZones { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AuditLog>(entity =>
@@ -683,8 +687,50 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.CreatedBy)
                 .HasConstraintName("FK__Venues__CreatedB__6477ECF3");
         });
+        modelBuilder.Entity<VenueSectionLayout>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__VenueSec__3214EC07ADE50E52");
+
+            entity.HasIndex(e => new { e.VenueId, e.Section }, "IX_VenueSectionLayouts_VenueId_Section").IsUnique();
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Color)
+                .HasMaxLength(20)
+                .HasDefaultValue("#60A5FA");
+            entity.Property(e => e.Section).HasMaxLength(100);
+
+            entity.HasOne(d => d.Venue).WithMany(p => p.VenueSectionLayouts)
+                .HasForeignKey(d => d.VenueId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_VenueSectionLayouts_Venues");
+
+            entity.HasOne(d => d.VenueZone).WithMany(p => p.VenueSectionLayouts)
+                .HasForeignKey(d => d.VenueZoneId)
+                .HasConstraintName("FK_VenueSectionLayouts_VenueZones");
+        });
+
+        modelBuilder.Entity<VenueZone>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__VenueZon__3214EC07543B345D");
+
+            entity.HasIndex(e => new { e.VenueId, e.Name }, "IX_VenueZones_VenueId_Name").IsUnique();
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Color)
+                .HasMaxLength(20)
+                .HasDefaultValue("#60A5FA");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.HasSeats).HasDefaultValue(true);
+            entity.Property(e => e.Name).HasMaxLength(100);
+
+            entity.HasOne(d => d.Venue).WithMany(p => p.VenueZones)
+                .HasForeignKey(d => d.VenueId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_VenueZones_Venues");
+        });
 
         OnModelCreatingPartial(modelBuilder);
+
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);

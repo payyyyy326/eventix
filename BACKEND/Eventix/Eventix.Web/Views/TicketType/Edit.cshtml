@@ -1,127 +1,167 @@
-﻿@model Eventix.Share.TicketType.UpdateTicketTypeRequest
+@model Eventix.Share.TicketType.UpdateTicketTypeRequest
 
 @{
     ViewData["Title"] = "Edit Ticket Type";
     Layout = "_OrganizerLayout";
 
-    var eventId = (Guid)ViewBag.EventId;
-    var ticketTypeId = (Guid)ViewBag.TicketTypeId;
-
-    var seatSection = ViewBag.Section as string ?? "N/A";
-    var isSeatRequired = ViewBag.IsSeatRequired is bool value && value;
+    var eventId       = (Guid)ViewBag.EventId;
+    var ticketTypeId  = (Guid)ViewBag.TicketTypeId;
+    var zoneName      = ViewBag.ZoneName as string ?? "N/A";
+    var hasSeats      = ViewBag.HasSeats is bool b && b;
+    var isSeatRequired = ViewBag.IsSeatRequired is bool sr && sr;
 }
 
 <section class="organizer-page">
+    <div class="wizard-shell">
 
-    <div class="dashboard-header">
-        <div class="page-heading">
-            <a class="back-link"
+        <div class="wizard-top">
+            <a class="wizard-back-link"
                asp-controller="Organizer"
                asp-action="TicketTypes"
                asp-route-eventId="@eventId">
                 ← Back to Ticket Types
             </a>
 
-            <span>Event Management</span>
-            <h1>Edit Ticket Type</h1>
-            <p>Update ticket information. Seat settings cannot be changed after creation.</p>
-        </div>
-    </div>
-
-    <div class="dashboard-panel">
-
-        <div class="ticket-info-readonly">
-            <div>
-                <span>Section</span>
-                <strong>@seatSection</strong>
-            </div>
-
-            <div>
-                <span>Seat Required</span>
-                <strong>@(isSeatRequired ? "Yes" : "No")</strong>
+            <div class="wizard-title">
+                <span>Event Management</span>
+                <h1>Edit Ticket Type</h1>
+                <p>Update ticket information. Zone and seat settings cannot be changed after creation.</p>
             </div>
         </div>
 
-        <form asp-controller="TicketType"
-              asp-action="Edit"
-              asp-route-id="@ticketTypeId"
-              asp-route-eventId="@eventId"
-              method="post"
-              class="ticket-form">
+        <div class="wizard-panel">
 
-            <div asp-validation-summary="ModelOnly"
-                 class="validation">
+            <div class="ticket-type-card mb-4">
+                <div class="ticket-type-card-header">
+                    <div>
+                        <h4>Zone Assignment</h4>
+                        <div class="wizard-meta" style="margin-top:10px;">
+                            <span class="wizard-pill neutral">@zoneName</span>
+                            <span class="wizard-pill @(hasSeats ? "" : "info")">
+                                @(hasSeats ? "Assigned Seating" : "General Admission")
+                            </span>
+                            <span class="wizard-pill @(isSeatRequired ? "" : "neutral")">
+                                Seat Required: @(isSeatRequired ? "Yes" : "No")
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="form-grid">
+            <form asp-controller="TicketType"
+                  asp-action="Edit"
+                  asp-route-id="@ticketTypeId"
+                  asp-route-eventId="@eventId"
+                  method="post">
 
-                <div class="form-group">
-                    <label asp-for="Name">Ticket Name</label>
-                    <input asp-for="Name" />
-                    <span asp-validation-for="Name"></span>
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="validation mb-4"></div>
+
+                <div class="wizard-card ticket-form-section mb-4">
+                    <div class="ticket-form-heading">
+                        <h4>Basic Information</h4>
+                        <p>Update name, price and available quantity.</p>
+                    </div>
+
+                    <div class="wizard-grid-2 mt-3">
+
+                        <div class="form-group">
+                            <label asp-for="Name">Ticket Name</label>
+                            <input asp-for="Name" class="form-control" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="Price">Price</label>
+                            <div class="ticket-price-input">
+                                <input asp-for="Price"
+                                       type="number"
+                                       min="0"
+                                       step="1000"
+                                       class="form-control" />
+                                <span>VND</span>
+                            </div>
+                            <span asp-validation-for="Price" class="text-danger"></span>
+                        </div>
+
+                    </div>
+
+                    <div class="wizard-grid-2 mt-3">
+
+                        <div class="form-group">
+                            <label asp-for="Quantity">Quantity</label>
+                            <input asp-for="Quantity"
+                                   type="number"
+                                   min="1"
+                                   class="form-control" />
+                            <span asp-validation-for="Quantity" class="text-danger"></span>
+                        </div>
+
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label asp-for="Price">Price</label>
-                    <input asp-for="Price"
-                           type="number"
-                           min="0"
-                           step="1000" />
-                    <span asp-validation-for="Price"></span>
+                <div class="wizard-card ticket-form-section mb-4">
+                    <div class="ticket-form-heading">
+                        <h4>Sales Period</h4>
+                        <p>Define when customers can purchase this ticket.</p>
+                    </div>
+
+                    <div class="wizard-grid-2 mt-3">
+
+                        <div class="form-group">
+                            <label asp-for="SaleStartTime">Sale Start</label>
+                            <input asp-for="SaleStartTime"
+                                   type="datetime-local"
+                                   class="form-control" />
+                            <span asp-validation-for="SaleStartTime" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="SaleEndTime">Sale End</label>
+                            <input asp-for="SaleEndTime"
+                                   type="datetime-local"
+                                   class="form-control" />
+                            <span asp-validation-for="SaleEndTime" class="text-danger"></span>
+                        </div>
+
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label asp-for="Quantity">Quantity</label>
-                    <input asp-for="Quantity"
-                           type="number"
-                           min="1" />
-                    <span asp-validation-for="Quantity"></span>
+                <div class="wizard-card ticket-form-section mb-4">
+                    <div class="ticket-form-heading">
+                        <h4>Description</h4>
+                        <p>Describe benefits, access rules or ticket conditions.</p>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label asp-for="Description">Description</label>
+                        <textarea asp-for="Description"
+                                  rows="5"
+                                  class="form-control"
+                                  placeholder="Describe this ticket type..."></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label asp-for="SaleStartTime">Sale Start Time</label>
-                    <input asp-for="SaleStartTime"
-                           type="datetime-local" />
-                    <span asp-validation-for="SaleStartTime"></span>
+                <div class="wizard-actions">
+                    <a asp-controller="Organizer"
+                       asp-action="TicketTypes"
+                       asp-route-eventId="@eventId"
+                       class="wizard-btn-secondary">
+                        Cancel
+                    </a>
+
+                    <button type="submit" class="wizard-btn-primary">
+                        Save Changes
+                    </button>
                 </div>
 
-                <div class="form-group">
-                    <label asp-for="SaleEndTime">Sale End Time</label>
-                    <input asp-for="SaleEndTime"
-                           type="datetime-local" />
-                    <span asp-validation-for="SaleEndTime"></span>
-                </div>
-
-            </div>
-
-            <div class="form-group">
-                <label asp-for="Description">Description</label>
-
-                <textarea asp-for="Description"
-                          rows="5"
-                          placeholder="Describe this ticket type..."></textarea>
-
-                <span asp-validation-for="Description"></span>
-            </div>
-
-            <div class="form-actions">
-                <button type="submit"
-                        class="dashboard-create-btn">
-                    Save Changes
-                </button>
-
-                <a class="secondary-btn"
-                   asp-controller="Organizer"
-                   asp-action="TicketTypes"
-                   asp-route-eventId="@eventId">
-                    Cancel
-                </a>
-            </div>
-
-        </form>
-
+            </form>
+        </div>
     </div>
-
 </section>
 
-<partial name="_ValidationScriptsPartial" />
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

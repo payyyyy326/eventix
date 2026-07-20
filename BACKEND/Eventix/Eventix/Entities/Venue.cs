@@ -25,4 +25,8 @@ public partial class Venue
     public virtual ICollection<Event> Events { get; set; } = new List<Event>();
 
     public virtual ICollection<Seat> Seats { get; set; } = new List<Seat>();
+
+    public virtual ICollection<VenueSectionLayout> VenueSectionLayouts { get; set; } = new List<VenueSectionLayout>();
+
+    public virtual ICollection<VenueZone> VenueZones { get; set; } = new List<VenueZone>();
 }

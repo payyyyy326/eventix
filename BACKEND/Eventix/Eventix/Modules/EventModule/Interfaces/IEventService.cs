@@ -14,5 +14,6 @@ namespace Eventix.Modules.EventModule.Interfaces
         Task<EventBookingResponse> GetEventBookingAsync(Guid eventId);
         Task<EventDetailResponse> UpLoadBannerAsync(Guid eventId, string bannerUrl, Guid organizerId);
         Task<EventDetailResponse> UpLoadImageAsync(Guid eventId, string imageUrl, Guid organizerId);
+        Task<EventResponse> PublishEventAsync(Guid eventId, Guid userId);
     }
 }

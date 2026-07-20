@@ -1,5 +1,6 @@
 ﻿using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Exceptions;
+using Eventix.Common.Helpers;
 using Eventix.Data;
 using Eventix.Entities;
 using Eventix.Extensions;
@@ -50,7 +51,7 @@ namespace Eventix.Modules.EventModule.Services
                     CategoryId = request.CategoryId,
                     VenueId = request.VenueId,
                     Title = request.Title,
-                    Slug = request.Slug,
+                    Slug = await GenerateUniqueSlugAsync(request.Title),
                     Description = request.Description,
                     Summary = request.Summary,
                     ImageUrl = request.ImageUrl,
@@ -482,8 +483,229 @@ namespace Eventix.Modules.EventModule.Services
                 PublishedAt = eventEntity.PublishedAt
             };
         }
+
+        public async Task<EventResponse> PublishEventAsync(Guid eventId, Guid userId)
+        {
+            var eventEntity = await _context.Events
+                .Include(e => e.Venue)
+                .Include(e => e.Category)
+                .Include(e => e.TicketTypes)
+                .FirstOrDefaultAsync(e => e.Id == eventId);
+
+            if (eventEntity == null)
+                throw new NotFoundException(SystemError.EVENT_NOT_FOUND);
+
+            if (eventEntity.CreatedBy != userId)
+                throw new ForbiddenException(SystemError.FORBIDDEN);
+
+            if (eventEntity.StartTime <= DateTime.UtcNow)
+            {
+                throw new BadRequestException(
+                    "The event start time must be in the future.");
+            }
+
+            if (eventEntity.EndTime <= eventEntity.StartTime)
+            {
+                throw new BadRequestException(
+                    "The event end time must be after its start time.");
+            }
+
+            var venueId = eventEntity.VenueId;
+
+            var zones = await _context.VenueZones
+                .Where(z => z.VenueId == venueId)
+                .OrderBy(z => z.SortOrder)
+                .ToListAsync();
+
+            if (zones.Count == 0)
+            {
+                throw new BadRequestException(
+                    "At least one venue zone is required.");
+            }
+
+            /*
+             * Đồng bộ capacity cho các zone có ghế.
+             * Capacity của seated zone phải bằng số ghế thực tế.
+             */
+            foreach (var zone in zones.Where(z => z.HasSeats))
+            {
+                var seatCount = await _context.Seats.CountAsync(s =>
+                    s.VenueId == venueId &&
+                    s.VenueZoneId == zone.Id);
+
+                if (seatCount <= 0)
+                {
+                    throw new BadRequestException(
+                        $"Zone '{zone.Name}' does not have assigned seats.");
+                }
+
+                zone.Capacity = seatCount;
+                zone.UpdatedAt = DateTime.UtcNow;
+            }
+
+            /*
+             * Sau khi đồng bộ seated-zone capacity,
+             * mới kiểm tra tổng capacity của venue.
+             */
+            var totalZoneCapacity = zones.Sum(z => z.Capacity);
+
+            if (totalZoneCapacity > eventEntity.Venue.Capacity)
+            {
+                throw new BadRequestException(
+                    $"Total zone capacity ({totalZoneCapacity}) exceeds " +
+                    $"venue capacity ({eventEntity.Venue.Capacity}).");
+            }
+
+            if (eventEntity.TicketTypes.Count == 0)
+            {
+                throw new BadRequestException(
+                    "At least one ticket type is required.");
+            }
+
+            /*
+             * Kiểm tra từng TicketType.
+             */
+            foreach (var ticketType in eventEntity.TicketTypes)
+            {
+                if (!ticketType.VenueZoneId.HasValue)
+                {
+                    throw new BadRequestException(
+                        $"Ticket type '{ticketType.Name}' has no venue zone.");
+                }
+
+                var zone = zones.FirstOrDefault(z =>
+                    z.Id == ticketType.VenueZoneId.Value);
+
+                if (zone == null)
+                {
+                    throw new BadRequestException(
+                        $"Ticket type '{ticketType.Name}' has an invalid venue zone.");
+                }
+
+                if (ticketType.Quantity <= 0)
+                {
+                    throw new BadRequestException(
+                        $"Ticket type '{ticketType.Name}' has an invalid quantity.");
+                }
+
+                if (ticketType.IsSeatRequired != zone.HasSeats)
+                {
+                    throw new BadRequestException(
+                        $"Ticket type '{ticketType.Name}' does not match " +
+                        $"the seating configuration of zone '{zone.Name}'.");
+                }
+            }
+
+            /*
+             * Kiểm tra tổng quantity của tất cả TicketType trong từng zone.
+             */
+            var ticketGroups = eventEntity.TicketTypes
+                .Where(t => t.VenueZoneId.HasValue)
+                .GroupBy(t => t.VenueZoneId!.Value);
+
+            foreach (var group in ticketGroups)
+            {
+                var zone = zones.FirstOrDefault(z => z.Id == group.Key);
+
+                if (zone == null)
+                {
+                    throw new BadRequestException(
+                        "A ticket type contains an invalid venue zone.");
+                }
+
+                var totalTicketQuantity = group.Sum(t => t.Quantity);
+
+                if (totalTicketQuantity > zone.Capacity)
+                {
+                    throw new BadRequestException(
+                        $"Total ticket quantity in zone '{zone.Name}' " +
+                        $"({totalTicketQuantity}) exceeds its capacity " +
+                        $"({zone.Capacity}).");
+                }
+            }
+
+            /*
+             * Kiểm tra mỗi zone đã có layout trên map.
+             */
+            var mappedZoneIds = await _context.VenueSectionLayouts
+                .Where(layout =>
+                    layout.VenueId == venueId &&
+                    layout.VenueZoneId.HasValue)
+                .Select(layout => layout.VenueZoneId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            var mappedZoneIdSet = mappedZoneIds.ToHashSet();
+
+            var zonesWithoutMap = zones
+                .Where(zone => !mappedZoneIdSet.Contains(zone.Id))
+                .Select(zone => zone.Name)
+                .ToList();
+
+            if (zonesWithoutMap.Count > 0)
+            {
+                throw new BadRequestException(
+                    $"Map layout is missing for: " +
+                    $"{string.Join(", ", zonesWithoutMap)}.");
+            }
+
+            eventEntity.Status = "Published";
+            eventEntity.PublishedAt = DateTime.UtcNow;
+            eventEntity.UpdatedAt = DateTime.UtcNow;
+            eventEntity.UpdatedBy = userId;
+
+            await _context.SaveChangesAsync();
+
+            return new EventResponse
+            {
+                Id = eventEntity.Id,
+
+                Title = eventEntity.Title,
+                Slug = eventEntity.Slug,
+
+                Summary = eventEntity.Summary,
+                ImageUrl = eventEntity.ImageUrl,
+
+                StartTime = eventEntity.StartTime,
+                EndTime = eventEntity.EndTime,
+
+                Status = eventEntity.Status,
+                ViewCount = eventEntity.ViewCount,
+                IsFeatured = eventEntity.IsFeatured,
+
+                CategoryId = eventEntity.CategoryId,
+                CategoryName = eventEntity.Category?.Name,
+
+                VenueId = eventEntity.VenueId,
+                VenueName = eventEntity.Venue?.Name,
+                VenueCity = eventEntity.Venue?.City,
+
+                MinPrice = eventEntity.TicketTypes.Count > 0
+            ? eventEntity.TicketTypes.Min(t => t.Price)
+            : null
+            };
+        }
+        private async Task<string> GenerateUniqueSlugAsync(string title)
+        {
+            var slug = SlugHelper.Generate(title);
+
+            if (string.IsNullOrWhiteSpace(slug))
+            {
+                slug = "event";
+            }
+
+            var originalSlug = slug;
+
+            var index = 2;
+
+            while (await _context.Events.AnyAsync(e => e.Slug == slug))
+            {
+                slug = $"{originalSlug}-{index}";
+                index++;
+            }
+
+            return slug;
+        }
     }
-
-
 }
 

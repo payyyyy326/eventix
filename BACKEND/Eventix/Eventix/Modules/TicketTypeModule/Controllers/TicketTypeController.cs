@@ -33,19 +33,29 @@ namespace Eventix.Modules.TicketTypeModule.Controllers
         [HttpGet("{id}")]
         [AllowAnonymous]
         //GET: api/ticketType/{id}
-        public async Task<ActionResult<ApiResponseModel<TicketTypeResponse>>> GetTicketTypeById([FromQuery] Guid ticketTypeId)
+        public async Task<ActionResult<ApiResponseModel<TicketTypeResponse>>> GetTicketTypeById([FromQuery] Guid id)
         {
-            var response = await _ticketTypeService.GetTicketTypeByIdAsync(ticketTypeId);
+            var response = await _ticketTypeService.GetTicketTypeByIdAsync(id);
             return SuccessResponse(SystemSuccess.TICKET_TYPE_RETRIEVED, response);
         }
 
         [HttpPut("update/{id}")]
         //PUT: api/TicketType/update
-        public async Task<ActionResult<ApiResponseModel<TicketTypeResponse>>> UpdateTicketTypes([FromBody] UpdateTicketTypeRequest request, [FromQuery] Guid eventId)
+        public async Task<ActionResult<ApiResponseModel<TicketTypeResponse>>> UpdateTicketTypes([FromBody] UpdateTicketTypeRequest request, [FromQuery] Guid id)
         {
             var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var response = await _ticketTypeService.UpdateTicketTypeAsync(eventId, request, userId);
+            var response = await _ticketTypeService.UpdateTicketTypeAsync(id, request, userId);
             return SuccessResponse(SystemSuccess.TICKET_TYPE_UPDATED, response);
+        }
+
+        [HttpPost("event/{eventId}")]
+        public async Task<ActionResult<ApiResponseModel<TicketTypeResponse>>> CreateTicketType(Guid eventId, [FromBody] CreateTicketTypeRequest request)
+        {
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var response = await _ticketTypeService.CreateTicketTypeAsync(eventId, request, userId);
+
+            return SuccessResponse(SystemSuccess.TICKET_TYPE_CREATED, response);
         }
     }
 }

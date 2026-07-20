@@ -122,6 +122,9 @@ namespace Eventix.Modules.SeatModule.Services
 
                 var fileSeatKeys = new HashSet<string>();
                 var newSeats = new List<Seat>();
+                var zoneDict = await _context.VenueZones
+                    .Where(z => z.VenueId == venueId)
+                    .ToDictionaryAsync(z => z.Name, z => z);
 
                 for (int rowIndex = 1; rowIndex <= sheet.LastRowNum; rowIndex++)
                 {
@@ -145,10 +148,30 @@ namespace Eventix.Modules.SeatModule.Services
                     var gapYText = ExcelHelper.GetCellValue(row, 7);
                     var status = SystemConstants.SeatStatus.AVAILABLE;
 
-                    if (string.IsNullOrWhiteSpace(section))
+                    var sectionName = section?.Trim();
+
+                    if (string.IsNullOrWhiteSpace(sectionName))
                     {
                         result.Errors.Add($"Dòng {excelRowNumber}: Section không được để trống.");
                         continue;
+                    }
+
+                    if (!zoneDict.TryGetValue(sectionName, out var zone))
+                    {
+                        zone = new VenueZone
+                        {
+                            Id = Guid.NewGuid(),
+                            VenueId = venueId,
+                            Name = sectionName,
+                            HasSeats = true,
+                            Capacity = 0,
+                            Color = "#60A5FA",
+                            SortOrder = zoneDict.Count + 1,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        await _context.VenueZones.AddAsync(zone);
+                        zoneDict.Add(sectionName, zone);
                     }
 
                     var startRow = startRowText?.Trim().ToUpper();
@@ -208,7 +231,7 @@ namespace Eventix.Modules.SeatModule.Services
                         {
                             var seatNumber = n.ToString();
 
-                            var seatKey = SeatHelper.BuildSeatKey(section, seatRow, seatNumber);
+                            var seatKey = SeatHelper.BuildSeatKey(sectionName, seatRow, seatNumber);
 
                             if (!fileSeatKeys.Add(seatKey))
                             {
@@ -227,6 +250,8 @@ namespace Eventix.Modules.SeatModule.Services
                                     continue;
                                 }
 
+                                existingSeat.VenueZoneId = zone.Id;
+                                existingSeat.Section = sectionName;
                                 existingSeat.Xposition = xPosition;
                                 existingSeat.Yposition = yPosition;
                                 existingSeat.Status = status;
@@ -239,7 +264,8 @@ namespace Eventix.Modules.SeatModule.Services
                                 {
                                     Id = Guid.NewGuid(),
                                     VenueId = venueId,
-                                    Section = section,
+                                    VenueZoneId = zone.Id,
+                                    Section = sectionName,
                                     Row = seatRow,
                                     Number = seatNumber,
                                     Xposition = xPosition,
@@ -260,6 +286,25 @@ namespace Eventix.Modules.SeatModule.Services
 
                 result.FailedCount = result.Errors.Count;
 
+                var affectedZoneIds = newSeats
+                    .Where(s => s.VenueZoneId.HasValue)
+                    .Select(s => s.VenueZoneId!.Value)
+                    .Concat(existingSeats
+                        .Where(s => s.VenueZoneId.HasValue)
+                        .Select(s => s.VenueZoneId!.Value))
+                    .Distinct()
+                    .ToList();
+
+                foreach (var zoneId in affectedZoneIds)
+                {
+                    var count = await _context.Seats.CountAsync(s => s.VenueZoneId == zoneId);
+                    var zone = await _context.VenueZones.FirstAsync(z => z.Id == zoneId);
+
+                    zone.HasSeats = true;
+                    zone.Capacity = count;
+                    zone.UpdatedAt = DateTime.UtcNow;
+                }
+
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
@@ -272,15 +317,187 @@ namespace Eventix.Modules.SeatModule.Services
             }
         }
 
-        public async Task<List<string>> GetSectionsByVenueAsync(Guid venueId)
+        public async Task<List<SeatSectionResponse>> GetSectionsByVenueAsync(Guid venueId)
         {
             return await _context.Seats
-                .Where(s => s.VenueId == venueId)
-                .Where(s => !string.IsNullOrWhiteSpace(s.Section))
-                .Select(s => s.Section!)
-                .Distinct()
-                .OrderBy(s => s)
+                .Where(s => s.VenueId == venueId && !string.IsNullOrWhiteSpace(s.Section))
+                .GroupBy(s => s.Section!)
+                .Select(g => new SeatSectionResponse
+                {
+                    Section = g.Key,
+                    SeatCount = g.Count()
+                })
+                .OrderBy(x => x.Section)
                 .ToListAsync();
+        }
+
+        public async Task<ImportSeatResult> GenerateSeatsAsync(Guid venueId, GenerateSeatsRequest request)
+        {
+            var result = new ImportSeatResult
+            {
+                TotalRows = 0,
+                CreatedCount = 0,
+                UpdatedCount = 0,
+                FailedCount = 0,
+                Errors = new List<string>()
+            };
+
+            var venue = await _context.Venues
+                .FirstOrDefaultAsync(v => v.Id == venueId);
+
+            if (venue == null)
+                throw new BadRequestException(SystemError.VENUE_NOT_FOUND);
+
+            var zone = await _context.VenueZones
+                .FirstOrDefaultAsync(z =>
+                    z.Id == request.VenueZoneId &&
+                    z.VenueId == venueId);
+
+            if (zone == null)
+                throw new BadRequestException(SystemError.INVALID_DATA);
+
+            if (!zone.HasSeats)
+                throw new BadRequestException(SystemError.INVALID_DATA);
+
+            var startRow = request.StartRow.Trim().ToUpper();
+            var endRow = request.EndRow.Trim().ToUpper();
+
+            if (!SeatHelper.IsValidRowLabel(startRow) ||
+                !SeatHelper.IsValidRowLabel(endRow))
+            {
+                throw new BadRequestException(SystemError.INVALID_FORMAT);
+            }
+
+            var startRowIndex = SeatHelper.RowLabelToIndex(startRow);
+            var endRowIndex = SeatHelper.RowLabelToIndex(endRow);
+
+            if (startRowIndex > endRowIndex)
+                throw new BadRequestException(SystemError.INVALID_FORMAT);
+
+            if (request.StartNumber <= 0 ||
+                request.EndNumber <= 0 ||
+                request.StartNumber > request.EndNumber)
+            {
+                throw new BadRequestException(SystemError.INVALID_FORMAT);
+            }
+
+            var expectedSeatCount =
+                (endRowIndex - startRowIndex + 1) *
+                (request.EndNumber - request.StartNumber + 1);
+
+            var otherZonesCapacity = await _context.VenueZones
+                .Where(z => z.VenueId == venueId && z.Id != zone.Id)
+                .SumAsync(z => z.Capacity);
+
+            var venueCapacity = await _context.Venues
+                .Where(v => v.Id == venueId)
+                .Select(v => v.Capacity)
+                .FirstAsync();
+
+            if (otherZonesCapacity + expectedSeatCount > venueCapacity)
+                throw new BadRequestException(SystemError.INVALID_QUANTITY);
+
+            if (expectedSeatCount > zone.Capacity)
+            {
+                throw new BadRequestException(SystemError.INVALID_QUANTITY);
+            }
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                var existingSeats = await _context.Seats
+                    .Where(s => s.VenueId == venueId &&
+                                s.VenueZoneId == zone.Id)
+                    .ToListAsync();
+
+                var existingSeatDict = existingSeats.ToDictionary(
+                    s => SeatHelper.BuildSeatKey(s.Section, s.Row, s.Number),
+                    s => s
+                );
+
+                var newSeats = new List<Seat>();
+
+                for (int r = startRowIndex; r <= endRowIndex; r++)
+                {
+                    var rowLabel = SeatHelper.IndexToRowLabel(r);
+
+                    for (int n = request.StartNumber; n <= request.EndNumber; n++)
+                    {
+                        result.TotalRows++;
+
+                        var seatNumber = n.ToString();
+
+                        var seatKey = SeatHelper.BuildSeatKey(
+                            zone.Name,
+                            rowLabel,
+                            seatNumber);
+
+                        var xPosition = request.StartX +
+                            ((n - request.StartNumber) * request.GapX);
+
+                        var yPosition = request.StartY +
+                            ((r - startRowIndex) * request.GapY);
+
+                        if (existingSeatDict.TryGetValue(seatKey, out var existingSeat))
+                        {
+                            if (!request.OverrideExisting)
+                            {
+                                result.Errors.Add($"Seat {zone.Name}-{rowLabel}-{seatNumber} already exists.");
+                                continue;
+                            }
+
+                            existingSeat.Xposition = xPosition;
+                            existingSeat.Yposition = yPosition;
+                            existingSeat.Status = SystemConstants.SeatStatus.AVAILABLE;
+                            existingSeat.Section = zone.Name;
+                            existingSeat.VenueZoneId = zone.Id;
+
+                            result.UpdatedCount++;
+                        }
+                        else
+                        {
+                            newSeats.Add(new Seat
+                            {
+                                Id = Guid.NewGuid(),
+                                VenueId = venueId,
+                                VenueZoneId = zone.Id,
+                                Section = zone.Name,
+                                Row = rowLabel,
+                                Number = seatNumber,
+                                Xposition = xPosition,
+                                Yposition = yPosition,
+                                Status = SystemConstants.SeatStatus.AVAILABLE
+                            });
+
+                            result.CreatedCount++;
+                        }
+                    }
+                }
+
+                if (newSeats.Any())
+                    await _context.Seats.AddRangeAsync(newSeats);
+
+                await _context.SaveChangesAsync();
+
+                zone.Capacity = await _context.Seats
+                    .CountAsync(s => s.VenueZoneId == zone.Id);
+
+                zone.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                result.FailedCount = result.Errors.Count;
+
+                return result;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
     }
 }

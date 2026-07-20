@@ -33,9 +33,14 @@ public partial class TicketType
     public DateTime? UpdatedAt { get; set; }
 
     public Guid? UpdatedBy { get; set; }
+
     public string Status { get; set; } = null!;
+
+    public Guid? VenueZoneId { get; set; }
 
     public virtual Event Event { get; set; } = null!;
 
     public virtual ICollection<EventSeatStatus> EventSeatStatuses { get; set; } = new List<EventSeatStatus>();
+
+    public virtual VenueZone? VenueZone { get; set; }
 }

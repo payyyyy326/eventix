@@ -1,0 +1,535 @@
+﻿@using Eventix.Web.Models.EventWizard
+@model EventTicketTypesViewModel
+
+@{
+    ViewData["Title"] = "Create Event - Step 4";
+    Layout = "_OrganizerLayout";
+
+    var ticketTypes = Model.TicketTypes ?? new();
+    var zones = Model.Zones ?? new();
+
+    var totalTickets = ticketTypes.Sum(t => t.Quantity);
+    var seatedTickets = ticketTypes.Count(t => t.IsSeatRequired);
+    var generalTickets = ticketTypes.Count(t => !t.IsSeatRequired);
+
+    var totalZoneCapacity = zones.Sum(z => z.Capacity);
+}
+
+<section class="organizer-page">
+    <div class="wizard-shell">
+
+        <div class="wizard-top">
+            <a class="wizard-back-link"
+               asp-controller="EventWizard"
+               asp-action="Step3">
+                ← Back to Zones
+            </a>
+
+            <div class="wizard-title">
+                <span>Create Event</span>
+                <h1>Step 4: Ticket Types</h1>
+                <p>
+                    Create ticket types, set prices and assign each ticket
+                    to a venue zone.
+                </p>
+            </div>
+
+            @await Html.PartialAsync("_WizardProgress")
+        </div>
+
+        <div class="wizard-panel">
+
+            <div class="wizard-grid-3 mb-4">
+                <div class="wizard-stat">
+                    <span>Ticket Types</span>
+                    <strong>@ticketTypes.Count</strong>
+                </div>
+
+                <div class="wizard-stat">
+                    <span>Total Tickets</span>
+                    <strong>@totalTickets</strong>
+                </div>
+
+                <div class="wizard-stat">
+                    <span>Seated / General</span>
+                    <strong>@seatedTickets / @generalTickets</strong>
+                </div>
+            </div>
+
+            <div class="wizard-card mb-4">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                        <h3>@(Model.Venue?.Name ?? "Selected Venue")</h3>
+                        <p>@(Model.Venue?.Address ?? "No address")</p>
+                    </div>
+
+                    <span class="wizard-pill info">
+                        @zones.Count zones
+                    </span>
+                </div>
+
+                <div class="wizard-meta">
+                    <span class="wizard-pill">
+                        Zone Capacity: @totalZoneCapacity.ToString("N0")
+                    </span>
+
+                    <span class="wizard-pill neutral">
+                        Tickets Created: @totalTickets.ToString("N0")
+                    </span>
+                </div>
+            </div>
+
+            <div class="wizard-card mb-4">
+                <h3>Add Ticket Type</h3>
+                <p>
+                    Select a zone first. Seat selection will be configured
+                    automatically according to that zone.
+                </p>
+
+                <form asp-controller="EventWizard"
+                      asp-action="AddTicketType"
+                      method="post"
+                      class="mt-4"
+                      id="addTicketTypeForm">
+
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly"
+                         class="text-danger mb-3">
+                    </div>
+
+                    <div class="wizard-card ticket-form-section mb-3">
+                        <div class="ticket-form-heading">
+                            <h4>Basic Information</h4>
+                            <p>Name, venue zone and ticket quantity.</p>
+                        </div>
+
+                        <div class="wizard-grid-2 mt-3">
+                            <div class="form-group">
+                                <label asp-for="NewTicketType.Name">
+                                    Ticket Name
+                                </label>
+
+                                <input asp-for="NewTicketType.Name"
+                                       class="form-control"
+                                       placeholder="VIP Early Bird, Standard, Standing..."
+                                       autocomplete="off" />
+
+                                <span asp-validation-for="NewTicketType.Name"
+                                      class="text-danger">
+                                </span>
+                            </div>
+
+                            <div class="form-group">
+                                <label asp-for="NewTicketType.VenueZoneId">
+                                    Venue Zone
+                                </label>
+
+                                <select asp-for="NewTicketType.VenueZoneId"
+                                        class="form-select"
+                                        id="venueZoneSelect">
+
+                                    <option value="">
+                                        -- Select Zone --
+                                    </option>
+
+                                    @foreach (var zone in zones
+                                                                        .OrderBy(z => z.SortOrder)
+                                                                        .ThenBy(z => z.Name))
+                                    {
+                                        var allocatedQuantity = ticketTypes
+                                        .Where(t => t.VenueZoneId == zone.Id)
+                                        .Sum(t => t.Quantity);
+
+                                        var remainingCapacity =
+                                        Math.Max(0, zone.Capacity - allocatedQuantity);
+
+                                        <option value="@zone.Id"
+                                                data-has-seats="@zone.HasSeats.ToString().ToLowerInvariant()"
+                                                data-capacity="@zone.Capacity"
+                                                data-allocated="@allocatedQuantity"
+                                                data-remaining="@remainingCapacity">
+
+                                            @zone.Name
+                                            -
+                                            @(zone.HasSeats ? "Assigned Seating" : "General Admission")
+                                            -
+                                            Remaining: @remainingCapacity
+                                        </option>
+                                    }
+                                </select>
+
+                                <span asp-validation-for="NewTicketType.VenueZoneId"
+                                      class="text-danger">
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="wizard-grid-2 mt-3">
+                            <div class="form-group">
+                                <label asp-for="NewTicketType.Quantity">
+                                    Quantity
+                                </label>
+
+                                <input asp-for="NewTicketType.Quantity"
+                                       type="number"
+                                       min="1"
+                                       class="form-control"
+                                       placeholder="100"
+                                       id="ticketQuantityInput" />
+
+                                <span asp-validation-for="NewTicketType.Quantity"
+                                      class="text-danger">
+                                </span>
+
+                                <small class="text-muted"
+                                       id="zoneCapacityHint">
+                                    Select a zone to see its remaining capacity.
+                                </small>
+                            </div>
+
+                            <div class="form-group">
+                                <label asp-for="NewTicketType.Price">
+                                    Price
+                                </label>
+
+                                <div class="ticket-price-input">
+                                    <input asp-for="NewTicketType.Price"
+                                           type="number"
+                                           min="0"
+                                           step="1000"
+                                           class="form-control"
+                                           placeholder="500000" />
+
+                                    <span>VND</span>
+                                </div>
+
+                                <span asp-validation-for="NewTicketType.Price"
+                                      class="text-danger">
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-card ticket-form-section mb-3">
+                        <div class="ticket-form-heading">
+                            <h4>Sales Period</h4>
+                            <p>
+                                Define when customers can purchase this ticket.
+                            </p>
+                        </div>
+
+                        <div class="wizard-grid-2 mt-3">
+                            <div class="form-group">
+                                <label asp-for="NewTicketType.SaleStartTime">
+                                    Sale Start
+                                </label>
+
+                                <input asp-for="NewTicketType.SaleStartTime"
+                                       type="datetime-local"
+                                       class="form-control" />
+
+                                <span asp-validation-for="NewTicketType.SaleStartTime"
+                                      class="text-danger">
+                                </span>
+                            </div>
+
+                            <div class="form-group">
+                                <label asp-for="NewTicketType.SaleEndTime">
+                                    Sale End
+                                </label>
+
+                                <input asp-for="NewTicketType.SaleEndTime"
+                                       type="datetime-local"
+                                       class="form-control" />
+
+                                <span asp-validation-for="NewTicketType.SaleEndTime"
+                                      class="text-danger">
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-card ticket-form-section mb-4">
+                        <div class="ticket-form-heading">
+                            <h4>Ticket Details</h4>
+                            <p>
+                                Add an optional description and review
+                                the seating configuration.
+                            </p>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label asp-for="NewTicketType.Description">
+                                Description
+                            </label>
+
+                            <textarea asp-for="NewTicketType.Description"
+                                      rows="4"
+                                      class="form-control"
+                                      placeholder="Describe benefits, access rules or ticket conditions...">
+                            </textarea>
+
+                            <span asp-validation-for="NewTicketType.Description"
+                                  class="text-danger">
+                            </span>
+                        </div>
+
+                        <div class="ticket-seat-status mt-3"
+                             id="ticketSeatStatus">
+
+                            <input asp-for="NewTicketType.IsSeatRequired"
+                                   type="checkbox"
+                                   id="seatRequiredCheckbox"
+                                   hidden />
+
+                            <div>
+                                <span class="wizard-pill neutral"
+                                      id="seatTypeBadge">
+                                    Select a zone
+                                </span>
+
+                                <p id="seatTypeDescription">
+                                    Seating configuration will be determined
+                                    by the selected zone.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                            class="wizard-btn-primary">
+                        + Add Ticket Type
+                    </button>
+                </form>
+            </div>
+
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+                    <div>
+                        <h3 class="text-white mb-1">
+                            Ticket Type Overview
+                        </h3>
+
+                        <p class="text-muted mb-0">
+                            Review all ticket types created for this event.
+                        </p>
+                    </div>
+
+                    <span class="wizard-pill info">
+                        @ticketTypes.Count total
+                    </span>
+                </div>
+
+                @if (!ticketTypes.Any())
+                {
+                    <div class="organizer-empty">
+                        <h2>No ticket types yet</h2>
+                        <p>
+                            Add at least one ticket type before continuing.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="ticket-type-grid">
+                        @foreach (var ticket in ticketTypes
+                                            .OrderBy(t => t.Price)
+                                            .ThenBy(t => t.Name))
+                        {
+                            var zone = zones.FirstOrDefault(
+                            z => z.Id == ticket.VenueZoneId);
+
+                            var priceLabel = ticket.Price <= 0
+                            ? "Free"
+                            : $"{ticket.Price:N0} VND";
+
+                            <article class="ticket-type-card">
+                                <div class="ticket-type-card-header">
+                                    <div>
+                                        <h4>@ticket.Name</h4>
+
+                                        <div class="wizard-meta">
+                                            <span class="wizard-pill
+                                                        @(ticket.IsSeatRequired ? "" : "info")">
+
+                                                @(ticket.IsSeatRequired
+                                                                                        ? "Assigned Seating"
+                                                                                        : "General Admission")
+                                    </span>
+
+                                            <span class="wizard-pill neutral">
+                                                @(zone?.Name ?? "Unknown zone")
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="ticket-type-price">
+                                        <strong>@priceLabel</strong>
+                                        <span>per ticket</span>
+                                    </div>
+                                </div>
+
+                        @if (!string.IsNullOrWhiteSpace(ticket.Description))
+                                {
+                                    <p class="ticket-type-description">
+                                        @ticket.Description
+                                    </p>
+                                }
+
+                                <div class="ticket-type-details">
+                                    <div>
+                                        <span>Quantity</span>
+                                        <strong>@ticket.Quantity.ToString("N0")</strong>
+                                    </div>
+
+                                    <div>
+                                        <span>Zone Capacity</span>
+                                        <strong>@(zone?.Capacity.ToString("N0") ?? "N/A")</strong>
+                                    </div>
+
+                                    <div>
+                                        <span>Sale Start</span>
+                                        <strong>
+                                            @ticket.SaleStartTime.ToString("dd/MM/yyyy HH:mm")
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <span>Sale End</span>
+                                        <strong>
+                                            @ticket.SaleEndTime.ToString("dd/MM/yyyy HH:mm")
+                                        </strong>
+                                    </div>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="wizard-actions">
+                <a asp-controller="EventWizard"
+                   asp-action="Step3"
+                   class="wizard-btn-secondary">
+                    ← Back
+                </a>
+
+                <form asp-controller="EventWizard"
+                      asp-action="Step4Continue"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <button type="submit"
+                            class="wizard-btn-primary"
+                            disabled="@(!ticketTypes.Any())">
+                        Continue to Seats →
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const zoneSelect =
+                document.getElementById("venueZoneSelect");
+
+            const seatRequiredCheckbox =
+                document.getElementById("seatRequiredCheckbox");
+
+            const seatTypeBadge =
+                document.getElementById("seatTypeBadge");
+
+            const seatTypeDescription =
+                document.getElementById("seatTypeDescription");
+
+            const quantityInput =
+                document.getElementById("ticketQuantityInput");
+
+            const capacityHint =
+                document.getElementById("zoneCapacityHint");
+
+            function updateZoneConfiguration() {
+                const selectedOption =
+                    zoneSelect?.options[zoneSelect.selectedIndex];
+
+                if (!selectedOption ||
+                    !selectedOption.value) {
+
+                    seatRequiredCheckbox.checked = false;
+
+                    seatTypeBadge.textContent =
+                        "Select a zone";
+
+                    seatTypeBadge.className =
+                        "wizard-pill neutral";
+
+                    seatTypeDescription.textContent =
+                        "Seating configuration will be determined by the selected zone.";
+
+                    capacityHint.textContent =
+                        "Select a zone to see its remaining capacity.";
+
+                    quantityInput.removeAttribute("max");
+
+                    return;
+                }
+
+                const hasSeats =
+                    selectedOption.dataset.hasSeats === "true";
+
+                const capacity =
+                    Number(selectedOption.dataset.capacity || 0);
+
+                const allocated =
+                    Number(selectedOption.dataset.allocated || 0);
+
+                const remaining =
+                    Number(selectedOption.dataset.remaining || 0);
+
+                seatRequiredCheckbox.checked = hasSeats;
+
+                if (hasSeats) {
+                    seatTypeBadge.textContent =
+                        "Assigned Seating";
+
+                    seatTypeBadge.className =
+                        "wizard-pill";
+
+                    seatTypeDescription.textContent =
+                        "Customers must choose a seat when purchasing this ticket.";
+                } else {
+                    seatTypeBadge.textContent =
+                        "General Admission";
+
+                    seatTypeBadge.className =
+                        "wizard-pill info";
+
+                    seatTypeDescription.textContent =
+                        "Customers choose a quantity without selecting individual seats.";
+                }
+
+                capacityHint.textContent =
+                    `Zone capacity: ${capacity.toLocaleString()} · ` +
+                    `Already allocated: ${allocated.toLocaleString()} · ` +
+                    `Remaining: ${remaining.toLocaleString()}`;
+
+                quantityInput.max = remaining;
+            }
+
+            zoneSelect?.addEventListener(
+                "change",
+                updateZoneConfiguration
+            );
+
+            updateZoneConfiguration();
+        });
+    </script>
+}

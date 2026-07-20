@@ -178,6 +178,7 @@ namespace Eventix.Modules.OrganizerModule.Services
                 ViewCount = eventEntity.ViewCount,
 
                 CategoryName = eventEntity.Category.Name,
+                VenueId = eventEntity.VenueId,
                 VenueName = eventEntity.Venue.Name,
                 VenueCity = eventEntity.Venue.City,
 

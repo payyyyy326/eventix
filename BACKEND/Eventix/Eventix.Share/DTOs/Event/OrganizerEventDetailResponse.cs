@@ -22,6 +22,7 @@
         public int ViewCount { get; set; }
 
         public string CategoryName { get; set; } = string.Empty;
+        public Guid VenueId { get; set; }
         public string VenueName { get; set; } = string.Empty;
         public string VenueCity { get; set; } = string.Empty;
 

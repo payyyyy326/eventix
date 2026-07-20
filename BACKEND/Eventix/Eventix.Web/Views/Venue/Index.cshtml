@@ -1,0 +1,96 @@
+﻿@using Eventix.Share.Venue
+@model List<VenueResponse>
+
+@{
+    ViewData["Title"] = "Venues";
+    Layout = "_OrganizerLayout";
+}
+
+<section class="organizer-page">
+
+    <div class="dashboard-header">
+        <div class="page-heading">
+            <span>Venue Management</span>
+
+            <h1>Venues</h1>
+
+            <p>Manage venues, seats and section maps.</p>
+        </div>
+
+        <a class="dashboard-create-btn"
+           asp-controller="Venue"
+           asp-action="Create">
+            + Create Venue
+        </a>
+    </div>
+
+    <div class="dashboard-panel">
+
+        @if (Model == null || !Model.Any())
+        {
+            <div class="organizer-empty">
+                <h2>No venues yet</h2>
+                <p>Create a venue before setting up seats and events.</p>
+            </div>
+        }
+        else
+        {
+            <div class="ticket-admin-list">
+
+                @foreach (var venue in Model.OrderBy(v => v.Name))
+                {
+                    <div class="ticket-admin-card">
+
+                        <div class="ticket-main">
+                            <div class="ticket-title-row">
+                                <h3>@venue.Name</h3>
+
+                                <span class="ticket-status active">
+                                    @venue.City
+                                </span>
+                            </div>
+
+                            <p>@venue.Address</p>
+
+                            <div class="ticket-admin-meta">
+                                <span>Capacity: @venue.Capacity</span>
+                            </div>
+                        </div>
+
+                        <div class="ticket-admin-side">
+                            <strong>@venue.Capacity.ToString("N0") seats</strong>
+                            <span>@venue.City</span>
+
+                            <div class="ticket-actions">
+                                <a class="ticket-action edit"
+                                   asp-controller="Venue"
+                                   asp-action="Details"
+                                   asp-route-id="@venue.Id">
+                                    Manage
+                                </a>
+
+                                <a class="ticket-action edit"
+                                   asp-controller="Venue"
+                                   asp-action="Edit"
+                                   asp-route-id="@venue.Id">
+                                    Edit
+                                </a>
+
+                                <a class="ticket-action"
+                                   asp-controller="Venue"
+                                   asp-action="SeatMap"
+                                   asp-route-id="@venue.Id">
+                                    Seat Map
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+                }
+
+            </div>
+        }
+
+    </div>
+
+</section>

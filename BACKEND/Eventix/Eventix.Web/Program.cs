@@ -14,6 +14,8 @@ namespace Eventix.Web
                 client.BaseAddress = new Uri("https://localhost:7162/");
             });
 
+            builder.Services.AddSession();
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -30,6 +32,8 @@ namespace Eventix.Web
             app.UseRouting();
 
             app.UseAuthorization();
+
+            app.UseSession();
 
             app.MapControllerRoute(
                 name: "default",

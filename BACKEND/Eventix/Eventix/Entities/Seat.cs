@@ -18,7 +18,11 @@ public partial class Seat
 
     public string Status { get; set; } = null!;
 
+    public Guid? VenueZoneId { get; set; }
+
     public virtual ICollection<EventSeatStatus> EventSeatStatuses { get; set; } = new List<EventSeatStatus>();
 
     public virtual Venue Venue { get; set; } = null!;
+
+    public virtual VenueZone? VenueZone { get; set; }
 }
