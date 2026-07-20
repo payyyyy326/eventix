@@ -38,19 +38,6 @@
 
 ---
 
-## 1. 🔧 SỬA LỖI TRƯỚC KHI LÀM TIẾP (Fix Bugs)
-
-> Xem chi tiết trong `docs/bugs.md`. Cần fix trước để code nền tảng ổn định.
-
-- [ ] **BUG-07** Fix CORS policy tên sai (`AllowWebApp` → `AllowNextApp`)
-- [ ] **BUG-01** Fix operator precedence trong conflict check venue/thời gian
-- [ ] **BUG-02** Fix `gapY` đọc sai cột trong Excel import
-- [ ] **BUG-04** Đổi `SaveChanges()` → `SaveChangesAsync()` tại 3 chỗ trong EventService
-- [ ] **BUG-03** Thêm error code `EMAIL_NOT_VERIFIED`, sửa LoginAsync
-- [ ] **BUG-06** Sửa `RejectAsync` không ghi `ApprovedBy` khi reject
-
----
-
 ## 2. 🛒 MODULE RESERVATION (Giữ chỗ tạm thời)
 
 > **Mục đích:** Tránh oversell khi nhiều người cùng thanh toán. Ghế/vé bị lock tạm trong ~10-15 phút.
