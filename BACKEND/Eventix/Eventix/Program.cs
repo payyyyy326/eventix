@@ -207,7 +207,7 @@ namespace Eventix
             });
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowWebApp", policy =>
+                options.AddPolicy("AllowNextApp", policy =>
                 {
                     policy
                         .WithOrigins("https://localhost:7240")

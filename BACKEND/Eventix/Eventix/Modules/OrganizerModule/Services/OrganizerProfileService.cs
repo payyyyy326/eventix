@@ -28,7 +28,7 @@ namespace Eventix.Modules.OrganizerModule.Services
                 .Include(a => a.Roles)
                 .AnyAsync(x => x.Id == adminId && x.Roles.Any(r => r.Name == RoleConstants.ADMIN));
 
-            if (!admin) throw new BadRequestException(SystemError.UNAUTHORIZED);
+            if (!admin) throw new ForbiddenException(SystemError.UNAUTHORIZED);
 
             var organizerProfile = _context.OrganizerProfiles
                 .FirstOrDefault(x => x.Id == organizerProfileId);

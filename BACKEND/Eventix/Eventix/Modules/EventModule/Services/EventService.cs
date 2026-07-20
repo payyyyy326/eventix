@@ -38,7 +38,7 @@ namespace Eventix.Modules.EventModule.Services
             var categoryExists = await _context.Categories.AnyAsync(x => x.Id == request.CategoryId);
             if (!categoryExists) throw new BadRequestException(SystemError.CATEGORY_NOT_FOUND);
 
-            var eventExist = await _context.Events.FirstOrDefaultAsync(e => ((e.StartTime > request.StartTime && e.StartTime < request.EndTime) || (e.EndTime > request.StartTime && e.EndTime < request.EndTime) && e.Venue.Id == request.VenueId));
+            var eventExist = await _context.Events.FirstOrDefaultAsync(e => ((e.Venue.Id == request.VenueId) && (e.StartTime > request.StartTime && e.StartTime < request.EndTime) || (e.EndTime > request.StartTime && e.EndTime < request.EndTime)));
             if (eventExist != null) throw new BadRequestException(SystemError.EVENT_EXIST);
 
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -383,7 +383,7 @@ namespace Eventix.Modules.EventModule.Services
             eventEntity.UpdatedBy = organizerId;
 
             _context.Events.Update(eventEntity);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             return new EventDetailResponse
             {
@@ -420,7 +420,7 @@ namespace Eventix.Modules.EventModule.Services
             eventEntity.UpdatedAt = DateTime.UtcNow;
             eventEntity.UpdatedBy = organizerId;
             _context.Events.Update(eventEntity);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             return new EventDetailResponse
             {
@@ -457,7 +457,7 @@ namespace Eventix.Modules.EventModule.Services
             eventEntity.UpdatedAt = DateTime.UtcNow;
             eventEntity.UpdatedBy = organizerId;
             _context.Events.Update(eventEntity);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             return new EventDetailResponse
             {

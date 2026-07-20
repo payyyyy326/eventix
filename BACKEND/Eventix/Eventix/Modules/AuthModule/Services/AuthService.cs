@@ -45,10 +45,7 @@ namespace Eventix.Modules.Auth.Services
 
             if (!user.EmailVerified)
             {
-                // In some systems, we might allow login but restrict actions, 
-                // but usually, it's better to force verification.
-                // For this project, let's assume they must verify first.
-                throw new ApiException(SystemError.INVALID_OR_EXPIRED_RESET_TOKEN); // Or a specific "Email not verified" error if added
+                throw new ApiException(SystemError.EMAIL_NOT_VERIFIED);
             }
 
             return await GenerateAuthResponse(user);

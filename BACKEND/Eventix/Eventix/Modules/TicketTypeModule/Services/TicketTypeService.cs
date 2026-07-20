@@ -61,7 +61,7 @@ namespace Eventix.Modules.TicketTypeModule.Services
                 throw new BadRequestException(SystemError.SECTION_NOT_FOUND);
 
             if (!request.IsSeatRequired && zone.HasSeats)
-                throw new BadRequestException(SystemError.INVALID_QUANTITY);
+                throw new BadRequestException(SystemError.INVALID_SECTION);
 
             if (request.Quantity > zone.Capacity)
                 throw new BadRequestException(SystemError.INVALID_QUANTITY);

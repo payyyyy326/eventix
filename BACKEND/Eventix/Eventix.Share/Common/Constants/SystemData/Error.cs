@@ -25,6 +25,7 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage INVALID_REFRESH_TOKEN = new("430", "Invalid refresh token", false);
         public static readonly SystemMessage REFRESH_TOKEN_EXPIRED = new("431", "Refresh token expired", false);
         public static readonly SystemMessage ACCOUNT_NOT_ACTIVE = new("432", "Account not active", false);
+        public static readonly SystemMessage EMAIL_NOT_VERIFIED = new("433", "Email not verified", false);
 
         // Validation Errors (440-459)
         public static readonly SystemMessage EMAIL_REQUIRED = new("440", "Email is required", false);
