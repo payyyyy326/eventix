@@ -98,11 +98,18 @@
                                 Manage
                             </a>
 
-                            <a asp-controller="Organizer"
-                               asp-action="EditEvent"
-                               asp-route-id="@item.Id">
-                                Edit
-                            </a>
+                            @{
+                                var editableStatuses = new[] { "Draft" };
+                                var canEdit = editableStatuses.Contains(item.Status);
+                            }
+                            @if (canEdit)
+                            {
+                                <a asp-controller="Organizer"
+                                   asp-action="EditEvent"
+                                   asp-route-id="@item.Id">
+                                    Edit
+                                </a>
+                            }
                         </div>
 
                     </div>

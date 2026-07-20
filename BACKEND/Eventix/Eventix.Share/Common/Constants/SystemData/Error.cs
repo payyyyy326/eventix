@@ -5,6 +5,7 @@ namespace Eventix.Common.Constants.SystemData
     public class SystemError
     {
         // General Error Messages (400-419)
+        public static readonly SystemMessage FORBIDDEN = new("403", "Forbidden", false);
         public static readonly SystemMessage BAD_REQUEST = new("400", "Bad request", false);
         public static readonly SystemMessage VALIDATION_ERROR = new("401", "Validation error", false);
         public static readonly SystemMessage MISSING_REQUIRED_FIELD = new("402", "Missing required field", false);
@@ -44,6 +45,8 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage SECTION_REQUIRED = new("457", "Section is required when seat is required", false);
         public static readonly SystemMessage QUANTITY_LESS_THAN_USED = new("458", "Quantity cannot be less than sold or reserved tickets.", false);
         public static readonly SystemMessage QUANTITY_EXCEEDS_SECTION_SEATS = new("459", "Quantity cannot exceed the number of seats in this section.", false);
+        public static readonly SystemMessage INVALID_SECTION = new("460", "Invalid section for this venue", false);
+        public static readonly SystemMessage INVALID_DATA = new("461", "Invalid data", false);
 
 
 
@@ -57,6 +60,7 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage ORGANIZER_EXIST = new("466", "User already has an organizer profile.", false);
         public static readonly SystemMessage TICKET_TYPE_EXIST = new("467", "Ticket type with the same name already exists for this event.", false);
         public static readonly SystemMessage EVENT_EXIST = new("468", "Event already existed", false);
+        public static readonly SystemMessage DUPLICATE_DATA = new("469", "Duplicate data found", false);
 
 
         // Not Found Errors (480-499)
@@ -77,6 +81,7 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage EVENT_NOT_FOUND = new("494", "Event not found", false);
         public static readonly SystemMessage TICKET_TYPE_NOT_FOUND = new("495", "Ticket type not found", false);
         public static readonly SystemMessage SECTION_NOT_FOUND = new("496", "Section not found", false);
+        public static readonly SystemMessage ZONE_NOT_FOUND = new("497", "Zone not found", false);
 
 
 

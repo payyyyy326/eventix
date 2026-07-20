@@ -1,5 +1,6 @@
 ﻿@{
     Layout = "_Layout";
+    @await RenderSectionAsync("Scripts", required: false)
 }
 
 <div class="organizer-layout">
@@ -20,8 +21,7 @@
                 My Events
             </a>
 
-            <a asp-controller="Organizer"
-               asp-action="CreateEvent">
+            <a asp-controller="EventWizard" asp-action="Step1">
                 Create Event
             </a>
 

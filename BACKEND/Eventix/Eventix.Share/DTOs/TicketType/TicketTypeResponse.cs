@@ -18,6 +18,11 @@
 
         public int ReservedQuantity { get; set; }
 
+        public Guid? VenueZoneId { get; set; }
+
+        public string? ZoneName { get; set; }
+
+        public bool HasSeats { get; set; }
         public string? Section { get; set; }
 
         public string Status { get; set; } = null!;

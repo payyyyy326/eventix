@@ -21,6 +21,9 @@ using Eventix.Modules.UserModule.Interfaces;
 using Eventix.Modules.UserModule.Service;
 using Eventix.Modules.VenueModule.Interfaces;
 using Eventix.Modules.VenueModule.Services;
+using Eventix.Modules.VenueZoneModule.Interfaces;
+using Eventix.Modules.VenueZoneModule.Services;
+using Eventix.Share.Common.Constants;
 using Eventix.Share.Common.Models;
 using EventTicketingSystem.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -118,7 +121,17 @@ namespace Eventix
                         };
                     });
 
-                builder.Services.AddAuthorization();
+                builder.Services.AddAuthorization(options =>
+                {
+                    options.AddPolicy(
+                        SystemConstants.RoleConstants.ORGANIZER,
+                        policy =>
+                        {
+                            policy.RequireAuthenticatedUser();
+                            policy.RequireRole(
+                                SystemConstants.RoleConstants.ORGANIZER);
+                        });
+                });
             }
 
             builder.Services.AddApplicationHealthChecks(builder.Configuration);
@@ -159,6 +172,7 @@ namespace Eventix
             builder.Services.AddScoped<ITicketTypeService, TicketTypeService>();
             builder.Services.AddScoped<IOrganizerProfileService, OrganizerProfileService>();
             builder.Services.AddScoped<IEventService, EventService>();
+            builder.Services.AddScoped<IVenueZoneService, VenueZoneService>();
             builder.Services.Configure<ApiSettings>(
                 builder.Configuration.GetSection(ApiSettings.SectionName));
 

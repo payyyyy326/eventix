@@ -9,6 +9,7 @@
         public decimal Price { get; set; }
 
         public int Quantity { get; set; }
+        public Guid? VenueZoneId { get; set; }
 
         public string? Section { get; set; }
 

@@ -5,6 +5,7 @@ using Eventix.Entities;
 using Eventix.Extensions;
 using Eventix.Modules.VenueModule.Interfaces;
 using Eventix.Share.Common.Models;
+using Eventix.Share.SeatMap;
 using Eventix.Share.User;
 using Eventix.Share.Venue;
 using Microsoft.EntityFrameworkCore;
@@ -182,6 +183,95 @@ namespace Eventix.Modules.VenueModule.Services
                 throw;
 
             }
+        }
+
+        public async Task<List<VenueSectionLayoutResponse>> GetSeatMapAsync(Guid venueId)
+        {
+            var venueExists = await _context.Venues.AnyAsync(v => v.Id == venueId);
+
+            if (!venueExists)
+                throw new BadRequestException(SystemError.VENUE_NOT_FOUND);
+
+            return await _context.VenueSectionLayouts
+                .Where(x => x.VenueId == venueId)
+                .OrderBy(x => x.Section)
+                .Select(x => new VenueSectionLayoutResponse
+                {
+                    Id = x.Id,
+                    VenueId = x.VenueId,
+                    Section = x.Section,
+                    X = x.X,
+                    Y = x.Y,
+                    Width = x.Width,
+                    Height = x.Height,
+                    Color = x.Color
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<VenueSectionLayoutResponse>> SaveSeatMapAsync(Guid venueId, List<VenueSectionLayoutRequest> request, Guid userId)
+        {
+            var venue = await _context.Venues.FirstOrDefaultAsync(v => v.Id == venueId);
+
+            if (venue == null)
+                throw new BadRequestException(SystemError.VENUE_NOT_FOUND);
+
+            var zones = await _context.VenueZones
+                .Where(z => z.VenueId == venueId)
+                .ToListAsync();
+
+            foreach (var item in request)
+            {
+                var zone = zones.FirstOrDefault(z =>
+                    z.Name == item.Section);
+
+                if (zone == null)
+                    throw new BadRequestException(SystemError.INVALID_SECTION);
+            }
+
+            var oldLayouts = await _context.VenueSectionLayouts
+                .Where(x => x.VenueId == venueId)
+                .ToListAsync();
+
+            _context.VenueSectionLayouts.RemoveRange(oldLayouts);
+
+            var layouts = request.Select(x =>
+            {
+                var zone = zones.First(z => z.Name == x.Section);
+
+                return new VenueSectionLayout
+                {
+                    Id = Guid.NewGuid(),
+                    VenueId = venueId,
+                    VenueZoneId = zone.Id,
+                    Section = zone.Name,
+                    X = x.X,
+                    Y = x.Y,
+                    Width = x.Width,
+                    Height = x.Height,
+                    Color = x.Color,
+                    CreatedAt = DateTime.UtcNow
+                };
+            }).ToList();
+
+            await _context.VenueSectionLayouts.AddRangeAsync(layouts);
+
+            venue.UpdatedAt = DateTime.UtcNow;
+            venue.UpdatedBy = userId;
+
+            await _context.SaveChangesAsync();
+
+            return layouts.Select(x => new VenueSectionLayoutResponse
+            {
+                Id = x.Id,
+                VenueId = x.VenueId,
+                Section = x.Section,
+                X = x.X,
+                Y = x.Y,
+                Width = x.Width,
+                Height = x.Height,
+                Color = x.Color
+            }).ToList();
         }
     }
 }

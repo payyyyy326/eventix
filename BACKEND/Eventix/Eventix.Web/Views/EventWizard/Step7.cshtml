@@ -1,0 +1,675 @@
+﻿@using Eventix.Web.Models.EventWizard
+@model EventReviewViewModel
+
+@{
+    ViewData["Title"] = "Create Event - Review & Publish";
+    Layout = "_OrganizerLayout";
+
+    var eventData = Model.EventInfo;
+    var venue = Model.Venue;
+
+    var zones = Model.Zones ?? new();
+    var ticketTypes = Model.TicketTypes ?? new();
+    var seatStatuses = Model.SeatStatuses ?? new();
+
+    var categoryName = eventData?.Categories?
+        .FirstOrDefault(x => x.Id == eventData.CategoryId)?.Name
+        ?? "N/A";
+}
+
+<section class="organizer-page">
+    <div class="wizard-shell">
+
+        <div class="wizard-top">
+            <a class="wizard-back-link"
+               asp-controller="EventWizard"
+               asp-action="Step6">
+                ← Back to Venue Map
+            </a>
+
+            <div class="wizard-title">
+                <span>Create Event</span>
+
+                <h1>Step 7: Review & Publish</h1>
+
+                <p>
+                    Review all event information and resolve any missing
+                    details before publishing.
+                </p>
+            </div>
+
+            @await Html.PartialAsync("_WizardProgress")
+        </div>
+
+        <div class="wizard-panel">
+
+            <div class="wizard-grid-3 mb-4">
+                <div class="wizard-stat">
+                    <span>Venue Zones</span>
+                    <strong>@zones.Count</strong>
+                </div>
+
+                <div class="wizard-stat">
+                    <span>Zone Capacity</span>
+                    <strong>
+                        @Model.TotalZoneCapacity.ToString("N0")
+                        /
+                        @(venue?.Capacity.ToString("N0") ?? "0")
+                    </strong>
+                </div>
+
+                <div class="wizard-stat">
+                    <span>Ticket Quantity</span>
+                    <strong>
+                        @Model.TotalTicketQuantity.ToString("N0")
+                    </strong>
+                </div>
+            </div>
+
+            <!-- Event Information -->
+            <section class="wizard-review-section">
+                <div class="wizard-review-header">
+                    <div>
+                        <h3>Event Information</h3>
+                        <p>
+                            Basic event details entered in Step 1.
+                        </p>
+                    </div>
+
+                    <a asp-controller="EventWizard"
+                       asp-action="Step1"
+                       class="wizard-btn-secondary">
+                        Edit
+                    </a>
+                </div>
+
+                @if (eventData == null)
+                {
+                    <div class="organizer-empty">
+                        <h2>Event information unavailable</h2>
+                        <p>
+                            Return to Step 1 and complete the event details.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="wizard-review-grid">
+                        <div class="wizard-review-item">
+                            <span class="wizard-review-label">
+                                Event title
+                            </span>
+
+                            <div class="wizard-review-value">
+                                @eventData.Title
+                            </div>
+                        </div>
+
+                        <div class="wizard-review-item">
+                            <span class="wizard-review-label">
+                                Category
+                            </span>
+
+                            <div class="wizard-review-value">
+                                @categoryName
+                            </div>
+                        </div>
+
+                        <div class="wizard-review-item">
+                            <span class="wizard-review-label">
+                                Start time
+                            </span>
+
+                            <div class="wizard-review-value">
+                                @eventData.StartTime.ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                        </div>
+
+                        <div class="wizard-review-item">
+                            <span class="wizard-review-label">
+                                End time
+                            </span>
+
+                            <div class="wizard-review-value">
+                                @eventData.EndTime.ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                        </div>
+
+                        <div class="wizard-review-item">
+                            <span class="wizard-review-label">
+                                Summary
+                            </span>
+
+                            <div class="wizard-review-value">
+                                @(string.IsNullOrWhiteSpace(eventData.Summary)
+                                                            ? "No summary"
+                                                            : eventData.Summary)
+                        </div>
+                    </div>
+
+                        <div class="wizard-review-item">
+                            <span class="wizard-review-label">
+                                Duration
+                            </span>
+
+                            <div class="wizard-review-value">
+                            @{
+                                    var duration =
+                                    eventData.EndTime -
+                                    eventData.StartTime;
+                                }
+
+                            @($"{duration.TotalHours:0.#} hours")
+                        </div>
+                    </div>
+                </div>
+
+                <div class="wizard-review-item mt-3">
+                    <span class="wizard-review-label">
+                        Description
+                    </span>
+
+                    <div class="wizard-review-value">
+                        @(string.IsNullOrWhiteSpace(eventData.Description)
+                                                ? "No description"
+                                                : eventData.Description)
+                    </div>
+                </div>
+                                }
+            </section>
+
+            <!-- Venue -->
+            <section class="wizard-review-section">
+                <div class="wizard-review-header">
+                    <div>
+                        <h3>Venue</h3>
+                        <p>
+                            Selected venue and maximum capacity.
+                        </p>
+                    </div>
+
+                    <a asp-controller="EventWizard"
+                       asp-action="Step2"
+                       class="wizard-btn-secondary">
+                        Edit
+                    </a>
+                </div>
+
+                @if (venue == null)
+                {
+                    <div class="organizer-empty">
+                        <h2>Venue unavailable</h2>
+                        <p>
+                            Return to Step 2 and select a venue.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="wizard-review-grid">
+                        <div class="wizard-review-item">
+                            <span class="wizard-review-label">
+                                Venue name
+                            </span>
+
+                            <div class="wizard-review-value">
+                                @venue.Name
+                            </div>
+                        </div>
+
+                        <div class="wizard-review-item">
+                            <span class="wizard-review-label">
+                                Maximum capacity
+                            </span>
+
+                            <div class="wizard-review-value">
+                                @venue.Capacity.ToString("N0")
+                            </div>
+                        </div>
+
+                        <div class="wizard-review-item">
+                            <span class="wizard-review-label">
+                                Address
+                            </span>
+
+                            <div class="wizard-review-value">
+                                @(string.IsNullOrWhiteSpace(venue.Address)
+                                                            ? "No address"
+                                                            : venue.Address)
+                                                                        </div>
+                                                                    </div>
+
+                        <div class="wizard-review-item">
+                            <span class="wizard-review-label">
+                                City
+                            </span>
+
+                            <div class="wizard-review-value">
+                                @(string.IsNullOrWhiteSpace(venue.City)
+                                                            ? "N/A"
+                                                            : venue.City)
+                        </div>
+                    </div>
+                </div>
+                                }
+            </section>
+
+            <!-- Venue Zones -->
+            <section class="wizard-review-section">
+                <div class="wizard-review-header">
+                    <div>
+                        <h3>Venue Zones</h3>
+                        <p>
+                            Seating and general admission areas.
+                        </p>
+                    </div>
+
+                    <a asp-controller="EventWizard"
+                       asp-action="Step3"
+                       class="wizard-btn-secondary">
+                        Edit
+                    </a>
+                </div>
+
+                @if (!zones.Any())
+                {
+                    <div class="organizer-empty">
+                        <h2>No venue zones</h2>
+                        <p>
+                            Create at least one venue zone before publishing.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="wizard-grid-3">
+                        @foreach (var zone in zones
+                                            .OrderBy(z => z.SortOrder)
+                                            .ThenBy(z => z.Name))
+                        {
+                            <article class="wizard-section-card">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <h4>@zone.Name</h4>
+
+                                        <div class="wizard-meta">
+                                            <span class="wizard-pill
+                                                        @(zone.HasSeats ? "" : "info")">
+
+                                                @(zone.HasSeats
+                                                                                        ? "Assigned Seating"
+                                                                                        : "General Admission")
+                                    </span>
+                                </div>
+                            </div>
+
+                                    <span class="review-zone-color"
+                                          style="background:@(string.IsNullOrWhiteSpace(zone.Color)
+                                                                                ? "#60A5FA"
+                                                                                : zone.Color);">
+                            </span>
+                        </div>
+
+                                <div class="review-zone-capacity">
+                                    <span>Capacity</span>
+
+                                    <strong>
+                                        @zone.Capacity.ToString("N0")
+                                    </strong>
+                                </div>
+
+                        @if (zone.HasSeats)
+                                {
+                                    <small class="text-muted">
+                                        @zone.SeatCount.ToString("N0")
+                                        generated or imported seats
+                                    </small>
+                                }
+                                else
+                                {
+                                    <small class="text-muted">
+                                        Quantity-based admission
+                                    </small>
+                                }
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+
+            <!-- Ticket Types -->
+            <section class="wizard-review-section">
+                <div class="wizard-review-header">
+                    <div>
+                        <h3>Ticket Types</h3>
+                        <p>
+                            Prices, quantities and venue-zone assignments.
+                        </p>
+                    </div>
+
+                    <a asp-controller="EventWizard"
+                       asp-action="Step4"
+                       class="wizard-btn-secondary">
+                        Edit
+                    </a>
+                </div>
+
+                @if (!ticketTypes.Any())
+                {
+                    <div class="organizer-empty">
+                        <h2>No ticket types</h2>
+                        <p>
+                            Add at least one ticket type before publishing.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Ticket</th>
+                                    <th>Zone</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Admission</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @foreach (var ticket in ticketTypes
+                                                            .OrderBy(t => t.Price)
+                                                            .ThenBy(t => t.Name))
+                                {
+                                    var ticketZone =
+                                    zones.FirstOrDefault(
+                                    z => z.Id ==
+                                    ticket.VenueZoneId);
+
+                                    <tr>
+                                        <td>
+                                            <strong>
+                                                @ticket.Name
+                                            </strong>
+                                        </td>
+
+                                        <td>
+                                            @(ticketZone?.Name
+                                                                                ?? ticket.Section
+                                                                                ?? "N/A")
+                                </td>
+
+                                        <td>
+                                    @if (ticket.Price <= 0)
+                                            {
+                                                <span class="wizard-pill">
+                                                    Free
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <strong>
+                                                    @ticket.Price.ToString("N0")
+                                                    VND
+                                                </strong>
+                                            }
+                                    </td>
+
+                                    <td>
+                                        @ticket.Quantity.ToString("N0")
+                                    </td>
+
+                                    <td>
+                                        <span class="wizard-pill
+                                                    @(ticket.IsSeatRequired
+                                                                                                  ? ""
+                                                                                                  : "info")">
+
+                                            @(ticket.IsSeatRequired
+                                                                                    ? "Assigned Seating"
+                                                                                    : "General Admission")
+                                    </span>
+                                </td>
+                            </tr>
+                                                        }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+
+            <!-- Seat Assignment -->
+            <section class="wizard-review-section">
+                <div class="wizard-review-header">
+                    <div>
+                        <h3>Seat Assignment</h3>
+                        <p>
+                            Seat generation and import status.
+                        </p>
+                    </div>
+
+                    <a asp-controller="EventWizard"
+                       asp-action="Step5"
+                       class="wizard-btn-secondary">
+                        Edit
+                    </a>
+                </div>
+
+                @if (!seatStatuses.Any())
+                {
+                    <div class="organizer-empty">
+                        <h2>No seat status available</h2>
+                        <p>
+                            Return to Step 5 and verify seat assignment.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="wizard-grid-3">
+                        @foreach (var status in seatStatuses)
+                        {
+                            <article class="wizard-section-card">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <h4>@status.ZoneName</h4>
+
+                                    @if (!status.HasSeats)
+                                    {
+                                        <span class="wizard-pill info">
+                                            Not required
+                                        </span>
+                                    }
+                                    else if (status.Completed)
+                                    {
+                                        <span class="wizard-pill">
+                                            Completed
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="wizard-pill danger">
+                                            Incomplete
+                                        </span>
+                                    }
+                                </div>
+
+                                @if (!status.HasSeats)
+                                {
+                                    <div class="review-zone-capacity">
+                                        <span>Capacity</span>
+
+                                        <strong>
+                                            @status.Capacity.ToString("N0")
+                                        </strong>
+                                    </div>
+
+                                    <small class="text-muted">
+                                        General admission zone
+                                    </small>
+                                }
+                                else
+                                {
+                                    <div class="review-zone-capacity">
+                                        <span>Assigned seats</span>
+
+                                        <strong>
+                                            @status.SeatCount.ToString("N0")
+                                        </strong>
+                                    </div>
+
+                                    <small class="text-muted">
+                                        Expected capacity:
+                                        @status.Capacity.ToString("N0")
+                                    </small>
+                                }
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+
+            <!-- Venue Map -->
+            <section class="wizard-review-section">
+                <div class="wizard-review-header">
+                    <div>
+                        <h3>Venue Map</h3>
+                        <p>
+                            Position and dimensions of each venue zone.
+                        </p>
+                    </div>
+
+                    <a asp-controller="EventWizard"
+                       asp-action="Step6"
+                       class="wizard-btn-secondary">
+                        Edit
+                    </a>
+                </div>
+
+                <div class="review-map-status
+                            @(Model.HasSavedMap ? "saved" : "missing")">
+
+                    <div class="review-map-icon">
+                        @(Model.HasSavedMap ? "✓" : "!")
+                    </div>
+
+                    <div>
+                        <strong>
+                            @(Model.HasSavedMap
+                                                        ? "Venue map saved"
+                                                        : "Venue map not saved")
+                        </strong>
+
+                        <p>
+                            @(Model.HasSavedMap
+                                                        ? "All current zone positions are stored."
+                                                        : "Return to Step 6 and save the venue map.")
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+           
+
+            @if (!Model.CanPublish)
+            {
+                <div class="publish-warning mb-4">
+                    <strong>Event cannot be published yet</strong>
+
+                    <ul>
+                        @if (Model.EventInfo == null)
+                        {
+                            <li>Event information is missing.</li>
+                        }
+
+                        @if (Model.Venue == null)
+                        {
+                            <li>A venue has not been selected.</li>
+                        }
+
+                        @if (!Model.HasZones)
+                        {
+                            <li>Create at least one venue zone.</li>
+                        }
+
+                        @if (!Model.HasTicketTypes)
+                        {
+                            <li>Create at least one ticket type.</li>
+                        }
+
+                        @if (!Model.AllSeatedZonesCompleted)
+                        {
+                            <li>
+                                Generate or import seats for every seated zone.
+                            </li>
+                        }
+
+                        @if (!Model.CapacityIsValid)
+                        {
+                            <li>
+                                Total zone capacity exceeds venue capacity.
+                            </li>
+                        }
+
+                        @if (!Model.HasSavedMap)
+                        {
+                            <li>Save the venue map layout.</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <div class="wizard-actions">
+                <a asp-controller="EventWizard"
+                   asp-action="Step6"
+                   class="wizard-btn-secondary">
+                    ← Back
+                </a>
+
+                <form asp-controller="EventWizard"
+                      asp-action="Publish"
+                      method="post"
+                      id="publishEventForm">
+
+                    @Html.AntiForgeryToken()
+
+                    <button type="submit"
+                            class="wizard-btn-primary"
+                            id="publishEventButton"
+                            disabled="@(!Model.CanPublish)">
+                        Publish Event
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const form =
+                document.getElementById("publishEventForm");
+
+            const button =
+                document.getElementById("publishEventButton");
+
+            form?.addEventListener("submit", function (event) {
+                const confirmed = window.confirm(
+                    "Publish this event now? It will become visible to customers."
+                );
+
+                if (!confirmed) {
+                    event.preventDefault();
+                    return;
+                }
+
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = "Publishing...";
+                }
+            });
+        });
+    </script>
+}

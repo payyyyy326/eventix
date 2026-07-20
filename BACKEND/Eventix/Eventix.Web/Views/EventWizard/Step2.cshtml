@@ -1,0 +1,389 @@
+﻿@using Eventix.Web.Models.EventWizard
+@model EventVenueViewModel
+
+@{
+    ViewData["Title"] = "Create Event - Step 2";
+    Layout = "_OrganizerLayout";
+
+    var currentMode = string.IsNullOrWhiteSpace(Model.Mode)
+        ? "select"
+        : Model.Mode;
+
+    var selectedVenueId = Model.SelectedVenueId;
+}
+
+<section class="organizer-page">
+    <div class="wizard-shell">
+
+        <div class="wizard-top">
+            <a class="wizard-back-link"
+               asp-controller="EventWizard"
+               asp-action="Step1">
+                ← Back to Event Info
+            </a>
+
+            <div class="wizard-title">
+                <span>Create Event</span>
+
+                <h1>Step 2: Venue</h1>
+
+                <p>
+                    Choose an existing venue or create a new venue
+                    for your event.
+                </p>
+            </div>
+
+            @await Html.PartialAsync("_WizardProgress")
+        </div>
+
+        <div class="wizard-panel">
+
+            <form asp-controller="EventWizard"
+                  asp-action="Step2"
+                  method="post"
+                  id="venueForm">
+
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly"
+                     class="text-danger mb-4">
+                </div>
+
+                <div class="wizard-card mb-4">
+                    <h3>Venue Option</h3>
+
+                    <div class="venue-mode-tabs mt-3"
+                         role="tablist"
+                         aria-label="Venue option">
+
+                        <label class="venue-mode-tab"
+                               data-mode="select">
+
+                            <input type="radio"
+                                   asp-for="Mode"
+                                   value="select"
+                                   id="modeSelect" />
+
+                            <span class="venue-mode-tab-title">
+                                Existing Venue
+                            </span>
+
+                            <small>
+                                Choose from your available venue list.
+                            </small>
+                        </label>
+
+                        <label class="venue-mode-tab"
+                               data-mode="create">
+
+                            <input type="radio"
+                                   asp-for="Mode"
+                                   value="create"
+                                   id="modeCreate" />
+
+                            <span class="venue-mode-tab-title">
+                                Create New Venue
+                            </span>
+
+                            <small>
+                                Add a new location for this event.
+                            </small>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="selectVenueBox">
+                    <div class="wizard-card mb-4">
+                        <div class="venue-section-header">
+                            <div>
+                                <h3>Select Venue</h3>
+
+                                <p>
+                                </p>
+                            </div>
+
+                            <span class="wizard-pill info">
+                                @(Model.Venues?.Count ?? 0) venues
+                            </span>
+                        </div>
+
+                        @if (Model.Venues == null ||
+                                                !Model.Venues.Any())
+                        {
+                            <div class="organizer-empty mt-3">
+                                <h2>No venues available</h2>
+
+                                <p>
+                                    Switch to “Create New Venue”
+                                    to add your first venue.
+                                </p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="venue-selection-list mt-3">
+                                @foreach (var venue in Model.Venues)
+                                {
+                                    var isSelected =
+                                    selectedVenueId == venue.Id;
+
+                                    <label class="venue-selection-card
+                                                          @(isSelected ? "selected" : "")">
+
+                                        <input type="radio"
+                                               asp-for="SelectedVenueId"
+                                               value="@venue.Id"
+                                               class="venue-radio" />
+
+                                        <div class="venue-selection-content">
+                                            <div class="venue-selection-top">
+                                                <div>
+                                                    <h4>@venue.Name</h4>
+
+                                                    <p>
+                                                        @venue.Address
+                                                    </p>
+                                                </div>
+
+                                                <span class="wizard-pill">
+                                                    @(string.IsNullOrWhiteSpace(venue.City)
+                                                                                                ? "Unknown city"
+                                                                                                : venue.City)
+                                        </span>
+                                    </div>
+
+                                            <div class="venue-selection-meta">
+                                                <span>
+                                                    Capacity
+                                                    <strong>
+                                                        @venue.Capacity.ToString("N0")
+                                                    </strong>
+                                                </span>
+
+                                            </div>
+                                        </div>
+
+                                        <span class="venue-selection-check">
+                                            ✓
+                                        </span>
+                                    </label>
+                                                        }
+                            </div>
+
+                            <span asp-validation-for="SelectedVenueId"
+                                  class="text-danger">
+                            </span>
+                        }
+                    </div>
+                </div>
+
+                <div id="createVenueBox">
+                    <div class="wizard-card mb-4">
+                        <h3>Create New Venue</h3>
+
+                        <p>
+                        </p>
+
+                        <div class="wizard-grid-2 mt-3">
+                            <div class="form-group">
+                                <label asp-for="NewVenue.Name">
+                                    Venue Name
+                                </label>
+
+                                <input asp-for="NewVenue.Name"
+                                       class="form-control"
+                                       placeholder="Example: National Convention Center"
+                                       autocomplete="off" />
+
+                                <span asp-validation-for="NewVenue.Name"
+                                      class="text-danger">
+                                </span>
+                            </div>
+
+                            <div class="form-group">
+                                <label asp-for="NewVenue.City">
+                                    City
+                                </label>
+
+                                <input asp-for="NewVenue.City"
+                                       class="form-control"
+                                       placeholder="Example: Hanoi"
+                                       autocomplete="address-level2" />
+
+                                <span asp-validation-for="NewVenue.City"
+                                      class="text-danger">
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label asp-for="NewVenue.Address">
+                                Address
+                            </label>
+
+                            <input asp-for="NewVenue.Address"
+                                   class="form-control"
+                                   placeholder="Street, district, city"
+                                   autocomplete="street-address" />
+
+                            <span asp-validation-for="NewVenue.Address"
+                                  class="text-danger">
+                            </span>
+                        </div>
+
+                        <div class="wizard-grid-2 mt-3">
+                            <div class="form-group">
+                                <label asp-for="NewVenue.Capacity">
+                                    Maximum Capacity
+                                </label>
+
+                                <input asp-for="NewVenue.Capacity"
+                                       type="number"
+                                       min="1"
+                                       class="form-control"
+                                       placeholder="Example: 3000" />
+
+                                <span asp-validation-for="NewVenue.Capacity"
+                                      class="text-danger">
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="wizard-actions">
+                    <a asp-controller="EventWizard"
+                       asp-action="Step1"
+                       class="wizard-btn-secondary">
+                        ← Back
+                    </a>
+
+                    <button type="submit"
+                            class="wizard-btn-primary"
+                            id="continueVenueButton">
+                        Continue to Zones →
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const selectBox =
+                document.getElementById("selectVenueBox");
+
+            const createBox =
+                document.getElementById("createVenueBox");
+
+            const modeRadios =
+                document.querySelectorAll(
+                    "input[name='Mode']"
+                );
+
+            const modeTabs =
+                document.querySelectorAll(
+                    ".venue-mode-tab"
+                );
+
+            const venueCards =
+                document.querySelectorAll(
+                    ".venue-selection-card"
+                );
+
+            function getSelectedMode() {
+                const selected =
+                    document.querySelector(
+                        "input[name='Mode']:checked"
+                    );
+
+                return selected?.value || "select";
+            }
+
+            function updateMode() {
+                const mode = getSelectedMode();
+
+                selectBox.style.display =
+                    mode === "select"
+                        ? "block"
+                        : "none";
+
+                createBox.style.display =
+                    mode === "create"
+                        ? "block"
+                        : "none";
+
+                modeTabs.forEach(tab => {
+                    tab.classList.toggle(
+                        "active",
+                        tab.dataset.mode === mode
+                    );
+                });
+
+                toggleModeInputs(mode);
+            }
+
+            function toggleModeInputs(mode) {
+                const createInputs =
+                    createBox.querySelectorAll(
+                        "input, select, textarea"
+                    );
+
+                createInputs.forEach(input => {
+                    input.disabled =
+                        mode !== "create";
+                });
+
+                const venueRadios =
+                    selectBox.querySelectorAll(
+                        "input[name='SelectedVenueId']"
+                    );
+
+                venueRadios.forEach(input => {
+                    input.disabled =
+                        mode !== "select";
+                });
+            }
+
+            function updateSelectedVenue() {
+                venueCards.forEach(card => {
+                    const radio =
+                        card.querySelector(
+                            ".venue-radio"
+                        );
+
+                    card.classList.toggle(
+                        "selected",
+                        radio?.checked === true
+                    );
+                });
+            }
+
+            modeRadios.forEach(radio => {
+                radio.addEventListener(
+                    "change",
+                    updateMode
+                );
+            });
+
+            venueCards.forEach(card => {
+                const radio =
+                    card.querySelector(
+                        ".venue-radio"
+                    );
+
+                radio?.addEventListener(
+                    "change",
+                    updateSelectedVenue
+                );
+            });
+
+            updateMode();
+            updateSelectedVenue();
+        });
+    </script>
+}

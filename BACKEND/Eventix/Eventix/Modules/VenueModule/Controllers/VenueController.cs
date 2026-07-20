@@ -2,6 +2,7 @@
 using Eventix.Controllers;
 using Eventix.Modules.VenueModule.Interfaces;
 using Eventix.Share.Common.Models;
+using Eventix.Share.SeatMap;
 using Eventix.Share.Venue;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -54,6 +55,25 @@ namespace Eventix.Modules.VenueModule.Controllers
             var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var venue = await _venueService.UpdateVenueAsync(id, request, userId);
             return SuccessResponse(SystemSuccess.VENUE_UPDATED, venue);
+        }
+
+        [HttpGet("{venueId}/seat-map")]
+        public async Task<ActionResult<ApiResponseModel<List<VenueSectionLayoutResponse>>>> GetSeatMap(Guid venueId)
+        {
+            var result = await _venueService.GetSeatMapAsync(venueId);
+            return SuccessResponse(SystemSuccess.SUCCESS, result);
+        }
+
+        [HttpPut("{venueId}/seat-map")]
+        public async Task<ActionResult<ApiResponseModel<List<VenueSectionLayoutResponse>>>> SaveSeatMap(
+            Guid venueId,
+            [FromBody] List<VenueSectionLayoutRequest> request)
+        {
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var result = await _venueService.SaveSeatMapAsync(venueId, request, userId);
+
+            return SuccessResponse(SystemSuccess.SUCCESS, result);
         }
 
     }

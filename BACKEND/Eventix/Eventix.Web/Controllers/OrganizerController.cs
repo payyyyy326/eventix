@@ -97,9 +97,17 @@ namespace Eventix.Web.Controllers
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
 
+            // Lấy thông tin event để biết status
+            var eventResponse = await client.GetFromJsonAsync<
+                ApiResponseModel<OrganizerEventDetailResponse>>(
+                $"api/OrganizerProfile/events/{eventId}");
+
+            ViewBag.EventStatus = eventResponse?.Data?.Status ?? "Draft";
+            ViewBag.EventTitle = eventResponse?.Data?.Title ?? "";
+
             var response = await client.GetFromJsonAsync<
                 ApiResponseModel<PaginationResponse<TicketTypeResponse>>>(
-                $"api/OrganizerProfile/events/{eventId}/ticket-types?CurrentPage=1&PageSize=20");
+                $"api/OrganizerProfile/events/{eventId}/ticket-types?CurrentPage=1&PageSize=50");
 
             return View(response?.Data ?? new PaginationResponse<TicketTypeResponse>());
         }

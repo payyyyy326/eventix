@@ -1,0 +1,100 @@
+﻿@using System.Text.Json
+@using Eventix.Web.Models.EventWizard
+@model EventSeatMapViewModel
+
+@{
+    ViewData["Title"] = "Create Event - Step 6";
+    Layout = "_OrganizerLayout";
+
+    var zonesJson = JsonSerializer.Serialize(Model.Zones);
+    var layoutsJson = JsonSerializer.Serialize(Model.Layouts);
+}
+
+<section class="organizer-page">
+    <div class="wizard-shell">
+
+        <div class="wizard-top">
+            <a class="wizard-back-link"
+               asp-controller="EventWizard"
+               asp-action="Step5">
+                ← Back to Seat Assignment
+            </a>
+
+            <div class="wizard-title">
+                <span>Create Event</span>
+                <h1>Step 6: Venue Map</h1>
+                <p>Arrange your zones visually so buyers can understand the event layout.</p>
+            </div>
+
+            @await Html.PartialAsync("_WizardProgress")
+        </div>
+
+        <div class="wizard-panel">
+
+            <div class="wizard-card mb-4">
+                <h3>@(Model.Venue?.Name ?? "Selected Venue")</h3>
+                <p>@(Model.Venue?.Address ?? "No address")</p>
+
+                <div class="wizard-meta">
+                    <span class="wizard-pill">
+                        Capacity: @(Model.Venue?.Capacity ?? 0)
+                    </span>
+
+                    <span class="wizard-pill">
+                        Zones: @(Model.Zones?.Count ?? 0)
+                    </span>
+                </div>
+            </div>
+
+            <div class="wizard-card mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3>Map Editor</h3>
+                        <p>Drag and resize each zone to match the real venue layout.</p>
+                    </div>
+
+                    <button type="button"
+                            id="saveSeatMapBtn"
+                            class="wizard-btn-primary">
+                        Save Layout
+                    </button>
+                </div>
+
+                <div id="saveMapStatus" class="mt-2 text-muted"></div>
+            </div>
+
+            <div class="seat-map-stage-label">
+                STAGE
+            </div>
+
+            <div id="seatMapCanvas" class="seat-map-canvas"></div>
+
+            <div class="wizard-actions">
+                <a asp-controller="EventWizard"
+                   asp-action="Step5"
+                   class="wizard-btn-secondary">
+                    ← Back
+                </a>
+
+                <form asp-controller="EventWizard"
+                      asp-action="Step6Continue"
+                      method="post">
+                    <button type="submit" class="wizard-btn-primary">
+                        Continue →
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<script>
+    window.eventixSeatMap = {
+        sections: @Html.Raw(zonesJson),
+        layouts: @Html.Raw(layoutsJson)
+    };
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+<script src="~/js/event-seat-map.js" asp-append-version="true"></script>

@@ -44,40 +44,52 @@ namespace Eventix.Modules.TicketTypeModule.Services
                 throw new BadRequestException(SystemError.INVALID_SALE_TIME);
 
             if (request.SaleEndTime > eventExist.StartTime)
-            {
-                throw new BadRequestException(
-                    SystemError.SALE_END_TIME_INVALID);
-            }
+                throw new BadRequestException(SystemError.SALE_END_TIME_INVALID);
 
-            if (request.IsSeatRequired)
-            {
-                if (string.IsNullOrWhiteSpace(request.Section))
-                    throw new BadRequestException(SystemError.SECTION_REQUIRED);
+            if (request.VenueZoneId == null || request.VenueZoneId == Guid.Empty)
+                throw new BadRequestException(SystemError.SECTION_REQUIRED);
 
-                var sectionSeatCount = await _context.Seats.CountAsync(s =>
-                    s.VenueId == eventExist.VenueId &&
-                    s.Section == request.Section);
+            var zone = await _context.VenueZones
+                .FirstOrDefaultAsync(z =>
+                    z.Id == request.VenueZoneId &&
+                    z.VenueId == eventExist.VenueId);
 
-                if (sectionSeatCount <= 0)
-                    throw new BadRequestException(SystemError.SECTION_NOT_FOUND);
+            if (zone == null)
+                throw new BadRequestException(SystemError.SECTION_NOT_FOUND);
 
-                if (request.Quantity > sectionSeatCount)
-                    throw new BadRequestException(SystemError.INVALID_QUANTITY);
-            }
+            if (request.IsSeatRequired && !zone.HasSeats)
+                throw new BadRequestException(SystemError.SECTION_NOT_FOUND);
 
+            if (!request.IsSeatRequired && zone.HasSeats)
+                throw new BadRequestException(SystemError.INVALID_QUANTITY);
+
+            if (request.Quantity > zone.Capacity)
+                throw new BadRequestException(SystemError.INVALID_QUANTITY);
+
+            var currentZoneTicketQuantity = await _context.TicketTypes
+                .Where(tt =>
+                    tt.EventId == eventId &&
+                    tt.VenueZoneId == zone.Id)
+                .SumAsync(tt => tt.Quantity);
+
+            if (currentZoneTicketQuantity + request.Quantity > zone.Capacity)
+                throw new BadRequestException(SystemError.INVALID_QUANTITY);
 
             var ticketType = new TicketType
             {
                 Id = Guid.NewGuid(),
                 EventId = eventId,
-                Name = request.Name,
+                Name = request.Name.Trim(),
                 Description = request.Description,
                 Price = request.Price,
                 Quantity = request.Quantity,
                 Status = TicketTypeStatus.Active,
                 SoldQuantity = 0,
                 ReservedQuantity = 0,
-                Section = request.IsSeatRequired ? request.Section : null,
+
+                VenueZoneId = zone.Id,
+                Section = zone.Name,
+
                 SaleStartTime = request.SaleStartTime,
                 SaleEndTime = request.SaleEndTime,
                 IsSeatRequired = request.IsSeatRequired,
@@ -98,12 +110,19 @@ namespace Eventix.Modules.TicketTypeModule.Services
                 Quantity = ticketType.Quantity,
                 SoldQuantity = ticketType.SoldQuantity,
                 ReservedQuantity = ticketType.ReservedQuantity,
-                Section = ticketType.Section,
+
+                VenueZoneId = zone.Id,
+                ZoneName = zone.Name,
+                HasSeats = zone.HasSeats,
+                Section = zone.Name,
+
+                Status = ticketType.Status,
                 SaleStartTime = ticketType.SaleStartTime,
                 SaleEndTime = ticketType.SaleEndTime,
-                IsSeatRequired = ticketType.IsSeatRequired
+                IsSeatRequired = ticketType.IsSeatRequired,
+                CreatedAt = ticketType.CreatedAt,
+                CreatedBy = ticketType.CreatedBy
             };
-
         }
 
         public Task DeleteTicketTypeAsync(Guid id)
@@ -232,7 +251,7 @@ namespace Eventix.Modules.TicketTypeModule.Services
                 throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
 
             var ticketTypeResponse = _context.TicketTypes
-                .Where(tt => tt.EventId == eventId && tt.Status == TicketTypeStatus.Active)
+                .Where(tt => tt.EventId == eventId)
                 .OrderBy(tt => tt.Price)
                 .Select(tt => new TicketTypeResponse
                 {
@@ -244,10 +263,18 @@ namespace Eventix.Modules.TicketTypeModule.Services
                     Quantity = tt.Quantity,
                     SoldQuantity = tt.SoldQuantity,
                     ReservedQuantity = tt.ReservedQuantity,
+                    VenueZoneId = tt.VenueZoneId,
+                    ZoneName = tt.VenueZone != null ? tt.VenueZone.Name : tt.Section,
+                    HasSeats = tt.VenueZone != null && tt.VenueZone.HasSeats,
                     Section = tt.Section,
+                    Status = tt.Status,
                     SaleStartTime = tt.SaleStartTime,
                     SaleEndTime = tt.SaleEndTime,
-                    IsSeatRequired = tt.IsSeatRequired
+                    IsSeatRequired = tt.IsSeatRequired,
+                    CreatedAt = tt.CreatedAt,
+                    CreatedBy = tt.CreatedBy,
+                    UpdatedAt = tt.UpdatedAt,
+                    UpdatedBy = tt.UpdatedBy
                 });
 
             return await ticketTypeResponse.GetPaged(
@@ -255,7 +282,10 @@ namespace Eventix.Modules.TicketTypeModule.Services
                 request.PageSize);
         }
 
-        public async Task<TicketTypeResponse> UpdateTicketTypeAsync(Guid id, UpdateTicketTypeRequest request, Guid userId)
+        public async Task<TicketTypeResponse> UpdateTicketTypeAsync(
+    Guid id,
+    UpdateTicketTypeRequest request,
+    Guid userId)
         {
             var organizer = await _context.OrganizerProfiles
                 .FirstOrDefaultAsync(o => o.UserId == userId);
@@ -265,10 +295,13 @@ namespace Eventix.Modules.TicketTypeModule.Services
 
             var ticketType = await _context.TicketTypes
                 .Include(tt => tt.Event)
+                .Include(tt => tt.VenueZone)
                 .FirstOrDefaultAsync(tt =>
                     tt.Id == id &&
                     tt.Event.OrganizerId == organizer.Id);
-            if (ticketType == null) throw new BadRequestException(SystemError.TICKET_TYPE_NOT_FOUND);
+
+            if (ticketType == null)
+                throw new BadRequestException(SystemError.TICKET_TYPE_NOT_FOUND);
 
             if (request.Price < 0)
                 throw new BadRequestException(SystemError.INVALID_PRICE_RANGE);
@@ -281,29 +314,35 @@ namespace Eventix.Modules.TicketTypeModule.Services
             if (request.Quantity < usedQuantity)
                 throw new BadRequestException(SystemError.QUANTITY_LESS_THAN_USED);
 
-            if (ticketType.IsSeatRequired && !string.IsNullOrWhiteSpace(ticketType.Section))
-            {
-                var sectionSeatCount = await _context.Seats.CountAsync(s =>
-                    s.VenueId == ticketType.Event.VenueId &&
-                    s.Section == ticketType.Section);
+            if (ticketType.VenueZoneId == null || ticketType.VenueZone == null)
+                throw new BadRequestException(SystemError.SECTION_NOT_FOUND);
 
-                if (request.Quantity > sectionSeatCount)
-                    throw new BadRequestException(SystemError.QUANTITY_EXCEEDS_SECTION_SEATS);
-            }
+            var zone = ticketType.VenueZone;
+
+            if (request.Quantity > zone.Capacity)
+                throw new BadRequestException(SystemError.QUANTITY_EXCEEDS_SECTION_SEATS);
+
+            var otherTicketQuantityInZone = await _context.TicketTypes
+                .Where(tt =>
+                    tt.EventId == ticketType.EventId &&
+                    tt.VenueZoneId == zone.Id &&
+                    tt.Id != ticketType.Id)
+                .SumAsync(tt => tt.Quantity);
+
+            if (otherTicketQuantityInZone + request.Quantity > zone.Capacity)
+                throw new BadRequestException(SystemError.QUANTITY_EXCEEDS_SECTION_SEATS);
 
             if (request.SaleStartTime >= request.SaleEndTime)
                 throw new BadRequestException(SystemError.INVALID_SALE_TIME);
 
             if (request.SaleEndTime > ticketType.Event.StartTime)
-            {
-                throw new BadRequestException(
-                    SystemError.SALE_END_TIME_INVALID);
-            }
+                throw new BadRequestException(SystemError.SALE_END_TIME_INVALID);
 
             using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
-                ticketType.Name = request.Name;
+                ticketType.Name = request.Name.Trim();
                 ticketType.Description = request.Description;
                 ticketType.Price = request.Price;
                 ticketType.Quantity = request.Quantity;
@@ -312,7 +351,6 @@ namespace Eventix.Modules.TicketTypeModule.Services
                 ticketType.UpdatedAt = DateTime.UtcNow;
                 ticketType.UpdatedBy = userId;
 
-                _context.TicketTypes.Update(ticketType);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
@@ -326,10 +364,20 @@ namespace Eventix.Modules.TicketTypeModule.Services
                     Quantity = ticketType.Quantity,
                     SoldQuantity = ticketType.SoldQuantity,
                     ReservedQuantity = ticketType.ReservedQuantity,
-                    Section = ticketType.Section,
+
+                    VenueZoneId = zone.Id,
+                    ZoneName = zone.Name,
+                    HasSeats = zone.HasSeats,
+                    Section = zone.Name,
+
+                    Status = ticketType.Status,
                     SaleStartTime = ticketType.SaleStartTime,
                     SaleEndTime = ticketType.SaleEndTime,
-                    IsSeatRequired = ticketType.IsSeatRequired
+                    IsSeatRequired = ticketType.IsSeatRequired,
+                    CreatedAt = ticketType.CreatedAt,
+                    CreatedBy = ticketType.CreatedBy,
+                    UpdatedAt = ticketType.UpdatedAt,
+                    UpdatedBy = ticketType.UpdatedBy
                 };
             }
             catch
@@ -338,7 +386,6 @@ namespace Eventix.Modules.TicketTypeModule.Services
                 throw;
             }
         }
-
         public async Task<TicketTypeResponse> DeactivateTicketTypeAsync(Guid id, Guid userId)
         {
             var organizer = await _context.OrganizerProfiles

@@ -50,6 +50,20 @@ namespace Eventix.Modules.SeatModule.Controllers
             return SuccessResponse(SystemSuccess.SUCCESS, result);
         }
 
+        [HttpGet("venue/{venueId}/sections")]
+        public async Task<ActionResult<ApiResponseModel<List<SeatSectionResponse>>>> GetSectionsByVenue(Guid venueId)
+        {
+            var result = await _seatService.GetSectionsByVenueAsync(venueId);
+            return SuccessResponse(SystemSuccess.SUCCESS, result);
+        }
+
+        [HttpPost("venue/{venueId}/generate")]
+        public async Task<ActionResult<ApiResponseModel<ImportSeatResult>>> GenerateSeats(Guid venueId, [FromBody] GenerateSeatsRequest request)
+        {
+            var result = await _seatService.GenerateSeatsAsync(venueId, request);
+
+            return SuccessResponse(SystemSuccess.SUCCESS, result);
+        }
 
     }
 }

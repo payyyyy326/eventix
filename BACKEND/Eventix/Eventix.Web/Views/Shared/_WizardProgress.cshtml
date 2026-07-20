@@ -1,0 +1,41 @@
+﻿@{
+    var currentStep = (int)(ViewBag.CurrentStep ?? 1);
+
+    var steps = new[]
+    {
+        "Event Info",
+        "Venue",
+        "Zones",
+        "Ticket Types",
+        "Seats",
+        "Map",
+        "Review"
+    };
+}
+
+<div class="wizard-progress-line">
+    @for (var i = 0; i < steps.Length; i++)
+    {
+        var stepNumber = i + 1;
+        var cssClass = "";
+
+        if (stepNumber < currentStep)
+        {
+            cssClass = "done";
+        }
+        else if (stepNumber == currentStep)
+        {
+            cssClass = "active";
+        }
+
+        <div class="wizard-progress-item @cssClass">
+            <div class="wizard-circle">
+                @(stepNumber < currentStep ? "✓" : stepNumber.ToString())
+            </div>
+
+            <div class="wizard-label">
+                @steps[i]
+            </div>
+        </div>
+    }
+</div>

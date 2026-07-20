@@ -8,8 +8,6 @@
 
         public string Title { get; set; } = null!;
 
-        public string Slug { get; set; } = null!;
-
         public string? Description { get; set; }
 
         public string? Summary { get; set; }

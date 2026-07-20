@@ -85,5 +85,22 @@ namespace Eventix.Modules.EventModule.Controllers
             var eventResponse = await _eventService.UpLoadImageAsync(id, imageUrl, organizerId);
             return SuccessResponse(SystemSuccess.EVENT_IMAGE_UPLOADED, eventResponse);
         }
+
+        [HttpPost("{eventId:guid}/publish")]
+        public async Task<ActionResult<ApiResponseModel<EventResponse>>> PublishEvent(Guid eventId)
+        {
+            var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!Guid.TryParse(userIdValue, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var result = await _eventService.PublishEventAsync(
+                eventId,
+                userId);
+
+            return SuccessResponse(SystemSuccess.EVENT_PUBLISHED, result);
+        }
     }
 }

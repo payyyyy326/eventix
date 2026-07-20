@@ -1,0 +1,74 @@
+﻿@using Eventix.Web.Models.EventWizard
+@model EventInfoViewModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Create Event - Step 1";
+    Layout = "_OrganizerLayout";
+    @await Html.PartialAsync("_WizardProgress")
+
+}
+
+<section class="organizer-page">
+    <div class="dashboard-header">
+        <div class="page-heading">
+            <span>Create Event</span>
+            <h1>Step 1: Event Information</h1>
+            <p>Enter the basic information for your event.</p>
+        </div>
+    </div>
+
+    <div class="dashboard-panel">
+        <form asp-controller="EventWizard"
+              asp-action="Step1"
+              method="post"
+              class="organizer-form">
+
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="form-group mb-3">
+                <label asp-for="Title"></label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="CategoryId">Category</label>
+
+                <select asp-for="CategoryId"
+                        asp-items="@(new SelectList(Model.Categories, "Id", "Name"))"
+                        class="form-select">
+                    <option value="">-- Select Category --</option>
+                </select>
+
+                <span asp-validation-for="CategoryId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="Summary"></label>
+                <input asp-for="Summary" class="form-control" />
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="Description"></label>
+                <textarea asp-for="Description" rows="5" class="form-control"></textarea>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="StartTime"></label>
+                <input asp-for="StartTime" type="datetime-local" class="form-control" />
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="EndTime"></label>
+                <input asp-for="EndTime" type="datetime-local" class="form-control" />
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+                <button type="submit" class="dashboard-create-btn">
+                    Continue to Venue
+                </button>
+            </div>
+        </form>
+    </div>
+</section>

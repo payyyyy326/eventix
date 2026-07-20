@@ -110,6 +110,7 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage EVENT_DELETED = new("325", "Event deleted successfully", true);
         public static readonly SystemMessage EVENT_BANNER_UPLOADED = new("326", "Event banner uploaded successfully", true);
         public static readonly SystemMessage EVENT_IMAGE_UPLOADED = new("327", "Event image uploaded successfully", true);
+        public static readonly SystemMessage EVENT_PUBLISHED = new("328", "Event published successfully", true);
         #endregion
     }
 }
