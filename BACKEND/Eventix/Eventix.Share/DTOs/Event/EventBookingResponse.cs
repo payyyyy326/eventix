@@ -18,5 +18,7 @@ namespace Eventix.Share.Event
         public VenueResponse Venue { get; set; } = null!;
 
         public List<TicketTypeResponse> TicketTypes { get; set; } = new();
+
+        public List<BookingSeatResponse> Seats { get; set; } = new();
     }
 }

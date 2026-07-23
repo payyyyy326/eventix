@@ -7,6 +7,7 @@ using Eventix.Extensions;
 using Eventix.Modules.EventModule.Interfaces;
 using Eventix.Share.Category;
 using Eventix.Share.Common.Models;
+using Eventix.Share.Common.Constants;
 using Eventix.Share.Event;
 using Eventix.Share.Organizer;
 using Eventix.Share.TicketType;
@@ -124,12 +125,36 @@ namespace Eventix.Modules.EventModule.Services
                 .AsNoTracking()
                 .Include(e => e.Venue)
                 .Include(e => e.TicketTypes)
+                    .ThenInclude(t => t.VenueZone)
                 .FirstOrDefaultAsync(e => e.Id == eventId);
 
             if (eventEntity == null)
             {
                 throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
             }
+
+            var availableSeats = await _context.EventSeatStatuses
+                .AsNoTracking()
+                .Where(s => s.EventId == eventId)
+                .Select(s => new BookingSeatResponse
+                {
+                    SeatId = s.SeatId,
+                    TicketTypeId = s.TicketTypeId,
+                    Section = s.Seat.Section,
+                    Row = s.Seat.Row,
+                    Number = s.Seat.Number,
+                    Status = s.Status,
+                    XPosition = s.Seat.Xposition,
+                    YPosition = s.Seat.Yposition,
+                    Label = ((s.Seat.Section ?? "") + " " +
+                             (s.Seat.Row ?? "") + "-" +
+                             s.Seat.Number).Trim()
+                })
+                .OrderBy(s => s.Section)
+                .ThenBy(s => s.Row)
+                .ThenBy(s => s.XPosition)
+                .ThenBy(s => s.Number)
+                .ToListAsync();
 
             return new EventBookingResponse
             {
@@ -161,6 +186,9 @@ namespace Eventix.Modules.EventModule.Services
                     SoldQuantity = t.SoldQuantity,
                     ReservedQuantity = t.ReservedQuantity,
 
+                    VenueZoneId = t.VenueZoneId,
+                    ZoneName = t.VenueZone?.Name,
+                    HasSeats = t.VenueZone?.HasSeats ?? t.IsSeatRequired,
                     Section = t.Section,
 
                     SaleStartTime = t.SaleStartTime,
@@ -173,7 +201,8 @@ namespace Eventix.Modules.EventModule.Services
                     UpdatedAt = t.UpdatedAt,
                     UpdatedBy = t.UpdatedBy
                 })
-                .ToList()
+                .ToList(),
+                Seats = availableSeats
             };
         }
 
@@ -647,6 +676,50 @@ namespace Eventix.Modules.EventModule.Services
                 throw new BadRequestException(
                     $"Map layout is missing for: " +
                     $"{string.Join(", ", zonesWithoutMap)}.");
+            }
+
+            /*
+             * Materialize the sellable seat inventory for this event.
+             * Seats are allocated deterministically inside each zone so a seat
+             * belongs to exactly one ticket type for the event.
+             */
+            var existingSeatInventory = await _context.EventSeatStatuses
+                .AnyAsync(x => x.EventId == eventEntity.Id);
+
+            if (!existingSeatInventory)
+            {
+                foreach (var group in eventEntity.TicketTypes
+                    .Where(x => x.IsSeatRequired && x.VenueZoneId.HasValue)
+                    .GroupBy(x => x.VenueZoneId!.Value))
+                {
+                    var zoneSeats = await _context.Seats
+                        .Where(x => x.VenueId == venueId &&
+                            x.VenueZoneId == group.Key &&
+                            x.Status == "Active")
+                        .OrderBy(x => x.Row)
+                        .ThenBy(x => x.Number)
+                        .ToListAsync();
+
+                    var seatIndex = 0;
+                    foreach (var ticketType in group.OrderBy(x => x.CreatedAt))
+                    {
+                        foreach (var seat in zoneSeats
+                            .Skip(seatIndex)
+                            .Take(ticketType.Quantity))
+                        {
+                            await _context.EventSeatStatuses.AddAsync(
+                                new EventSeatStatus
+                                {
+                                    Id = Guid.NewGuid(),
+                                    EventId = eventEntity.Id,
+                                    SeatId = seat.Id,
+                                    TicketTypeId = ticketType.Id,
+                                    Status = SystemConstants.SeatStatus.AVAILABLE
+                                });
+                        }
+                        seatIndex += ticketType.Quantity;
+                    }
+                }
             }
 
             eventEntity.Status = "Published";

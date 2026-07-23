@@ -1,0 +1,46 @@
+@model List<Eventix.Share.Booking.BookingResponse>
+
+@{
+    ViewData["Title"] = "Đặt vé thành công";
+    var first = Model.First();
+    var quantity = Model.Sum(x => x.Quantity);
+    var total = Model.Sum(x => x.TotalAmount);
+    var seats = Model
+        .Where(x => !string.IsNullOrWhiteSpace(x.SeatLabel))
+        .Select(x => x.SeatLabel)
+        .ToList();
+}
+
+<main class="booking-confirmation">
+    <div class="booking-success-icon">✓</div>
+    <span class="booking-eyebrow">ĐẶT VÉ THÀNH CÔNG</span>
+    <h1>@first.EventTitle</h1>
+    <p>@first.TicketTypeName · @quantity vé</p>
+
+    @if (seats.Count > 0)
+    {
+        <p>Ghế: <strong>@string.Join(", ", seats)</strong></p>
+    }
+
+    <div class="booking-confirmation-total">
+        @total.ToString("N0") VND
+    </div>
+
+    <p>Hệ thống đang giữ vé đến
+        <strong>@Model.Min(x => x.ExpiresAt).ToString("HH:mm dd/MM/yyyy")</strong>.
+    </p>
+
+    <form asp-controller="Commerce" asp-action="Checkout" method="get">
+        @foreach (var booking in Model)
+        {
+            <input type="hidden" name="reservationIds" value="@booking.Id" />
+        }
+        <button class="booking-primary-action" type="submit">
+            Tiếp tục thanh toán
+        </button>
+    </form>
+
+    <a asp-controller="Event" asp-action="Details" asp-route-id="@first.EventId">
+        Quay lại sự kiện
+    </a>
+</main>

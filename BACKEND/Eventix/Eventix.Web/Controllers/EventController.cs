@@ -1,8 +1,11 @@
 ﻿using Eventix.Share.Common.Models;
 using Eventix.Share.Event;
+using Eventix.Share.Booking;
+using Eventix.Share.Common.Constants;
 using Eventix.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using System.Net.Http.Headers;
 
 namespace Eventix.Web.Controllers
 {
@@ -67,6 +70,87 @@ namespace Eventix.Web.Controllers
             }
 
             return View(result.Data);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Booking(Guid id, Guid? ticketTypeId)
+        {
+            var token = Request.Cookies[SystemConstants.CookieNames.Token];
+            if (string.IsNullOrWhiteSpace(token))
+                return RedirectToAction("Login", "Auth");
+
+            var eventData = await LoadBookingEventAsync(id);
+            if (eventData == null)
+                return NotFound();
+
+            return View(new BookingViewModel
+            {
+                Event = eventData,
+                Request = new CreateBookingRequest
+                {
+                    EventId = id,
+                    TicketTypeId = ticketTypeId ?? Guid.Empty,
+                    Quantity = 1
+                }
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Book(CreateBookingRequest request)
+        {
+            var token = Request.Cookies[SystemConstants.CookieNames.Token];
+            if (string.IsNullOrWhiteSpace(token))
+                return RedirectToAction("Login", "Auth");
+
+            if (!ModelState.IsValid)
+                return await ReturnBookingViewAsync(request);
+
+            var client = _httpClientFactory.CreateClient("Eventix");
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", token);
+
+            var response = await client.PostAsJsonAsync("api/bookings", request);
+            var result = await response.Content
+                .ReadFromJsonAsync<ApiResponseModel<List<BookingResponse>>>();
+
+            if (!response.IsSuccessStatusCode ||
+                result == null ||
+                !result.IsSuccess ||
+                result.Data == null ||
+                result.Data.Count == 0)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    result?.Message ?? "Unable to reserve tickets.");
+                return await ReturnBookingViewAsync(request);
+            }
+
+            return View("BookingConfirmation", result.Data);
+        }
+
+        private async Task<IActionResult> ReturnBookingViewAsync(
+            CreateBookingRequest request)
+        {
+            var eventData = await LoadBookingEventAsync(request.EventId);
+            if (eventData == null)
+                return NotFound();
+
+            return View("Booking", new BookingViewModel
+            {
+                Event = eventData,
+                Request = request
+            });
+        }
+
+        private async Task<EventBookingResponse?> LoadBookingEventAsync(Guid id)
+        {
+            var client = _httpClientFactory.CreateClient("Eventix");
+            var result = await client.GetFromJsonAsync<
+                ApiResponseModel<EventBookingResponse>>(
+                $"api/events/{id}/booking");
+
+            return result?.IsSuccess == true ? result.Data : null;
         }
     }
 }

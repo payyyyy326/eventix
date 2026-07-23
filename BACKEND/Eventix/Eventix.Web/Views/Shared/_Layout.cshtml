@@ -18,6 +18,8 @@
     <link rel="stylesheet" href="~/css/organizer.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/ticket-type.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/event-wizard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/booking.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/commerce.css" asp-append-version="true" />
 
 </head>
 <body>
@@ -73,6 +75,14 @@
                     </a>
 
                     <a asp-controller="User" asp-action="EditProfile">Hồ sơ</a>
+                    <a asp-controller="Commerce" asp-action="Bookings">Vé đang giữ</a>
+                    <a asp-controller="Commerce" asp-action="Tickets">Vé của tôi</a>
+                    <a asp-controller="Commerce" asp-action="Orders">Đơn hàng</a>
+
+                    @if (isOrganizer)
+                    {
+                        <a asp-controller="Commerce" asp-action="CheckIn">Check-in</a>
+                    }
 
                     <form asp-controller="Auth" asp-action="Logout" method="post">
                         <button type="submit">Đăng xuất</button>

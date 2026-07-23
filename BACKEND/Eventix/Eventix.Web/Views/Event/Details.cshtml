@@ -129,9 +129,26 @@
                         @ticket.Price.ToString("N0") VND
                     </div>
 
-                    <button class="ticket-buy-btn">
-                        Buy Ticket
-                    </button>
+                    @{
+                        var available = ticket.Quantity -
+                            ticket.SoldQuantity -
+                            ticket.ReservedQuantity;
+                    }
+
+                    @if (available > 0)
+                    {
+                        <a class="ticket-buy-btn"
+                           asp-controller="Event"
+                           asp-action="Booking"
+                           asp-route-id="@Model.Id"
+                           asp-route-ticketTypeId="@ticket.Id">
+                            Đặt vé
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="ticket-sold-out">Hết vé</span>
+                    }
 
                 </div>
 

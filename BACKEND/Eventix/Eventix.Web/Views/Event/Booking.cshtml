@@ -1,0 +1,337 @@
+@model Eventix.Web.Models.BookingViewModel
+
+@{
+    ViewData["Title"] = "Đặt vé";
+    var zoneGroups = Model.Event.TicketTypes
+        .GroupBy(ticket => new
+        {
+            Key = ticket.VenueZoneId?.ToString()
+                ?? $"section:{ticket.Section ?? ticket.Name}",
+            Name = ticket.ZoneName ?? ticket.Section ?? ticket.Name,
+            HasSeats = ticket.IsSeatRequired
+        })
+        .ToList();
+    var selectedTicket = Model.Event.TicketTypes
+        .FirstOrDefault(ticket => ticket.Id == Model.Request.TicketTypeId);
+    var selectedZoneKey = selectedTicket?.VenueZoneId?.ToString()
+        ?? (selectedTicket == null
+            ? zoneGroups.FirstOrDefault()?.Key.Key
+            : $"section:{selectedTicket.Section ?? selectedTicket.Name}");
+    var selectedAdmissionType =
+        (selectedTicket?.IsSeatRequired
+            ?? zoneGroups.FirstOrDefault()?.Key.HasSeats
+            ?? false)
+        ? "seated"
+        : "standing";
+    var hasStandingZones = zoneGroups.Any(zone => !zone.Key.HasSeats);
+    var hasSeatedZones = zoneGroups.Any(zone => zone.Key.HasSeats);
+}
+
+<main class="booking-page">
+    <section class="booking-event-card">
+        <img src="@Model.Event.BannerUrl" alt="@Model.Event.Title" />
+        <div>
+            <span class="booking-eyebrow">ĐẶT VÉ SỰ KIỆN</span>
+            <h1>@Model.Event.Title</h1>
+            <p>@Model.Event.StartTime.ToString("dd/MM/yyyy HH:mm")</p>
+            <p>@Model.Event.Venue.Name — @Model.Event.Venue.Address, @Model.Event.Venue.City</p>
+        </div>
+    </section>
+
+    <form asp-action="Book" method="post" class="booking-form" id="booking-form">
+        @Html.AntiForgeryToken()
+        <input asp-for="Request.EventId" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="booking-error"></div>
+
+        <section class="booking-panel">
+            <h2>1. Chọn loại vé</h2>
+            <div class="booking-admission-grid">
+                <label class="booking-admission @(!hasStandingZones ? "disabled" : "")">
+                    <input type="radio"
+                           name="AdmissionType"
+                           value="standing"
+                           checked="@(selectedAdmissionType == "standing")"
+                           disabled="@(!hasStandingZones)" />
+                    <span class="booking-admission-icon">♟</span>
+                    <strong>Vé đứng</strong>
+                    <small>Chọn khu và số lượng vé</small>
+                    @if (!hasStandingZones)
+                    {
+                        <em>Sự kiện chưa có khu đứng</em>
+                    }
+                </label>
+
+                <label class="booking-admission @(!hasSeatedZones ? "disabled" : "")">
+                    <input type="radio"
+                           name="AdmissionType"
+                           value="seated"
+                           checked="@(selectedAdmissionType == "seated")"
+                           disabled="@(!hasSeatedZones)" />
+                    <span class="booking-admission-icon">▣</span>
+                    <strong>Vé ngồi</strong>
+                    <small>Chọn khu và số ghế cụ thể</small>
+                    @if (!hasSeatedZones)
+                    {
+                        <em>Sự kiện chưa có khu ghế</em>
+                    }
+                </label>
+            </div>
+        </section>
+
+        <section class="booking-panel">
+            <h2>2. Chọn khu vé</h2>
+            <div class="booking-zone-grid">
+                @foreach (var zone in zoneGroups)
+                {
+                    var available = zone.Sum(ticket =>
+                        ticket.Quantity - ticket.SoldQuantity - ticket.ReservedQuantity);
+                    <label class="booking-zone @(available <= 0 ? "disabled" : "")"
+                           data-admission-type="@(zone.Key.HasSeats ? "seated" : "standing")">
+                        <input type="radio"
+                               name="SelectedZone"
+                               value="@zone.Key.Key"
+                               checked="@(selectedZoneKey == zone.Key.Key)"
+                               disabled="@(available <= 0)" />
+                        <span class="booking-zone-name">@zone.Key.Name</span>
+                        <small>@(zone.Key.HasSeats ? "Khu ghế ngồi" : "Khu đứng")</small>
+                        <strong>Còn @available vé</strong>
+                    </label>
+                }
+            </div>
+        </section>
+
+        <section class="booking-panel">
+            <h2>3. Chọn hạng vé</h2>
+            <div class="booking-ticket-grid">
+                @foreach (var ticket in Model.Event.TicketTypes.OrderBy(t => t.Price))
+                {
+                    var available = ticket.Quantity - ticket.SoldQuantity - ticket.ReservedQuantity;
+                    var selected = Model.Request.TicketTypeId == ticket.Id;
+                    var zoneKey = ticket.VenueZoneId?.ToString()
+                        ?? $"section:{ticket.Section ?? ticket.Name}";
+                    <label class="booking-ticket @(available <= 0 ? "disabled" : "")">
+                        <input asp-for="Request.TicketTypeId"
+                               type="radio"
+                               value="@ticket.Id"
+                               checked="@selected"
+                               disabled="@(available <= 0)"
+                               data-zone="@zoneKey"
+                               data-seat-required="@ticket.IsSeatRequired.ToString().ToLowerInvariant()"
+                               data-price="@ticket.Price" />
+                        <span class="booking-ticket-name">@ticket.Name</span>
+                        <span>@ticket.Price.ToString("N0") VND</span>
+                        <small>Còn @available vé · @(ticket.IsSeatRequired ? "Chọn ghế" : "Tự do")</small>
+                    </label>
+                }
+            </div>
+            <span asp-validation-for="Request.TicketTypeId" class="booking-error"></span>
+        </section>
+
+        <section class="booking-panel">
+            <h2>4. Số lượng và chỗ ngồi</h2>
+            <div class="booking-fields">
+                <label>
+                    Số lượng
+                    <input asp-for="Request.Quantity" min="1" max="10" id="booking-quantity" />
+                </label>
+
+                <div id="seat-field" class="booking-seat-field" hidden>
+                    <div class="booking-seat-heading">
+                        <div>
+                            <strong>Chọn số ghế</strong>
+                            <small>Chọn một ghế còn trống trong khu vực vé của bạn.</small>
+                        </div>
+                        <span id="selected-seat-label">Chưa chọn ghế</span>
+                    </div>
+
+                    <div class="booking-stage">
+                        <span>SÂN KHẤU</span>
+                    </div>
+
+                    <div id="booking-seat-map" class="booking-seat-map">
+                        @foreach (var rowGroup in Model.Event.Seats
+                            .OrderBy(s => s.Section)
+                            .ThenBy(s => s.Row)
+                            .ThenBy(s => s.XPosition)
+                            .ThenBy(s => s.Number)
+                            .GroupBy(s => new { s.Section, s.Row }))
+                        {
+                            <div class="booking-seat-row">
+                                <strong class="booking-row-label">@(rowGroup.Key.Row ?? rowGroup.Key.Section)</strong>
+                                <div class="booking-row-seats">
+                                    @foreach (var seat in rowGroup)
+                                    {
+                                        var selectedSeat = Model.Request.SeatIds.Contains(seat.SeatId);
+                                        var availableSeat = seat.Status == "Available";
+                                        <label class="booking-seat-option @(!availableSeat ? "unavailable" : "")"
+                                               data-ticket-type="@seat.TicketTypeId"
+                                               data-seat-label="@seat.Label"
+                                               data-available="@availableSeat.ToString().ToLowerInvariant()"
+                                               title="@seat.Label">
+                                            <input name="Request.SeatIds"
+                                                   type="checkbox"
+                                                   value="@seat.SeatId"
+                                                   checked="@(selectedSeat && availableSeat)"
+                                                   disabled="@(!availableSeat)" />
+                                            <span class="booking-seat-number">@seat.Number</span>
+                                            @if (!availableSeat)
+                                            {
+                                                <span class="booking-seat-lock">×</span>
+                                            }
+                                        </label>
+                                    }
+                                </div>
+                                <strong class="booking-row-label">@(rowGroup.Key.Row ?? rowGroup.Key.Section)</strong>
+                            </div>
+                        }
+                    </div>
+
+                    <div id="booking-seat-empty" class="booking-seat-empty" hidden>
+                        Loại vé này chưa được cấu hình ghế. Organizer cần gán zone và publish lại sự kiện.
+                    </div>
+
+                    <div class="booking-seat-legend">
+                        <span><i class="legend-available"></i> Ghế còn trống</span>
+                        <span><i class="legend-selected"></i> Ghế bạn chọn</span>
+                        <span><i class="legend-unavailable"></i> Ghế không khả dụng</span>
+                    </div>
+                </div>
+            </div>
+
+            <span asp-validation-for="Request.Quantity" class="booking-error"></span>
+            <span asp-validation-for="Request.SeatIds" class="booking-error"></span>
+        </section>
+
+        <section class="booking-summary">
+            <div>
+                <span>Tạm tính</span>
+                <strong id="booking-total">0 VND</strong>
+            </div>
+            <p>Vé được giữ trong 15 phút. Sau thời gian này hệ thống sẽ tự động giải phóng.</p>
+            <button type="submit">Xác nhận đặt vé</button>
+        </section>
+    </form>
+</main>
+
+@section Scripts {
+    <script>
+        (() => {
+            const admissionRadios = [...document.querySelectorAll('input[name="AdmissionType"]')];
+            const zoneRadios = [...document.querySelectorAll('input[name="SelectedZone"]')];
+            const radios = [...document.querySelectorAll('input[name="Request.TicketTypeId"]')];
+            const quantity = document.getElementById('booking-quantity');
+            const seatField = document.getElementById('seat-field');
+            const seatMap = document.getElementById('booking-seat-map');
+            const seatEmpty = document.getElementById('booking-seat-empty');
+            const selectedSeatLabel = document.getElementById('selected-seat-label');
+            const total = document.getElementById('booking-total');
+            const allSeats = [...seatMap.querySelectorAll('.booking-seat-option')];
+
+            function refreshSelectedSeat() {
+                const checked = allSeats.filter(seat => {
+                    const input = seat.querySelector('input');
+                    return input.checked && !input.disabled;
+                });
+                selectedSeatLabel.textContent =
+                    checked.length
+                        ? `Đã chọn ${checked.length}: ${checked.map(x => x.dataset.seatLabel).join(', ')}`
+                        : 'Chưa chọn ghế';
+            }
+
+            function refresh() {
+                const selectedAdmission = admissionRadios.find(radio => radio.checked);
+                zoneRadios.forEach(radio => {
+                    const card = radio.closest('.booking-zone');
+                    const visible = selectedAdmission &&
+                        card.dataset.admissionType === selectedAdmission.value;
+                    card.hidden = !visible;
+                    radio.disabled = !visible || card.classList.contains('disabled');
+                    if (!visible) radio.checked = false;
+                });
+
+                if (selectedAdmission &&
+                    !zoneRadios.some(radio => radio.checked && !radio.disabled)) {
+                    const firstZone = zoneRadios.find(radio => !radio.disabled);
+                    if (firstZone) firstZone.checked = true;
+                }
+
+                const selectedZone = zoneRadios.find(radio => radio.checked);
+                radios.forEach(radio => {
+                    const card = radio.closest('.booking-ticket');
+                    const visible = selectedZone && radio.dataset.zone === selectedZone.value;
+                    card.hidden = !visible;
+                    radio.disabled = !visible || card.classList.contains('disabled');
+                    if (!visible) radio.checked = false;
+                });
+
+                if (selectedZone && !radios.some(radio => radio.checked && !radio.disabled)) {
+                    const firstAvailable = radios.find(radio =>
+                        !radio.disabled && radio.dataset.zone === selectedZone.value);
+                    if (firstAvailable) firstAvailable.checked = true;
+                }
+
+                const selected = radios.find(radio => radio.checked);
+                if (!selected) {
+                    total.textContent = '0 VND';
+                    seatField.hidden = true;
+                    return;
+                }
+
+                const seatRequired = selected.dataset.seatRequired === 'true';
+                seatField.hidden = !seatRequired;
+                quantity.readOnly = seatRequired;
+
+                if (!seatRequired) {
+                    allSeats.forEach(seat => {
+                        seat.querySelector('input').checked = false;
+                    });
+                }
+
+                let visibleSeatCount = 0;
+                allSeats.forEach(seat => {
+                    const input = seat.querySelector('input');
+                    const visible = seat.dataset.ticketType === selected.value;
+                    seat.hidden = !visible;
+                    input.disabled = !visible || seat.dataset.available !== 'true';
+                    if (visible && seat.dataset.available === 'true') visibleSeatCount++;
+                });
+                seatMap.querySelectorAll('.booking-seat-row').forEach(row => {
+                    row.hidden = ![...row.querySelectorAll('.booking-seat-option')]
+                        .some(seat => !seat.hidden);
+                });
+
+                seatEmpty.hidden = !seatRequired || visibleSeatCount > 0;
+                seatMap.hidden = seatRequired && visibleSeatCount === 0;
+                refreshSelectedSeat();
+
+                if (seatRequired) {
+                    quantity.value = allSeats.filter(seat => {
+                        const input = seat.querySelector('input');
+                        return input.checked && !input.disabled;
+                    }).length;
+                }
+                const amount = Number(selected.dataset.price) * Number(quantity.value || 0);
+                total.textContent =
+                    new Intl.NumberFormat('vi-VN').format(amount) + ' VND';
+            }
+
+            admissionRadios.forEach(radio => radio.addEventListener('change', refresh));
+            zoneRadios.forEach(radio => radio.addEventListener('change', refresh));
+            radios.forEach(radio => radio.addEventListener('change', refresh));
+            allSeats.forEach(seat => {
+                seat.querySelector('input').addEventListener('change', () => {
+                    const selectedCount = allSeats.filter(x =>
+                        x.querySelector('input').checked).length;
+                    if (selectedCount > 10) {
+                        seat.querySelector('input').checked = false;
+                        alert('Bạn chỉ có thể chọn tối đa 10 ghế trong một lần đặt.');
+                    }
+                    refreshSelectedSeat();
+                    refresh();
+                });
+            });
+            quantity.addEventListener('input', refresh);
+            refresh();
+        })();
+    </script>
+}

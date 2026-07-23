@@ -1,0 +1,15 @@
+@model Eventix.Share.Commerce.OrderResponse
+@{ ViewData["Title"] = "Thanh toán"; }
+<main class="commerce-page"><section class="commerce-card">
+    <span class="booking-eyebrow">THANH TOÁN</span>
+    <h1>Đơn hàng @Model.OrderCode</h1>
+    @foreach (var item in Model.Items) {
+        <div class="commerce-row"><div><strong>@item.EventTitle</strong><p>@item.TicketTypeName · @item.Quantity vé @item.SeatLabel</p></div><span>@item.TotalPrice.ToString("N0") VND</span></div>
+    }
+    <div class="commerce-row"><span>Tạm tính</span><span>@Model.SubTotal.ToString("N0") VND</span></div>
+    <div class="commerce-row"><span>Phí dịch vụ (2%)</span><span>@Model.ServiceFee.ToString("N0") VND</span></div>
+    <div class="commerce-total"><span>Tổng cộng</span><strong>@Model.TotalAmount.ToString("N0") VND</strong></div>
+    <p>Đơn giữ đến: @Model.ExpiresAt?.ToString("HH:mm dd/MM/yyyy")</p>
+    <form asp-action="Pay" method="post">@Html.AntiForgeryToken()<input type="hidden" name="orderId" value="@Model.Id" /><button class="commerce-button" type="submit">Thanh toán Demo</button></form>
+    <small>Chế độ Demo xác nhận giao dịch ngay, không trừ tiền thật.</small>
+</section></main>
