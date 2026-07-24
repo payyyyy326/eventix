@@ -1,21 +1,32 @@
 using System.Data;
+using System.Globalization;
+using System.Net;
 using Eventix.Common.Exceptions;
 using Eventix.Data;
 using Eventix.Entities;
+using Eventix.Infrastructure.Email;
 using Eventix.Modules.CommerceModule.Interfaces;
 using Eventix.Share.Commerce;
 using Eventix.Share.Common.Constants;
 using Microsoft.EntityFrameworkCore;
+using QRCoder;
 
 namespace Eventix.Modules.CommerceModule.Services;
 
 public class CommerceService : ICommerceService
 {
     private readonly AppDbContext _context;
+    private readonly IEmailService _emailService;
+    private readonly ILogger<CommerceService> _logger;
 
-    public CommerceService(AppDbContext context)
+    public CommerceService(
+        AppDbContext context,
+        IEmailService emailService,
+        ILogger<CommerceService> logger)
     {
         _context = context;
+        _emailService = emailService;
+        _logger = logger;
     }
 
     public async Task<OrderResponse> CreateOrderAsync(
@@ -215,6 +226,8 @@ public class CommerceService : ICommerceService
             await _context.Payments.AddAsync(payment);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            await TrySendPaymentSuccessEmailAsync(order.Id, userId);
             return MapPayment(payment);
         }
         catch
@@ -412,6 +425,111 @@ public class CommerceService : ICommerceService
             };
     }
 
+    private async Task TrySendPaymentSuccessEmailAsync(Guid orderId, Guid userId)
+    {
+        try
+        {
+            var user = await _context.Users
+                .AsNoTracking()
+                .Where(x => x.Id == userId)
+                .Select(x => new { x.Email, x.FullName })
+                .FirstOrDefaultAsync();
+            if (user == null || string.IsNullOrWhiteSpace(user.Email))
+                return;
+
+            var order = await GetOrderInternalAsync(orderId);
+            var tickets = await _context.Tickets
+                .AsNoTracking()
+                .Where(x => x.OrderId == orderId)
+                .OrderBy(x => x.TicketCode)
+                .Select(x => new { x.Id, x.TicketCode, x.QrToken })
+                .ToListAsync();
+            var eventNames = string.Join(
+                ", ",
+                order.Items.Select(x => x.EventTitle).Distinct());
+            var rows = string.Join("", order.Items.Select(item =>
+            {
+                var seat = string.IsNullOrWhiteSpace(item.SeatLabel)
+                    ? "Không có số ghế"
+                    : WebUtility.HtmlEncode(item.SeatLabel);
+                return $"""
+                    <tr>
+                        <td style="padding:8px;border-bottom:1px solid #eee">{WebUtility.HtmlEncode(item.EventTitle)}</td>
+                        <td style="padding:8px;border-bottom:1px solid #eee">{WebUtility.HtmlEncode(item.TicketTypeName)}</td>
+                        <td style="padding:8px;border-bottom:1px solid #eee">{seat}</td>
+                        <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">{item.Quantity}</td>
+                    </tr>
+                    """;
+            }));
+
+            var inlineImages = new Dictionary<string, byte[]>();
+            var qrCards = string.Join("", tickets.Select(ticket =>
+            {
+                var contentId = $"ticket-qr-{ticket.Id:N}";
+                inlineImages[contentId] = GenerateQrPng(ticket.QrToken);
+                return $"""
+                    <div style="display:inline-block;width:220px;margin:10px;padding:12px;border:1px solid #ddd;border-radius:8px;text-align:center">
+                        <img src="cid:{contentId}" width="190" height="190" alt="QR {WebUtility.HtmlEncode(ticket.TicketCode)}" style="display:block;margin:auto">
+                        <p style="margin:8px 0 0"><strong>{WebUtility.HtmlEncode(ticket.TicketCode)}</strong></p>
+                    </div>
+                    """;
+            }));
+            var amount = order.TotalAmount.ToString(
+                "N0",
+                CultureInfo.GetCultureInfo("vi-VN"));
+            var paidAt = (order.PaidAt ?? DateTime.UtcNow)
+                .AddHours(7)
+                .ToString("dd/MM/yyyy HH:mm");
+            var subject = $"[Eventix] Đặt vé thành công - {eventNames}";
+            var body = $"""
+                <div style="font-family:Arial,sans-serif;max-width:680px;margin:auto;color:#222">
+                    <div style="background:#198754;color:#fff;padding:22px;border-radius:10px 10px 0 0">
+                        <h2 style="margin:0">Đặt vé thành công</h2>
+                    </div>
+                    <div style="padding:24px;border:1px solid #ddd;border-top:0;border-radius:0 0 10px 10px">
+                        <p>Xin chào <strong>{WebUtility.HtmlEncode(user.FullName)}</strong>,</p>
+                        <p>Thanh toán của bạn đã thành công lúc <strong>{paidAt} (GMT+7)</strong>. Vé điện tử đã được phát hành.</p>
+                        <p>Mã đơn hàng: <strong>{WebUtility.HtmlEncode(order.OrderCode)}</strong></p>
+                        <table style="width:100%;border-collapse:collapse">
+                            <thead><tr style="background:#eaf7ef">
+                                <th style="padding:8px;text-align:left">Sự kiện</th>
+                                <th style="padding:8px;text-align:left">Hạng vé</th>
+                                <th style="padding:8px;text-align:left">Ghế</th>
+                                <th style="padding:8px">SL</th>
+                            </tr></thead>
+                            <tbody>{rows}</tbody>
+                        </table>
+                        <p style="font-size:18px;text-align:right">Đã thanh toán: <strong>{amount} VND</strong></p>
+                        <h3>Mã QR vé điện tử</h3>
+                        <div style="text-align:center">{qrCards}</div>
+                        <p style="color:#666;font-size:13px">Xuất trình đúng mã QR của từng vé khi check-in. Bạn cũng có thể xem lại trong mục “Vé của tôi” trên Eventix.</p>
+                    </div>
+                </div>
+                """;
+            await _emailService.SendEmailWithInlineImagesAsync(
+                user.Email,
+                subject,
+                body,
+                inlineImages);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Payment succeeded but confirmation email failed for order {OrderId}",
+                orderId);
+        }
+    }
+
+    private static byte[] GenerateQrPng(string qrToken)
+    {
+        using var generator = new QRCodeGenerator();
+        using var qrData = generator.CreateQrCode(
+            qrToken,
+            QRCodeGenerator.ECCLevel.Q);
+        using var qrCode = new PngByteQRCode(qrData);
+        return qrCode.GetGraphic(8);
+    }
     private static PaymentResponse MapPayment(Payment payment) => new()
     {
         Id = payment.Id,
