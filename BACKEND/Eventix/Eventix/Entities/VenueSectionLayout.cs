@@ -22,9 +22,19 @@ public partial class VenueSectionLayout
 
     public DateTime? UpdatedAt { get; set; }
 
+    /// <summary>
+    /// FK tới VenueZone (legacy, vẫn giữ để tương thích).
+    /// </summary>
     public Guid? VenueZoneId { get; set; }
+
+    /// <summary>
+    /// FK tới TicketType (luồng mới: map block theo loại vé).
+    /// </summary>
+    public Guid? TicketTypeId { get; set; }
 
     public virtual Venue Venue { get; set; } = null!;
 
     public virtual VenueZone? VenueZone { get; set; }
+
+    public virtual TicketType? TicketType { get; set; }
 }

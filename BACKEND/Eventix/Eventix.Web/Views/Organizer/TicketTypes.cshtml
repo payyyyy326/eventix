@@ -81,8 +81,8 @@
                             <p>@ticket.Description</p>
 
                             <div class="ticket-admin-meta">
-                                <span>Zone: @(ticket.ZoneName ?? ticket.Section ?? "N/A")</span>
-                                <span>@(ticket.HasSeats ? "Assigned Seating" : "General Admission")</span>
+                                <span>Section: @(ticket.Section ?? "N/A")</span>
+                                <span>@(ticket.IsSeatRequired ? "Assigned Seating" : "General Admission")</span>
                                 <span>Total: @ticket.Quantity</span>
                                 <span>Sold: @ticket.SoldQuantity</span>
                                 <span>Reserved: @ticket.ReservedQuantity</span>

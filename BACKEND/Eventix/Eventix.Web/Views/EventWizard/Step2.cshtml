@@ -1,4 +1,4 @@
-﻿@using Eventix.Web.Models.EventWizard
+@using Eventix.Web.Models.EventWizard
 @model EventVenueViewModel
 
 @{
@@ -19,7 +19,7 @@
             <a class="wizard-back-link"
                asp-controller="EventWizard"
                asp-action="Step1">
-                ← Back to Event Info
+                ? Back to Event Info
             </a>
 
             <div class="wizard-title">
@@ -97,26 +97,17 @@
                         <div class="venue-section-header">
                             <div>
                                 <h3>Select Venue</h3>
-
-                                <p>
-                                </p>
                             </div>
-
                             <span class="wizard-pill info">
-                                @(Model.Venues?.Count ?? 0) venues
+                                @Model.VenuePage.TotalRows venues
                             </span>
                         </div>
 
-                        @if (Model.Venues == null ||
-                                                !Model.Venues.Any())
+                        @if (!Model.Venues.Any())
                         {
                             <div class="organizer-empty mt-3">
                                 <h2>No venues available</h2>
-
-                                <p>
-                                    Switch to “Create New Venue”
-                                    to add your first venue.
-                                </p>
+                                <p>Switch to "Create New Venue" to add your first venue.</p>
                             </div>
                         }
                         else
@@ -124,55 +115,62 @@
                             <div class="venue-selection-list mt-3">
                                 @foreach (var venue in Model.Venues)
                                 {
-                                    var isSelected =
-                                    selectedVenueId == venue.Id;
-
-                                    <label class="venue-selection-card
-                                                          @(isSelected ? "selected" : "")">
-
+                                    var isSelected = selectedVenueId == venue.Id;
+                                    <label class="venue-selection-card @(isSelected ? "selected" : "")">
                                         <input type="radio"
                                                asp-for="SelectedVenueId"
                                                value="@venue.Id"
                                                class="venue-radio" />
-
                                         <div class="venue-selection-content">
                                             <div class="venue-selection-top">
                                                 <div>
                                                     <h4>@venue.Name</h4>
-
-                                                    <p>
-                                                        @venue.Address
-                                                    </p>
+                                                    <p>@venue.Address</p>
                                                 </div>
-
                                                 <span class="wizard-pill">
-                                                    @(string.IsNullOrWhiteSpace(venue.City)
-                                                                                                ? "Unknown city"
-                                                                                                : venue.City)
-                                        </span>
-                                    </div>
-
-                                            <div class="venue-selection-meta">
-                                                <span>
-                                                    Capacity
-                                                    <strong>
-                                                        @venue.Capacity.ToString("N0")
-                                                    </strong>
+                                                    @(string.IsNullOrWhiteSpace(venue.City) ? "Unknown city" : venue.City)
                                                 </span>
-
+                                            </div>
+                                            <div class="venue-selection-meta">
+                                                <span>Capacity <strong>@venue.Capacity.ToString("N0")</strong></span>
                                             </div>
                                         </div>
-
-                                        <span class="venue-selection-check">
-                                            ✓
-                                        </span>
+                                        <span class="venue-selection-check">?</span>
                                     </label>
-                                                        }
+                                }
                             </div>
 
-                            <span asp-validation-for="SelectedVenueId"
-                                  class="text-danger">
-                            </span>
+                            @if (Model.VenuePage.TotalPages > 1)
+                            {
+                                <div class="pagination-bar mt-3">
+                                    @if (Model.VenuePage.CurrentPage > 1)
+                                    {
+                                        <a class="pagination-btn"
+                                           asp-controller="EventWizard"
+                                           asp-action="Step2"
+                                           asp-route-venuePage="@(Model.VenuePage.CurrentPage - 1)">? Prev</a>
+                                    }
+                                    @for (int p = 1; p <= Model.VenuePage.TotalPages; p++)
+                                    {
+                                        <a class="pagination-btn @(p == Model.VenuePage.CurrentPage ? "active" : "")"
+                                           asp-controller="EventWizard"
+                                           asp-action="Step2"
+                                           asp-route-venuePage="@p">@p</a>
+                                    }
+                                    @if (Model.VenuePage.CurrentPage < Model.VenuePage.TotalPages)
+                                    {
+                                        <a class="pagination-btn"
+                                           asp-controller="EventWizard"
+                                           asp-action="Step2"
+                                           asp-route-venuePage="@(Model.VenuePage.CurrentPage + 1)">Next ?</a>
+                                    }
+                                    <span class="pagination-info">
+                                        Page @Model.VenuePage.CurrentPage / @Model.VenuePage.TotalPages
+                                    </span>
+                                </div>
+                            }
+
+                            <span asp-validation-for="SelectedVenueId" class="text-danger"></span>
                         }
                     </div>
                 </div>
@@ -255,13 +253,13 @@
                     <a asp-controller="EventWizard"
                        asp-action="Step1"
                        class="wizard-btn-secondary">
-                        ← Back
+                        ? Back
                     </a>
 
                     <button type="submit"
                             class="wizard-btn-primary"
                             id="continueVenueButton">
-                        Continue to Zones →
+                        Continue to Ticket Types ?
                     </button>
                 </div>
             </form>

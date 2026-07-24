@@ -1,0 +1,11 @@
+@model Eventix.Share.Commerce.TicketResponse
+@{ ViewData["Title"] = "Vé điện tử"; }
+<main class="commerce-page"><section class="commerce-card ticket-detail">
+    <span class="commerce-status">@Model.Status</span><h1>@Model.EventTitle</h1>
+    <p>@Model.EventStartTime.ToString("HH:mm dd/MM/yyyy")</p><p>@Model.VenueName</p>
+    <h2>@Model.TicketTypeName @Model.SeatLabel</h2><div id="ticket-qr" class="ticket-qr"></div>
+    <strong>@Model.TicketCode</strong><p class="qr-token">@Model.QrToken</p>
+    <button class="commerce-button" onclick="window.print()">In / Lưu PDF</button>
+</section></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>new QRCode(document.getElementById("ticket-qr"),{text:@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.QrToken)),width:220,height:220});</script>

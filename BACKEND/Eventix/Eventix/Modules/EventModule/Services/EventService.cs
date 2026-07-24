@@ -4,9 +4,11 @@ using Eventix.Common.Helpers;
 using Eventix.Data;
 using Eventix.Entities;
 using Eventix.Extensions;
+using Eventix.Helpers;
 using Eventix.Modules.EventModule.Interfaces;
 using Eventix.Share.Category;
 using Eventix.Share.Common.Models;
+using Eventix.Share.Common.Constants;
 using Eventix.Share.Event;
 using Eventix.Share.Organizer;
 using Eventix.Share.TicketType;
@@ -38,8 +40,13 @@ namespace Eventix.Modules.EventModule.Services
             var categoryExists = await _context.Categories.AnyAsync(x => x.Id == request.CategoryId);
             if (!categoryExists) throw new BadRequestException(SystemError.CATEGORY_NOT_FOUND);
 
-            var eventExist = await _context.Events.FirstOrDefaultAsync(e => ((e.Venue.Id == request.VenueId) && (e.StartTime > request.StartTime && e.StartTime < request.EndTime) || (e.EndTime > request.StartTime && e.EndTime < request.EndTime)));
-            if (eventExist != null) throw new BadRequestException(SystemError.EVENT_EXIST);
+            // Kiểm tra trùng venue + thời gian: hai khoảng [A_start, A_end) và [B_start, B_end) overlap khi A_start < B_end AND A_end > B_start
+            var hasOverlap = await _context.Events.AnyAsync(e =>
+                e.VenueId == request.VenueId &&
+                e.Status != EventStatus.Cancelled &&
+                e.StartTime < request.EndTime &&
+                e.EndTime > request.StartTime);
+            if (hasOverlap) throw new BadRequestException(SystemError.EVENT_EXIST);
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -131,6 +138,29 @@ namespace Eventix.Modules.EventModule.Services
                 throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
             }
 
+            var availableSeats = await _context.EventSeatStatuses
+                .AsNoTracking()
+                .Where(s => s.EventId == eventId)
+                .Select(s => new BookingSeatResponse
+                {
+                    SeatId = s.SeatId,
+                    TicketTypeId = s.TicketTypeId,
+                    Section = s.Seat.Section,
+                    Row = s.Seat.Row,
+                    Number = s.Seat.Number,
+                    Status = s.Status,
+                    XPosition = s.Seat.Xposition,
+                    YPosition = s.Seat.Yposition,
+                    Label = ((s.Seat.Section ?? "") + " " +
+                             (s.Seat.Row ?? "") + "-" +
+                             s.Seat.Number).Trim()
+                })
+                .OrderBy(s => s.Section)
+                .ThenBy(s => s.Row)
+                .ThenBy(s => s.XPosition)
+                .ThenBy(s => s.Number)
+                .ToListAsync();
+
             return new EventBookingResponse
             {
                 Id = eventEntity.Id,
@@ -167,13 +197,15 @@ namespace Eventix.Modules.EventModule.Services
                     SaleEndTime = t.SaleEndTime,
 
                     IsSeatRequired = t.IsSeatRequired,
+                    Status = t.Status,
 
                     CreatedAt = t.CreatedAt,
                     CreatedBy = t.CreatedBy,
                     UpdatedAt = t.UpdatedAt,
                     UpdatedBy = t.UpdatedBy
                 })
-                .ToList()
+                .ToList(),
+                Seats = availableSeats
             };
         }
 
@@ -512,50 +544,6 @@ namespace Eventix.Modules.EventModule.Services
 
             var venueId = eventEntity.VenueId;
 
-            var zones = await _context.VenueZones
-                .Where(z => z.VenueId == venueId)
-                .OrderBy(z => z.SortOrder)
-                .ToListAsync();
-
-            if (zones.Count == 0)
-            {
-                throw new BadRequestException(
-                    "At least one venue zone is required.");
-            }
-
-            /*
-             * Đồng bộ capacity cho các zone có ghế.
-             * Capacity của seated zone phải bằng số ghế thực tế.
-             */
-            foreach (var zone in zones.Where(z => z.HasSeats))
-            {
-                var seatCount = await _context.Seats.CountAsync(s =>
-                    s.VenueId == venueId &&
-                    s.VenueZoneId == zone.Id);
-
-                if (seatCount <= 0)
-                {
-                    throw new BadRequestException(
-                        $"Zone '{zone.Name}' does not have assigned seats.");
-                }
-
-                zone.Capacity = seatCount;
-                zone.UpdatedAt = DateTime.UtcNow;
-            }
-
-            /*
-             * Sau khi đồng bộ seated-zone capacity,
-             * mới kiểm tra tổng capacity của venue.
-             */
-            var totalZoneCapacity = zones.Sum(z => z.Capacity);
-
-            if (totalZoneCapacity > eventEntity.Venue.Capacity)
-            {
-                throw new BadRequestException(
-                    $"Total zone capacity ({totalZoneCapacity}) exceeds " +
-                    $"venue capacity ({eventEntity.Venue.Capacity}).");
-            }
-
             if (eventEntity.TicketTypes.Count == 0)
             {
                 throw new BadRequestException(
@@ -563,90 +551,117 @@ namespace Eventix.Modules.EventModule.Services
             }
 
             /*
-             * Kiểm tra từng TicketType.
+             * Validation mới: TicketType-based (không cần VenueZone).
+             * Chỉ kiểm tra quantity hợp lệ.
              */
             foreach (var ticketType in eventEntity.TicketTypes)
             {
-                if (!ticketType.VenueZoneId.HasValue)
-                {
-                    throw new BadRequestException(
-                        $"Ticket type '{ticketType.Name}' has no venue zone.");
-                }
-
-                var zone = zones.FirstOrDefault(z =>
-                    z.Id == ticketType.VenueZoneId.Value);
-
-                if (zone == null)
-                {
-                    throw new BadRequestException(
-                        $"Ticket type '{ticketType.Name}' has an invalid venue zone.");
-                }
-
                 if (ticketType.Quantity <= 0)
                 {
                     throw new BadRequestException(
                         $"Ticket type '{ticketType.Name}' has an invalid quantity.");
                 }
-
-                if (ticketType.IsSeatRequired != zone.HasSeats)
-                {
-                    throw new BadRequestException(
-                        $"Ticket type '{ticketType.Name}' does not match " +
-                        $"the seating configuration of zone '{zone.Name}'.");
-                }
             }
 
             /*
-             * Kiểm tra tổng quantity của tất cả TicketType trong từng zone.
+             * Tổng quantity không vượt quá venue capacity.
              */
-            var ticketGroups = eventEntity.TicketTypes
-                .Where(t => t.VenueZoneId.HasValue)
-                .GroupBy(t => t.VenueZoneId!.Value);
-
-            foreach (var group in ticketGroups)
-            {
-                var zone = zones.FirstOrDefault(z => z.Id == group.Key);
-
-                if (zone == null)
-                {
-                    throw new BadRequestException(
-                        "A ticket type contains an invalid venue zone.");
-                }
-
-                var totalTicketQuantity = group.Sum(t => t.Quantity);
-
-                if (totalTicketQuantity > zone.Capacity)
-                {
-                    throw new BadRequestException(
-                        $"Total ticket quantity in zone '{zone.Name}' " +
-                        $"({totalTicketQuantity}) exceeds its capacity " +
-                        $"({zone.Capacity}).");
-                }
-            }
-
-            /*
-             * Kiểm tra mỗi zone đã có layout trên map.
-             */
-            var mappedZoneIds = await _context.VenueSectionLayouts
-                .Where(layout =>
-                    layout.VenueId == venueId &&
-                    layout.VenueZoneId.HasValue)
-                .Select(layout => layout.VenueZoneId!.Value)
-                .Distinct()
-                .ToListAsync();
-
-            var mappedZoneIdSet = mappedZoneIds.ToHashSet();
-
-            var zonesWithoutMap = zones
-                .Where(zone => !mappedZoneIdSet.Contains(zone.Id))
-                .Select(zone => zone.Name)
-                .ToList();
-
-            if (zonesWithoutMap.Count > 0)
+            var totalTicketQty = eventEntity.TicketTypes.Sum(t => t.Quantity);
+            if (totalTicketQty > eventEntity.Venue.Capacity)
             {
                 throw new BadRequestException(
-                    $"Map layout is missing for: " +
-                    $"{string.Join(", ", zonesWithoutMap)}.");
+                    $"Total ticket quantity ({totalTicketQty}) exceeds " +
+                    $"venue capacity ({eventEntity.Venue.Capacity}).");
+            }
+
+            /*
+             * Với TicketType có IsSeatRequired = true:
+             * - Nếu đã có EventSeatStatus → skip (đã generate từ trước)
+             * - Nếu chưa có → generate seats ngay lúc publish
+             */
+            foreach (var ticketType in eventEntity.TicketTypes.Where(t => t.IsSeatRequired))
+            {
+                var existingStatusCount = await _context.EventSeatStatuses
+                    .CountAsync(s => s.EventId == eventEntity.Id &&
+                                     s.TicketTypeId == ticketType.Id);
+
+                if (existingStatusCount == 0)
+                {
+                    // Generate seats nếu chưa có
+                    var sectionName = ticketType.Section ?? ticketType.Name;
+
+                    var existingSeats = await _context.Seats
+                        .Where(s => s.VenueId == venueId && s.Section == sectionName)
+                        .ToListAsync();
+
+                    var existingKeys = existingSeats
+                        .Select(s => $"{s.Section}|{s.Row}|{s.Number}")
+                        .ToHashSet();
+
+                    var cols = (int)Math.Ceiling(Math.Sqrt(ticketType.Quantity));
+                    var rows = (int)Math.Ceiling((double)ticketType.Quantity / cols);
+                    const decimal startX = 20m, startY = 20m, gapX = 40m, gapY = 40m;
+
+                    var newSeats = new List<Seat>();
+                    var seatCount = 0;
+
+                    for (int r = 0; r < rows && seatCount < ticketType.Quantity; r++)
+                    {
+                        var rowLabel = SeatHelper.IndexToRowLabel(r);
+                        for (int c = 1; c <= cols && seatCount < ticketType.Quantity; c++)
+                        {
+                            var key = $"{sectionName}|{rowLabel}|{c}";
+                            if (!existingKeys.Contains(key))
+                            {
+                                newSeats.Add(new Seat
+                                {
+                                    Id = Guid.NewGuid(),
+                                    VenueId = venueId,
+                                    VenueZoneId = null,
+                                    Section = sectionName,
+                                    Row = rowLabel,
+                                    Number = c.ToString(),
+                                    Xposition = startX + ((c - 1) * gapX),
+                                    Yposition = startY + (r * gapY),
+                                    Status = SystemConstants.SeatStatus.AVAILABLE
+                                });
+                            }
+                            seatCount++;
+                        }
+                    }
+
+                    if (newSeats.Any())
+                    {
+                        await _context.Seats.AddRangeAsync(newSeats);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    // Tạo EventSeatStatus cho tất cả ghế trong section này
+                    var allSeats = existingSeats.Concat(newSeats).ToList();
+                    var statuses = allSeats.Select(seat => new EventSeatStatus
+                    {
+                        Id = Guid.NewGuid(),
+                        EventId = eventEntity.Id,
+                        SeatId = seat.Id,
+                        TicketTypeId = ticketType.Id,
+                        Status = SystemConstants.SeatStatus.AVAILABLE
+                    });
+                    await _context.EventSeatStatuses.AddRangeAsync(statuses);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Gán TicketTypeId cho VenueSectionLayout nếu chưa có
+                var orphanLayout = await _context.VenueSectionLayouts
+                    .FirstOrDefaultAsync(l =>
+                        l.VenueId == venueId &&
+                        l.TicketTypeId == null &&
+                        l.Section == (ticketType.Section ?? ticketType.Name));
+
+                if (orphanLayout != null)
+                {
+                    orphanLayout.TicketTypeId = ticketType.Id;
+                    orphanLayout.UpdatedAt = DateTime.UtcNow;
+                }
             }
 
             eventEntity.Status = "Published";

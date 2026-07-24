@@ -96,7 +96,7 @@
                            asp-action="Details"
                            asp-route-id="@item.Id">
 
-                            <img src="@(item.ImageUrl ?? "/images/no-image.jpg")"
+                            <img src="@MediaUrl.Img(item.ImageUrl)"
                                  alt="@item.Title" />
 
                             <div class="event-card-body">

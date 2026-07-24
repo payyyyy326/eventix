@@ -2,7 +2,16 @@
 {
     public class GenerateSeatsRequest
     {
-        public Guid VenueZoneId { get; set; }
+        /// <summary>
+        /// Zone-based generate (legacy). Nếu TicketTypeId được cung cấp, trường này bị bỏ qua.
+        /// </summary>
+        public Guid? VenueZoneId { get; set; }
+
+        /// <summary>
+        /// TicketType-based generate (luồng mới). Khi có giá trị, seats sẽ được gắn theo
+        /// TicketType thay vì VenueZone.
+        /// </summary>
+        public Guid? TicketTypeId { get; set; }
 
         public string StartRow { get; set; } = string.Empty;
 

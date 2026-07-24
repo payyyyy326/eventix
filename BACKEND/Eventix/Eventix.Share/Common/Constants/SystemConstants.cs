@@ -81,7 +81,38 @@
         public static class SeatStatus
         {
             public const string AVAILABLE = "Available";
+            public const string RESERVED = "Reserved";
             public const string SOLD = "Sold";
+        }
+
+        public static class ReservationStatus
+        {
+            public const string ACTIVE = "Active";
+            public const string CONFIRMED = "Confirmed";
+            public const string EXPIRED = "Expired";
+            public const string CANCELLED = "Cancelled";
+        }
+
+        public static class OrderStatus
+        {
+            public const string PENDING = "Pending";
+            public const string PAID = "Paid";
+            public const string CANCELLED = "Cancelled";
+            public const string EXPIRED = "Expired";
+        }
+
+        public static class PaymentStatus
+        {
+            public const string PENDING = "Pending";
+            public const string SUCCESS = "Success";
+            public const string FAILED = "Failed";
+        }
+
+        public static class TicketStatus
+        {
+            public const string ACTIVE = "Active";
+            public const string USED = "Used";
+            public const string CANCELLED = "Cancelled";
         }
 
         public static class EventStatus

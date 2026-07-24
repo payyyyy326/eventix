@@ -18,20 +18,25 @@
 
         public int ReservedQuantity { get; set; }
 
-        public Guid? VenueZoneId { get; set; }
+        public int AvailableQuantity => Quantity - SoldQuantity - ReservedQuantity;
 
-        public string? ZoneName { get; set; }
-
-        public bool HasSeats { get; set; }
         public string? Section { get; set; }
+
+        /// <summary>
+        /// True = loại vé có ghế ngồi. False = đứng / general admission.
+        /// </summary>
+        public bool IsSeatRequired { get; set; }
+
+        /// <summary>
+        /// Màu hiển thị trên venue map.
+        /// </summary>
+        public string? SectionColor { get; set; }
 
         public string Status { get; set; } = null!;
 
         public DateTime SaleStartTime { get; set; }
 
         public DateTime SaleEndTime { get; set; }
-
-        public bool IsSeatRequired { get; set; }
 
         public DateTime CreatedAt { get; set; }
 

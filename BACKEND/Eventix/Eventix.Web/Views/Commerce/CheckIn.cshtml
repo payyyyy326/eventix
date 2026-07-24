@@ -1,0 +1,9 @@
+@model Eventix.Share.Commerce.CheckInRequest
+@{ ViewData["Title"] = "Check-in vé"; var result = ViewBag.Result as Eventix.Share.Commerce.CheckInResponse; }
+<main class="commerce-page"><section class="commerce-card"><h1>Check-in vé</h1>
+<p>Nhập Event ID và token đọc được từ QR.</p><div asp-validation-summary="All" class="validation-summary-errors"></div>
+<form asp-action="CheckIn" method="post">@Html.AntiForgeryToken()
+<label>Event ID</label><input asp-for="EventId" /><label>QR token</label><input asp-for="QrToken" autofocus />
+<button class="commerce-button" type="submit">Xác nhận check-in</button></form>
+@if (result != null) { <div class="checkin-success"><h2>✓ Check-in thành công</h2><p>@result.CustomerName · @result.TicketTypeName @result.SeatLabel</p><strong>@result.TicketCode</strong></div> }
+</section></main>

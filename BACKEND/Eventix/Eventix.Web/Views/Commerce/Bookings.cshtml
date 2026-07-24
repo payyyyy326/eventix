@@ -1,0 +1,87 @@
+@model List<Eventix.Share.Booking.BookingResponse>
+@{
+    ViewData["Title"] = "Vé đang giữ";
+    var now = DateTime.UtcNow;
+}
+<main class="commerce-page">
+    <h1>Vé đang giữ</h1>
+    <p>Các vé chưa thanh toán được giữ tối đa 15 phút.</p>
+
+    @if (Model.Count == 0)
+    {
+        <section class="commerce-card">
+            <p>Bạn chưa có lượt giữ vé nào.</p>
+            <a class="commerce-button" asp-controller="Event" asp-action="Index">Tìm sự kiện</a>
+        </section>
+    }
+
+    @foreach (var booking in Model)
+    {
+        var canPay = booking.Status == "Active" && booking.ExpiresAt > now;
+        <section class="commerce-card booking-hold"
+                 data-expires="@DateTime.SpecifyKind(booking.ExpiresAt, DateTimeKind.Utc).ToString("O")">
+            <div class="commerce-row">
+                <div>
+                    <h2>@booking.EventTitle</h2>
+                    <p>@booking.TicketTypeName · @booking.Quantity vé</p>
+                    @if (!string.IsNullOrWhiteSpace(booking.SeatLabel))
+                    {
+                        <p>Ghế: <strong>@booking.SeatLabel</strong></p>
+                    }
+                </div>
+                <span class="commerce-status">@booking.Status</span>
+            </div>
+            <div class="commerce-total">
+                <span>@booking.TotalAmount.ToString("N0") VND</span>
+                @if (canPay)
+                {
+                    <strong class="booking-countdown">Đang tính...</strong>
+                }
+                else
+                {
+                    <strong>Đã hết hạn</strong>
+                }
+            </div>
+            @if (canPay)
+            {
+                <div class="booking-actions">
+                    <a class="commerce-button"
+                       asp-action="Checkout"
+                       asp-route-reservationIds="@booking.Id">
+                        Thanh toán ngay
+                    </a>
+                    <form asp-action="CancelBooking" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@booking.Id" />
+                        <button class="commerce-button commerce-button-danger"
+                                type="submit"
+                                onclick="return confirm('Bạn muốn hủy lượt giữ vé này?')">
+                            Hủy giữ vé
+                        </button>
+                    </form>
+                </div>
+            }
+        </section>
+    }
+</main>
+
+<script>
+    function updateBookingCountdowns() {
+        document.querySelectorAll(".booking-hold").forEach(card => {
+            const output = card.querySelector(".booking-countdown");
+            if (!output) return;
+            const expires = new Date(card.dataset.expires).getTime();
+            const remaining = expires - Date.now();
+            if (remaining <= 0) {
+                output.textContent = "Đã hết hạn";
+                card.querySelectorAll(".booking-actions").forEach(x => x.remove());
+                return;
+            }
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            output.textContent = `Còn ${minutes}:${seconds.toString().padStart(2, "0")}`;
+        });
+    }
+    updateBookingCountdowns();
+    setInterval(updateBookingCountdowns, 1000);
+</script>

@@ -111,6 +111,12 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage EVENT_BANNER_UPLOADED = new("326", "Event banner uploaded successfully", true);
         public static readonly SystemMessage EVENT_IMAGE_UPLOADED = new("327", "Event image uploaded successfully", true);
         public static readonly SystemMessage EVENT_PUBLISHED = new("328", "Event published successfully", true);
+
+        // Booking Success Messages (341-360)
+        public static readonly SystemMessage BOOKING_CREATED = new("341", "Tickets reserved successfully", true);
+        public static readonly SystemMessage BOOKINGS_RETRIEVED = new("342", "Bookings retrieved successfully", true);
+        public static readonly SystemMessage BOOKING_CANCELLED = new("343", "Booking cancelled successfully", true);
+
         #endregion
     }
 }

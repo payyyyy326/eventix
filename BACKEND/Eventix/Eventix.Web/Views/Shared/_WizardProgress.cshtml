@@ -1,11 +1,12 @@
-﻿@{
+@{
     var currentStep = (int)(ViewBag.CurrentStep ?? 1);
 
+    // Step 3 (Venue Zones) is removed - wizard now has 6 steps:
+    // 1: Event Info, 2: Venue, 3: Ticket Types, 4: Seats (preview), 5: Map, 6: Review
     var steps = new[]
     {
         "Event Info",
         "Venue",
-        "Zones",
         "Ticket Types",
         "Seats",
         "Map",

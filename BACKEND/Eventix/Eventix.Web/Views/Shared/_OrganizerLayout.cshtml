@@ -1,6 +1,5 @@
 ﻿@{
     Layout = "_Layout";
-    @await RenderSectionAsync("Scripts", required: false)
 }
 
 <div class="organizer-layout">
@@ -39,3 +38,7 @@
     </section>
 
 </div>
+
+@section Scripts {
+    @await RenderSectionAsync("Scripts", required: false)
+}

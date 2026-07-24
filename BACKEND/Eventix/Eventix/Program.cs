@@ -7,6 +7,10 @@ using Eventix.Infrastructure.Hubs;
 using Eventix.Infrastructure.Jobs;
 using Eventix.Modules.Auth.Interfaces;
 using Eventix.Modules.Auth.Services;
+using Eventix.Modules.BookingModule.Interfaces;
+using Eventix.Modules.BookingModule.Services;
+using Eventix.Modules.CommerceModule.Interfaces;
+using Eventix.Modules.CommerceModule.Services;
 using Eventix.Modules.CategoryModule.Interfaces;
 using Eventix.Modules.CategoryModule.Services;
 using Eventix.Modules.EventModule.Interfaces;
@@ -149,6 +153,19 @@ namespace Eventix
                     .WithSimpleSchedule(x => x
                         .WithIntervalInMinutes(1)
                         .RepeatForever()));
+
+                var bookingExpirationJobKey = new JobKey("BookingExpirationJob");
+
+                q.AddJob<BookingExpirationJob>(opts =>
+                    opts.WithIdentity(bookingExpirationJobKey));
+
+                q.AddTrigger(opts => opts
+                    .ForJob(bookingExpirationJobKey)
+                    .WithIdentity("BookingExpirationJob-trigger")
+                    .WithSimpleSchedule(x => x
+                        .WithIntervalInMinutes(1)
+                        .RepeatForever()));
+
             });
 
             builder.Services.AddQuartzHostedService(options =>
@@ -164,6 +181,8 @@ namespace Eventix
 
             // Register Services
             builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IBookingService, BookingService>();
+            builder.Services.AddScoped<ICommerceService, CommerceService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();

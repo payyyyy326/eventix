@@ -2,17 +2,14 @@
 @model EventTicketTypesViewModel
 
 @{
-    ViewData["Title"] = "Create Event - Step 4";
+    ViewData["Title"] = "Create Event - Step 3";
     Layout = "_OrganizerLayout";
 
     var ticketTypes = Model.TicketTypes ?? new();
-    var zones = Model.Zones ?? new();
 
-    var totalTickets = ticketTypes.Sum(t => t.Quantity);
-    var seatedTickets = ticketTypes.Count(t => t.IsSeatRequired);
+    var totalTickets  = ticketTypes.Sum(t => t.Quantity);
+    var seatedTickets  = ticketTypes.Count(t => t.IsSeatRequired);
     var generalTickets = ticketTypes.Count(t => !t.IsSeatRequired);
-
-    var totalZoneCapacity = zones.Sum(z => z.Capacity);
 }
 
 <section class="organizer-page">
@@ -21,16 +18,16 @@
         <div class="wizard-top">
             <a class="wizard-back-link"
                asp-controller="EventWizard"
-               asp-action="Step3">
-                ← Back to Zones
+               asp-action="Step2">
+                ← Back to Venue
             </a>
 
             <div class="wizard-title">
                 <span>Create Event</span>
-                <h1>Step 4: Ticket Types</h1>
+                <h1>Step 3: Ticket Types</h1>
                 <p>
-                    Create ticket types, set prices and assign each ticket
-                    to a venue zone.
+                    Create ticket types and set prices.
+                    Seated tickets will auto-generate seats when the event is published.
                 </p>
             </div>
 
@@ -62,17 +59,9 @@
                         <h3>@(Model.Venue?.Name ?? "Selected Venue")</h3>
                         <p>@(Model.Venue?.Address ?? "No address")</p>
                     </div>
-
-                    <span class="wizard-pill info">
-                        @zones.Count zones
-                    </span>
                 </div>
 
                 <div class="wizard-meta">
-                    <span class="wizard-pill">
-                        Zone Capacity: @totalZoneCapacity.ToString("N0")
-                    </span>
-
                     <span class="wizard-pill neutral">
                         Tickets Created: @totalTickets.ToString("N0")
                     </span>
@@ -82,8 +71,8 @@
             <div class="wizard-card mb-4">
                 <h3>Add Ticket Type</h3>
                 <p>
-                    Select a zone first. Seat selection will be configured
-                    automatically according to that zone.
+                    Choose Standing (General Admission) or Seated.
+                    Seated tickets will auto-generate seats equal to the quantity.
                 </p>
 
                 <form asp-controller="EventWizard"
@@ -121,48 +110,29 @@
                             </div>
 
                             <div class="form-group">
-                                <label asp-for="NewTicketType.VenueZoneId">
-                                    Venue Zone
-                                </label>
-
-                                <select asp-for="NewTicketType.VenueZoneId"
-                                        class="form-select"
-                                        id="venueZoneSelect">
-
-                                    <option value="">
-                                        -- Select Zone --
-                                    </option>
-
-                                    @foreach (var zone in zones
-                                                                        .OrderBy(z => z.SortOrder)
-                                                                        .ThenBy(z => z.Name))
-                                    {
-                                        var allocatedQuantity = ticketTypes
-                                        .Where(t => t.VenueZoneId == zone.Id)
-                                        .Sum(t => t.Quantity);
-
-                                        var remainingCapacity =
-                                        Math.Max(0, zone.Capacity - allocatedQuantity);
-
-                                        <option value="@zone.Id"
-                                                data-has-seats="@zone.HasSeats.ToString().ToLowerInvariant()"
-                                                data-capacity="@zone.Capacity"
-                                                data-allocated="@allocatedQuantity"
-                                                data-remaining="@remainingCapacity">
-
-                                            @zone.Name
-                                            -
-                                            @(zone.HasSeats ? "Assigned Seating" : "General Admission")
-                                            -
-                                            Remaining: @remainingCapacity
-                                        </option>
-                                    }
-                                </select>
-
-                                <span asp-validation-for="NewTicketType.VenueZoneId"
-                                      class="text-danger">
-                                </span>
+                                <label>Ticket Type</label>
+                                <div class="d-flex gap-3 mt-2">
+                                    <label class="d-flex align-items-center gap-2" style="cursor:pointer;">
+                                        <input asp-for="NewTicketType.IsSeatRequired"
+                                               type="radio"
+                                               value="false"
+                                               id="radioStanding"
+                                               checked="checked" />
+                                        <span>🧍 Standing (General Admission)</span>
+                                    </label>
+                                    <label class="d-flex align-items-center gap-2" style="cursor:pointer;">
+                                        <input asp-for="NewTicketType.IsSeatRequired"
+                                               type="radio"
+                                               value="true"
+                                               id="radioSeated" />
+                                        <span>💺 Seated (Assigned Seating)</span>
+                                    </label>
+                                </div>
+                                <small class="text-muted mt-1">
+                                    Seated tickets will auto-generate seats equal to the quantity you enter.
+                                </small>
                             </div>
+
                         </div>
 
                         <div class="wizard-grid-2 mt-3">
@@ -225,13 +195,18 @@
                                     Sale Start
                                 </label>
 
-                                <input asp-for="NewTicketType.SaleStartTime"
+                                <input name="_saleStartLocal"
+                                       id="saleStartInput"
                                        type="datetime-local"
-                                       class="form-control" />
+                                       class="form-control"
+                                       value="@(Model.NewTicketType.SaleStartTime == default ? "" : Model.NewTicketType.SaleStartTime.ToString("yyyy-MM-ddTHH:mm"))" />
+
+                                <input type="hidden"
+                                       name="NewTicketType.SaleStartTime"
+                                       id="saleStartUtc" />
 
                                 <span asp-validation-for="NewTicketType.SaleStartTime"
-                                      class="text-danger">
-                                </span>
+                                      class="text-danger"></span>
                             </div>
 
                             <div class="form-group">
@@ -239,13 +214,18 @@
                                     Sale End
                                 </label>
 
-                                <input asp-for="NewTicketType.SaleEndTime"
+                                <input name="_saleEndLocal"
+                                       id="saleEndInput"
                                        type="datetime-local"
-                                       class="form-control" />
+                                       class="form-control"
+                                       value="@(Model.NewTicketType.SaleEndTime == default ? "" : Model.NewTicketType.SaleEndTime.ToString("yyyy-MM-ddTHH:mm"))" />
+
+                                <input type="hidden"
+                                       name="NewTicketType.SaleEndTime"
+                                       id="saleEndUtc" />
 
                                 <span asp-validation-for="NewTicketType.SaleEndTime"
-                                      class="text-danger">
-                                </span>
+                                      class="text-danger"></span>
                             </div>
                         </div>
                     </div>
@@ -337,9 +317,6 @@
                                             .OrderBy(t => t.Price)
                                             .ThenBy(t => t.Name))
                         {
-                            var zone = zones.FirstOrDefault(
-                            z => z.Id == ticket.VenueZoneId);
-
                             var priceLabel = ticket.Price <= 0
                             ? "Free"
                             : $"{ticket.Price:N0} VND";
@@ -357,10 +334,6 @@
                                                                                         ? "Assigned Seating"
                                                                                         : "General Admission")
                                     </span>
-
-                                            <span class="wizard-pill neutral">
-                                                @(zone?.Name ?? "Unknown zone")
-                                            </span>
                                         </div>
                                     </div>
 
@@ -384,8 +357,8 @@
                                     </div>
 
                                     <div>
-                                        <span>Zone Capacity</span>
-                                        <strong>@(zone?.Capacity.ToString("N0") ?? "N/A")</strong>
+                                        <span>Type</span>
+                                        <strong>@(ticket.IsSeatRequired ? "Seated" : "Standing")</strong>
                                     </div>
 
                                     <div>
@@ -410,7 +383,7 @@
 
             <div class="wizard-actions">
                 <a asp-controller="EventWizard"
-                   asp-action="Step3"
+                   asp-action="Step2"
                    class="wizard-btn-secondary">
                     ← Back
                 </a>
@@ -438,98 +411,70 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const zoneSelect =
-                document.getElementById("venueZoneSelect");
+            // ── Seat type badge ───────────────────────────────────────────────
+            const radioStanding = document.getElementById("radioStanding");
+            const radioSeated   = document.getElementById("radioSeated");
+            const badge         = document.getElementById("seatTypeBadge");
+            const desc          = document.getElementById("seatTypeDescription");
 
-            const seatRequiredCheckbox =
-                document.getElementById("seatRequiredCheckbox");
-
-            const seatTypeBadge =
-                document.getElementById("seatTypeBadge");
-
-            const seatTypeDescription =
-                document.getElementById("seatTypeDescription");
-
-            const quantityInput =
-                document.getElementById("ticketQuantityInput");
-
-            const capacityHint =
-                document.getElementById("zoneCapacityHint");
-
-            function updateZoneConfiguration() {
-                const selectedOption =
-                    zoneSelect?.options[zoneSelect.selectedIndex];
-
-                if (!selectedOption ||
-                    !selectedOption.value) {
-
-                    seatRequiredCheckbox.checked = false;
-
-                    seatTypeBadge.textContent =
-                        "Select a zone";
-
-                    seatTypeBadge.className =
-                        "wizard-pill neutral";
-
-                    seatTypeDescription.textContent =
-                        "Seating configuration will be determined by the selected zone.";
-
-                    capacityHint.textContent =
-                        "Select a zone to see its remaining capacity.";
-
-                    quantityInput.removeAttribute("max");
-
-                    return;
+            function updateBadge() {
+                const isSeated = radioSeated?.checked;
+                if (badge) {
+                    badge.textContent = isSeated ? "Assigned Seating" : "General Admission";
+                    badge.className   = isSeated ? "wizard-pill" : "wizard-pill info";
                 }
-
-                const hasSeats =
-                    selectedOption.dataset.hasSeats === "true";
-
-                const capacity =
-                    Number(selectedOption.dataset.capacity || 0);
-
-                const allocated =
-                    Number(selectedOption.dataset.allocated || 0);
-
-                const remaining =
-                    Number(selectedOption.dataset.remaining || 0);
-
-                seatRequiredCheckbox.checked = hasSeats;
-
-                if (hasSeats) {
-                    seatTypeBadge.textContent =
-                        "Assigned Seating";
-
-                    seatTypeBadge.className =
-                        "wizard-pill";
-
-                    seatTypeDescription.textContent =
-                        "Customers must choose a seat when purchasing this ticket.";
-                } else {
-                    seatTypeBadge.textContent =
-                        "General Admission";
-
-                    seatTypeBadge.className =
-                        "wizard-pill info";
-
-                    seatTypeDescription.textContent =
-                        "Customers choose a quantity without selecting individual seats.";
+                if (desc) {
+                    desc.textContent = isSeated
+                        ? "Seats will be auto-generated equal to the quantity you enter."
+                        : "Customers choose quantity. No individual seat assignment required.";
                 }
-
-                capacityHint.textContent =
-                    `Zone capacity: ${capacity.toLocaleString()} · ` +
-                    `Already allocated: ${allocated.toLocaleString()} · ` +
-                    `Remaining: ${remaining.toLocaleString()}`;
-
-                quantityInput.max = remaining;
             }
 
-            zoneSelect?.addEventListener(
-                "change",
-                updateZoneConfiguration
-            );
+            radioStanding?.addEventListener("change", updateBadge);
+            radioSeated?.addEventListener("change", updateBadge);
+            updateBadge();
 
-            updateZoneConfiguration();
+            // ── Datetime: min = now, default = today ──────────────────────────
+            function toLocalDatetimeValue(date) {
+                const pad = n => String(n).padStart(2, '0');
+                return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+            }
+
+            const now       = new Date();
+            const nowStr    = toLocalDatetimeValue(now);
+            const saleStart = document.getElementById('saleStartInput');
+            const saleEnd   = document.getElementById('saleEndInput');
+
+            if (saleStart) {
+                saleStart.setAttribute('min', nowStr);
+                if (!saleStart.value) {
+                    const d = new Date(now);
+                    d.setHours(d.getHours() + 1, 0, 0, 0);
+                    saleStart.value = toLocalDatetimeValue(d);
+                }
+                saleStart.addEventListener('change', function () {
+                    if (saleEnd) saleEnd.setAttribute('min', this.value);
+                    if (saleEnd?.value && saleEnd.value <= this.value) saleEnd.value = '';
+                });
+            }
+
+            if (saleEnd) {
+                saleEnd.setAttribute('min', nowStr);
+                if (!saleEnd.value) {
+                    const d = new Date(now);
+                    d.setDate(d.getDate() + 7);
+                    d.setMinutes(0, 0, 0);
+                    saleEnd.value = toLocalDatetimeValue(d);
+                }
+            }
+
+            // Convert local → UTC trước khi submit
+            document.getElementById('addTicketTypeForm')?.addEventListener('submit', function () {
+                const startVal = saleStart?.value;
+                const endVal   = saleEnd?.value;
+                if (startVal) document.getElementById('saleStartUtc').value = new Date(startVal).toISOString();
+                if (endVal)   document.getElementById('saleEndUtc').value   = new Date(endVal).toISOString();
+            });
         });
     </script>
 }

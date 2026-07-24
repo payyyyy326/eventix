@@ -1,13 +1,27 @@
-﻿@using System.Text.Json
+@using System.Text.Json
 @using Eventix.Web.Models.EventWizard
 @model EventSeatMapViewModel
 
 @{
-    ViewData["Title"] = "Create Event - Step 6";
+    ViewData["Title"] = "Create Event - Step 5";
     Layout = "_OrganizerLayout";
 
-    var zonesJson = JsonSerializer.Serialize(Model.Zones);
-    var layoutsJson = JsonSerializer.Serialize(Model.Layouts);
+    // Build sections from TicketTypes (not VenueZones)
+    // The JS needs: Name, SeatCount (= Quantity for seated, 0 for standing), Color
+    var sectionColors = new[] {
+        "#7c3aed", "#2563eb", "#16a34a", "#ea580c", "#db2777", "#0891b2",
+        "#d97706", "#be123c", "#0e7490", "#4d7c0f"
+    };
+
+    var sectionsForMap = Model.TicketTypes.Select((t, i) => new {
+        Name = t.Name,
+        SeatCount = t.IsSeatRequired ? t.Quantity : 0,
+        Color = t.SectionColor ?? sectionColors[i % sectionColors.Length],
+        IsSeatRequired = t.IsSeatRequired
+    }).ToList();
+
+    var sectionsJson = JsonSerializer.Serialize(sectionsForMap);
+    var layoutsJson  = JsonSerializer.Serialize(Model.Layouts);
 }
 
 <section class="organizer-page">
@@ -17,13 +31,16 @@
             <a class="wizard-back-link"
                asp-controller="EventWizard"
                asp-action="Step5">
-                ← Back to Seat Assignment
+                ← Back to Seat Preview
             </a>
 
             <div class="wizard-title">
                 <span>Create Event</span>
-                <h1>Step 6: Venue Map</h1>
-                <p>Arrange your zones visually so buyers can understand the event layout.</p>
+                <h1>Step 5: Venue Map</h1>
+                <p>
+                    Arrange your ticket type sections on the venue map.
+                    Drag and resize each block to match the real venue layout.
+                </p>
             </div>
 
             @await Html.PartialAsync("_WizardProgress")
@@ -39,18 +56,44 @@
                     <span class="wizard-pill">
                         Capacity: @(Model.Venue?.Capacity ?? 0)
                     </span>
-
                     <span class="wizard-pill">
-                        Zones: @(Model.Zones?.Count ?? 0)
+                        Sections: @Model.TicketTypes.Count
                     </span>
                 </div>
             </div>
+
+            @if (Model.TicketTypes.Any())
+            {
+                <div class="wizard-card mb-4">
+                    <h4 class="mb-3">Section Legend</h4>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var (ticket, index) in Model.TicketTypes.Select((t, i) => (t, i)))
+                        {
+                            var color = ticket.SectionColor ?? sectionColors[index % sectionColors.Length];
+                            <div class="d-flex align-items-center gap-2">
+                                <div style="width:14px;height:14px;border-radius:3px;background:@color;flex-shrink:0;"></div>
+                                <span class="text-muted" style="font-size:0.85rem;">
+                                    @ticket.Name
+                                    @if (ticket.IsSeatRequired)
+                                    {
+                                        <span class="wizard-pill" style="font-size:0.7rem;padding:2px 6px;margin-left:4px;">@ticket.Quantity seats</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="wizard-pill info" style="font-size:0.7rem;padding:2px 6px;margin-left:4px;">General</span>
+                                    }
+                                </span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
 
             <div class="wizard-card mb-4">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h3>Map Editor</h3>
-                        <p>Drag and resize each zone to match the real venue layout.</p>
+                        <p>Drag and resize each section to match the real venue layout.</p>
                     </div>
 
                     <button type="button"
@@ -69,18 +112,19 @@
 
             <div id="seatMapCanvas" class="seat-map-canvas"></div>
 
-            <div class="wizard-actions">
+            <div class="wizard-actions mt-4">
                 <a asp-controller="EventWizard"
                    asp-action="Step5"
                    class="wizard-btn-secondary">
                     ← Back
                 </a>
 
-                <form asp-controller="EventWizard"
+                <form id="seatMapContinueForm"
+                      asp-controller="EventWizard"
                       asp-action="Step6Continue"
                       method="post">
                     <button type="submit" class="wizard-btn-primary">
-                        Continue →
+                        Continue to Review →
                     </button>
                 </form>
             </div>
@@ -91,8 +135,9 @@
 
 <script>
     window.eventixSeatMap = {
-        sections: @Html.Raw(zonesJson),
-        layouts: @Html.Raw(layoutsJson)
+        sections: @Html.Raw(sectionsJson),
+        layouts:  @Html.Raw(layoutsJson),
+        isSaved: @(((bool)(ViewBag.IsSeatMapSaved ?? false)).ToString().ToLowerInvariant())
     };
 </script>
 

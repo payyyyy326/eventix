@@ -106,5 +106,13 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage UPDATE_CONCURRENCY_ERROR = new("522", "Error updating resource", false);
         public static readonly SystemMessage TRANSACTION_FAILED = new("523", "Transaction failed", false);
 
+        // Booking Errors
+        public static readonly SystemMessage BOOKING_NOT_FOUND = new("490", "Booking not found", false);
+        public static readonly SystemMessage BOOKING_NOT_ACTIVE = new("491", "Booking is no longer active", false);
+        public static readonly SystemMessage TICKET_NOT_ON_SALE = new("492", "Ticket type is not on sale", false);
+        public static readonly SystemMessage TICKET_SOLD_OUT = new("493", "Not enough tickets are available", false);
+        public static readonly SystemMessage SEAT_REQUIRED = new("494", "A seat must be selected for this ticket type", false);
+        public static readonly SystemMessage SEAT_NOT_AVAILABLE = new("495", "The selected seat is not available", false);
+
     }
 }

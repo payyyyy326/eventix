@@ -1,14 +1,11 @@
-@using Eventix.Share.VenueZone
-@model Eventix.Share.TicketType.CreateTicketTypeRequest
+@using Eventix.Share.TicketType
+@model CreateTicketTypeRequest
 
 @{
     ViewData["Title"] = "Create Ticket Type";
     Layout = "_OrganizerLayout";
 
-    var eventId      = (Guid)ViewBag.EventId;
-    var zones        = ViewBag.Zones as List<VenueZoneResponse> ?? new List<VenueZoneResponse>();
-    var zoneCapacity = ViewBag.ZoneCapacity as List<ZoneAvailableCapacityResponse> ?? new List<ZoneAvailableCapacityResponse>();
-    var hasZones     = zones.Any();
+    var eventId = (Guid)ViewBag.EventId;
 }
 
 <section class="organizer-page">
@@ -25,18 +22,11 @@
             <div class="wizard-title">
                 <span>Event Management</span>
                 <h1>Create Ticket Type</h1>
-                <p>Create a new ticket type and assign it to a venue zone.</p>
+                <p>Set the ticket name, type, price and sale period.</p>
             </div>
         </div>
 
         <div class="wizard-panel">
-
-            @if (!hasZones)
-            {
-                <div class="validation mb-4" style="color:#fbbf24;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);">
-                    ⚠ No venue zones found for this event. Please configure zones before creating ticket types.
-                </div>
-            }
 
             <form asp-controller="TicketType"
                   asp-action="Create"
@@ -47,47 +37,14 @@
 
                 <div asp-validation-summary="ModelOnly" class="validation mb-4"></div>
 
+                @* Basic Info *@
                 <div class="wizard-card ticket-form-section mb-4">
                     <div class="ticket-form-heading">
-                        <h4>Zone & Basic Information</h4>
-                        <p>Select a zone first — seat configuration is determined automatically.</p>
+                        <h4>Basic Information</h4>
+                        <p>Name, ticket type and quantity.</p>
                     </div>
 
                     <div class="wizard-grid-2 mt-3">
-
-                        <div class="form-group">
-                            <label asp-for="VenueZoneId">Venue Zone</label>
-                            @if (hasZones)
-                            {
-                                <select asp-for="VenueZoneId"
-                                        class="form-control"
-                                        id="venueZoneSelect">
-                                    <option value="">-- Select Zone --</option>
-                                    @foreach (var zone in zones.OrderBy(z => z.SortOrder).ThenBy(z => z.Name))
-                                    {
-                                        var cap = zoneCapacity.FirstOrDefault(c => c.VenueZoneId == zone.Id);
-                                        var available = cap?.AvailableSlots ?? zone.Capacity;
-                                        <option value="@zone.Id"
-                                                data-has-seats="@zone.HasSeats.ToString().ToLower()"
-                                                data-capacity="@zone.Capacity"
-                                                data-available="@available">
-                                            @zone.Name
-                                            &mdash;
-                                            @(zone.HasSeats ? "Assigned Seating" : "General Admission")
-                                            &mdash;
-                                            Available: @available / @zone.Capacity
-                                        </option>
-                                    }
-                                </select>
-                            }
-                            else
-                            {
-                                <select class="form-control" id="venueZoneSelect" disabled>
-                                    <option value="">-- No zones available --</option>
-                                </select>
-                            }
-                            <span asp-validation-for="VenueZoneId" class="text-danger"></span>
-                        </div>
 
                         <div class="form-group">
                             <label asp-for="Name">Ticket Name</label>
@@ -97,24 +54,55 @@
                             <span asp-validation-for="Name" class="text-danger"></span>
                         </div>
 
-                    </div>
-
-                    <div class="wizard-grid-2 mt-3">
-
                         <div class="form-group">
                             <label asp-for="Quantity">Quantity</label>
                             <input asp-for="Quantity"
                                    type="number"
                                    min="1"
                                    class="form-control"
-                                   placeholder="100"
-                                   id="ticketQuantityInput" />
-                            <small id="zoneCapacityHint" style="color:#64748b;">
-                                Select a zone to see available slots.
-                            </small>
+                                   placeholder="100" />
                             <span asp-validation-for="Quantity" class="text-danger"></span>
                         </div>
 
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label>Admission Type</label>
+                        <div class="d-flex gap-4 mt-2">
+                            <label class="d-flex align-items-center gap-2" style="cursor:pointer;">
+                                <input asp-for="IsSeatRequired"
+                                       type="radio"
+                                       value="false"
+                                       id="radioStanding"
+                                       checked="checked" />
+                                <div>
+                                    <strong>🧍 Standing</strong>
+                                    <small class="d-block text-muted">General admission — no seat assignment</small>
+                                </div>
+                            </label>
+                            <label class="d-flex align-items-center gap-2" style="cursor:pointer;">
+                                <input asp-for="IsSeatRequired"
+                                       type="radio"
+                                       value="true"
+                                       id="radioSeated" />
+                                <div>
+                                    <strong>💺 Seated</strong>
+                                    <small class="d-block text-muted">Seats auto-generated from quantity</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+
+                @* Price *@
+                <div class="wizard-card ticket-form-section mb-4">
+                    <div class="ticket-form-heading">
+                        <h4>Pricing</h4>
+                        <p>Set the ticket price. Enter 0 for free events.</p>
+                    </div>
+
+                    <div class="wizard-grid-2 mt-3">
                         <div class="form-group">
                             <label asp-for="Price">Price</label>
                             <div class="ticket-price-input">
@@ -129,9 +117,21 @@
                             <span asp-validation-for="Price" class="text-danger"></span>
                         </div>
 
+                        <div class="form-group">
+                            <label asp-for="SectionColor">Section Color</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input asp-for="SectionColor"
+                                       type="color"
+                                       class="form-control"
+                                       style="width:3rem;height:2.5rem;padding:.2rem;"
+                                       value="#3B82F6" />
+                                <small class="text-muted">Color displayed on the venue map.</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
+                @* Sale Period *@
                 <div class="wizard-card ticket-form-section mb-4">
                     <div class="ticket-form-heading">
                         <h4>Sales Period</h4>
@@ -139,7 +139,6 @@
                     </div>
 
                     <div class="wizard-grid-2 mt-3">
-
                         <div class="form-group">
                             <label asp-for="SaleStartTime">Sale Start</label>
                             <input asp-for="SaleStartTime"
@@ -155,37 +154,22 @@
                                    class="form-control" />
                             <span asp-validation-for="SaleEndTime" class="text-danger"></span>
                         </div>
-
                     </div>
                 </div>
 
+                @* Description *@
                 <div class="wizard-card ticket-form-section mb-4">
                     <div class="ticket-form-heading">
-                        <h4>Details & Seating Configuration</h4>
-                        <p>Optional description. Seat type is auto-detected from the selected zone.</p>
+                        <h4>Description</h4>
+                        <p>Optional details about this ticket type.</p>
                     </div>
 
                     <div class="form-group mt-3">
-                        <label asp-for="Description">Description</label>
                         <textarea asp-for="Description"
                                   rows="4"
                                   class="form-control"
                                   placeholder="Describe benefits, access rules or ticket conditions..."></textarea>
                         <span asp-validation-for="Description" class="text-danger"></span>
-                    </div>
-
-                    <input asp-for="IsSeatRequired"
-                           type="hidden"
-                           id="isSeatRequiredInput"
-                           value="false" />
-
-                    <div class="ticket-seat-status mt-3" id="seatStatusBox">
-                        <div>
-                            <span class="wizard-pill neutral" id="seatTypeBadge">Select a zone</span>
-                            <p id="seatTypeDescription">
-                                Seating configuration will be determined by the selected zone.
-                            </p>
-                        </div>
                     </div>
                 </div>
 
@@ -197,18 +181,9 @@
                         Cancel
                     </a>
 
-                    @if (hasZones)
-                    {
-                        <button type="submit" class="wizard-btn-primary">
-                            + Create Ticket Type
-                        </button>
-                    }
-                    else
-                    {
-                        <button type="submit" class="wizard-btn-primary" disabled>
-                            + Create Ticket Type
-                        </button>
-                    }
+                    <button type="submit" class="wizard-btn-primary">
+                        + Create Ticket Type
+                    </button>
                 </div>
 
             </form>
@@ -218,63 +193,4 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-
-    <script>
-        const zoneSelect    = document.getElementById("venueZoneSelect");
-        const isSeatInput   = document.getElementById("isSeatRequiredInput");
-        const quantityInput = document.getElementById("ticketQuantityInput");
-        const capacityHint  = document.getElementById("zoneCapacityHint");
-        const seatBadge     = document.getElementById("seatTypeBadge");
-        const seatDesc      = document.getElementById("seatTypeDescription");
-
-        function onZoneChange() {
-            if (!zoneSelect) return;
-
-            const selected = zoneSelect.options[zoneSelect.selectedIndex];
-
-            if (!selected || !selected.value) {
-                isSeatInput.value        = "false";
-                capacityHint.textContent = "Select a zone to see available slots.";
-                capacityHint.style.color = "#64748b";
-                seatBadge.textContent    = "Select a zone";
-                seatBadge.className      = "wizard-pill neutral";
-                seatDesc.textContent     = "Seating configuration will be determined by the selected zone.";
-                quantityInput.removeAttribute("max");
-                return;
-            }
-
-            const hasSeats  = selected.dataset.hasSeats === "true";
-            const capacity  = parseInt(selected.dataset.capacity)  || 0;
-            const available = parseInt(selected.dataset.available) ?? capacity;
-
-            isSeatInput.value = hasSeats ? "true" : "false";
-
-            // Giới hạn quantity theo available slots (không phải capacity tổng)
-            quantityInput.setAttribute("max", available);
-            if (parseInt(quantityInput.value) > available) {
-                quantityInput.value = available;
-            }
-
-            if (available === 0) {
-                capacityHint.textContent = "⚠ No available slots in this zone (fully allocated).";
-                capacityHint.style.color = "#ef4444";
-            } else {
-                capacityHint.textContent = `Available slots: ${available} / ${capacity} total`;
-                capacityHint.style.color = available < capacity * 0.2 ? "#f59e0b" : "#22c55e";
-            }
-
-            if (hasSeats) {
-                seatBadge.textContent = "Assigned Seating";
-                seatBadge.className   = "wizard-pill";
-                seatDesc.textContent  = "Customers will choose a specific seat when purchasing this ticket.";
-            } else {
-                seatBadge.textContent = "General Admission";
-                seatBadge.className   = "wizard-pill info";
-                seatDesc.textContent  = "No specific seat assignment. Customers enter on a first-come basis.";
-            }
-        }
-
-        zoneSelect?.addEventListener("change", onZoneChange);
-        onZoneChange();
-    </script>
 }

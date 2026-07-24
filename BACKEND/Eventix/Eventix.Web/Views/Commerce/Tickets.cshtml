@@ -1,0 +1,11 @@
+@model List<Eventix.Share.Commerce.TicketResponse>
+@{ ViewData["Title"] = "Vé của tôi"; }
+<main class="commerce-page"><h1>Vé của tôi</h1>
+@if (Model.Count == 0) { <p>Bạn chưa có vé điện tử.</p> }
+<div class="ticket-grid">@foreach (var ticket in Model) {
+    <a class="commerce-card ticket-card" asp-action="Ticket" asp-route-id="@ticket.Id">
+        <span class="commerce-status">@ticket.Status</span><h2>@ticket.EventTitle</h2>
+        <p>@ticket.EventStartTime.ToString("HH:mm dd/MM/yyyy") · @ticket.VenueName</p>
+        <p>@ticket.TicketTypeName @ticket.SeatLabel</p><strong>@ticket.TicketCode</strong>
+    </a>
+}</div></main>
