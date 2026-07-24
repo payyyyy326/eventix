@@ -5,18 +5,16 @@
     var zoneGroups = Model.Event.TicketTypes
         .GroupBy(ticket => new
         {
-            Key = ticket.VenueZoneId?.ToString()
-                ?? $"section:{ticket.Section ?? ticket.Name}",
-            Name = ticket.ZoneName ?? ticket.Section ?? ticket.Name,
+            Key = $"section:{ticket.Section ?? ticket.Name}",
+            Name = ticket.Section ?? ticket.Name,
             HasSeats = ticket.IsSeatRequired
         })
         .ToList();
     var selectedTicket = Model.Event.TicketTypes
         .FirstOrDefault(ticket => ticket.Id == Model.Request.TicketTypeId);
-    var selectedZoneKey = selectedTicket?.VenueZoneId?.ToString()
-        ?? (selectedTicket == null
-            ? zoneGroups.FirstOrDefault()?.Key.Key
-            : $"section:{selectedTicket.Section ?? selectedTicket.Name}");
+    var selectedZoneKey = selectedTicket == null
+        ? zoneGroups.FirstOrDefault()?.Key.Key
+        : $"section:{selectedTicket.Section ?? selectedTicket.Name}";
     var selectedAdmissionType =
         (selectedTicket?.IsSeatRequired
             ?? zoneGroups.FirstOrDefault()?.Key.HasSeats
@@ -107,8 +105,7 @@
                 {
                     var available = ticket.Quantity - ticket.SoldQuantity - ticket.ReservedQuantity;
                     var selected = Model.Request.TicketTypeId == ticket.Id;
-                    var zoneKey = ticket.VenueZoneId?.ToString()
-                        ?? $"section:{ticket.Section ?? ticket.Name}";
+                    var zoneKey = $"section:{ticket.Section ?? ticket.Name}";
                     <label class="booking-ticket @(available <= 0 ? "disabled" : "")">
                         <input asp-for="Request.TicketTypeId"
                                type="radio"

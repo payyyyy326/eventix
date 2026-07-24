@@ -691,7 +691,13 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__VenueSec__3214EC07ADE50E52");
 
-            entity.HasIndex(e => new { e.VenueId, e.Section }, "IX_VenueSectionLayouts_VenueId_Section").IsUnique();
+            // Unique index cũ theo VenueId+Section bị loại bỏ vì
+            // nhiều TicketType có thể có cùng section name trong cùng venue.
+            // Thay bằng index không unique.
+            entity.HasIndex(e => new { e.VenueId, e.Section }, "IX_VenueSectionLayouts_VenueId_Section")
+                  .IsUnique(false);
+
+            entity.HasIndex(e => e.TicketTypeId, "IX_VenueSectionLayouts_TicketTypeId");
 
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.Property(e => e.Color)
@@ -707,6 +713,11 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.VenueZone).WithMany(p => p.VenueSectionLayouts)
                 .HasForeignKey(d => d.VenueZoneId)
                 .HasConstraintName("FK_VenueSectionLayouts_VenueZones");
+
+            entity.HasOne(d => d.TicketType).WithMany(p => p.VenueSectionLayouts)
+                .HasForeignKey(d => d.TicketTypeId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_VenueSectionLayouts_TicketTypes");
         });
 
         modelBuilder.Entity<VenueZone>(entity =>

@@ -1,5 +1,5 @@
-﻿using Eventix.Share.Venue;
-using Eventix.Share.VenueZone;
+﻿using Eventix.Share.TicketType;
+using Eventix.Share.Venue;
 
 namespace Eventix.Web.Models.EventWizard
 {
@@ -9,10 +9,9 @@ namespace Eventix.Web.Models.EventWizard
 
         public VenueResponse? Venue { get; set; }
 
-        public List<SeatImportStatusResponse> SeatStatuses { get; set; } = new();
+        public List<CreateTicketTypeRequest> TicketTypes { get; set; } = new();
 
-        public IFormFile? ExcelFile { get; set; }
-
-        public bool CanContinue => SeatStatuses.All(x => x.Completed);
+        // Seats will be auto-generated when the event is published
+        public bool CanContinue => TicketTypes.Any();
     }
 }

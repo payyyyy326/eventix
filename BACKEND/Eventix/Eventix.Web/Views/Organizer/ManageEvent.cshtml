@@ -8,7 +8,7 @@
 <section class="manage-event-page">
 
     <div class="manage-event-hero">
-        <img src="@(Model.BannerUrl ?? Model.ImageUrl ?? "/images/no-image.jpg")"
+        <img src="@MediaUrl.Img(Model.BannerUrl ?? Model.ImageUrl)"
              alt="@Model.Title" />
 
         <div class="manage-event-overlay">

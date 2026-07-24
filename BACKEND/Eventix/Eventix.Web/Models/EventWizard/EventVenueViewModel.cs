@@ -1,4 +1,5 @@
-﻿using Eventix.Share.Venue;
+using Eventix.Share.Common.Models;
+using Eventix.Share.Venue;
 
 namespace Eventix.Web.Models.EventWizard
 {
@@ -6,7 +7,11 @@ namespace Eventix.Web.Models.EventWizard
     {
         public Guid? SelectedVenueId { get; set; }
 
-        public List<VenueResponse> Venues { get; set; } = new();
+        // Dùng PaginationResponse thay vì List thuần
+        public PaginationResponse<VenueResponse> VenuePage { get; set; } = new();
+
+        // Shortcut để lấy danh sách venue trang hiện tại
+        public List<VenueResponse> Venues => VenuePage.DataList;
 
         public CreateVenueRequest NewVenue { get; set; } = new();
 

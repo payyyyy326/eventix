@@ -11,6 +11,7 @@ namespace Eventix.Modules.VenueZoneModule.Controllers
 {
     [Route("api/[controller]")]
     [Authorize]
+    [ApiExplorerSettings(IgnoreApi = true)] // Không expose ra Swagger/API nữa
     public class VenueZoneController : BaseApiController
     {
         private readonly IVenueZoneService _venueZoneService;

@@ -1,13 +1,13 @@
-﻿@using Eventix.Web.Models.EventWizard
+@using Eventix.Web.Models.EventWizard
 @model EventSeatAssignmentViewModel
 
 @{
-    ViewData["Title"] = "Create Event - Step 5";
+    ViewData["Title"] = "Create Event - Step 4";
     Layout = "_OrganizerLayout";
 
-    var totalZones = Model.SeatStatuses?.Count ?? 0;
-    var seatedZones = Model.SeatStatuses?.Count(x => x.HasSeats) ?? 0;
-    var completedZones = Model.SeatStatuses?.Count(x => x.Completed) ?? 0;
+    var seatedTypes  = Model.TicketTypes.Where(t => t.IsSeatRequired).ToList();
+    var standingTypes = Model.TicketTypes.Where(t => !t.IsSeatRequired).ToList();
+    var totalSeats   = seatedTypes.Sum(t => t.Quantity);
 }
 
 <section class="organizer-page">
@@ -22,8 +22,11 @@
 
             <div class="wizard-title">
                 <span>Create Event</span>
-                <h1>Step 5: Seat Assignment</h1>
-                <p>Generate or import seats for zones that require assigned seating.</p>
+                <h1>Step 4: Seat Preview</h1>
+                <p>
+                    Review how seats will be auto-generated for each ticket type.
+                    Seated tickets generate one seat per ticket quantity when published.
+                </p>
             </div>
 
             @await Html.PartialAsync("_WizardProgress")
@@ -33,18 +36,18 @@
 
             <div class="wizard-grid-3 mb-4">
                 <div class="wizard-stat">
-                    <span>Total Zones</span>
-                    <strong>@totalZones</strong>
+                    <span>Total Ticket Types</span>
+                    <strong>@Model.TicketTypes.Count</strong>
                 </div>
 
                 <div class="wizard-stat">
-                    <span>Seated Zones</span>
-                    <strong>@seatedZones</strong>
+                    <span>Seated Sections</span>
+                    <strong>@seatedTypes.Count</strong>
                 </div>
 
                 <div class="wizard-stat">
-                    <span>Completed</span>
-                    <strong>@completedZones / @totalZones</strong>
+                    <span>Seats to Generate</span>
+                    <strong>@totalSeats</strong>
                 </div>
             </div>
 
@@ -56,132 +59,117 @@
                     <span class="wizard-pill">
                         City: @(Model.Venue?.City ?? "N/A")
                     </span>
-
                     <span class="wizard-pill">
-                        Capacity: @(Model.Venue?.Capacity ?? 0)
+                        Venue Capacity: @(Model.Venue?.Capacity ?? 0)
                     </span>
                 </div>
             </div>
 
-            <div class="wizard-grid-2 mb-4">
-                <div class="wizard-upload">
-                    <div class="wizard-upload-title">Download Seat Template</div>
-                    <div class="wizard-upload-desc">
-                        Use this Excel template for custom seat layouts.
+            @if (seatedTypes.Any())
+            {
+                <div class="mb-4">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <h3 class="text-white mb-0">💺 Seated Ticket Types</h3>
+                        <span class="wizard-pill">Seats auto-generated on publish</span>
                     </div>
 
-                    <a asp-controller="EventWizard"
-                       asp-action="DownloadSeatTemplate"
-                       class="wizard-btn-primary">
-                        Download Template
-                    </a>
-                </div>
-
-                <div class="wizard-upload">
-                    <div class="wizard-upload-title">Import Seats From Excel</div>
-                    <div class="wizard-upload-desc">
-                        Upload a completed Excel file. Accepted format: .xlsx, .xls
-                    </div>
-
-                    <form asp-controller="EventWizard"
-                          asp-action="ImportSeats"
-                          method="post"
-                          enctype="multipart/form-data">
-
-                        <input name="ExcelFile"
-                               type="file"
-                               accept=".xlsx,.xls"
-                               class="form-control mb-3" />
-
-                        <button type="submit" class="wizard-btn-primary">
-                            Import Excel
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="mb-4">
-                <h3 class="mb-3 text-white">Seat Assignment Status</h3>
-
-                @if (Model.SeatStatuses == null || !Model.SeatStatuses.Any())
-                {
-                    <div class="organizer-empty">
-                        <h2>No zones found</h2>
-                        <p>Please create venue zones before assigning seats.</p>
-                    </div>
-                }
-                else
-                {
                     <div class="ticket-admin-list">
-                        @foreach (var item in Model.SeatStatuses)
+                        @foreach (var ticket in seatedTypes)
                         {
-                            var percent = item.Capacity == 0
-                            ? 0
-                            : (int)Math.Round((double)item.ImportedSeats / item.Capacity * 100);
+                            var priceLabel = ticket.Price <= 0 ? "Free" : $"{ticket.Price:N0} VND";
 
-                            if (percent > 100)
-                            {
-                                percent = 100;
-                            }
-
-                        <div class="ticket-admin-card">
-                            <div class="ticket-main">
-                                <div class="ticket-title-row">
-                                    <h3>@item.ZoneName</h3>
-
-                                    <span class="ticket-status @(item.Completed ? "active" : "inactive")">
-                                        @(item.Completed ? "Completed" : "Required")
-                                    </span>
-                                </div>
-
-                                <p>
-                                    @(item.HasSeats
-                                                                    ? "This zone requires assigned seats."
-                                                                    : "This zone does not require seat assignment.")
-                            </p>
-
-                                    <div class="ticket-admin-meta">
-                                        <span>Type: @(item.HasSeats ? "Seated" : "General")</span>
-                                        <span>Capacity: @item.Capacity</span>
-                                        <span>Imported Seats: @item.ImportedSeats</span>
+                            <div class="ticket-admin-card">
+                                <div class="ticket-main">
+                                    <div class="ticket-title-row">
+                                        <h3>@ticket.Name</h3>
+                                        <span class="ticket-status active">Auto-Generate</span>
                                     </div>
 
-                            @if (item.HasSeats)
-                                    {
-                                        <div class="wizard-progress-bar">
-                                            <div class="wizard-progress-fill"
-                                                 style="width:@percent%">
-                                            </div>
-                                        </div>
+                                    <p class="text-muted">
+                                        @ticket.Quantity seats will be generated in a grid layout
+                                        (Section: <strong>@ticket.Name</strong>).
+                                    </p>
 
-                                        <small class="text-muted">
-                                            @percent% seats imported
-                                        </small>
-                                    }
+                                    <div class="ticket-admin-meta">
+                                        <span>Type: Assigned Seating</span>
+                                        <span>Price: @priceLabel</span>
+                                        <span>Quantity: @ticket.Quantity</span>
+                                    </div>
                                 </div>
 
                                 <div class="ticket-admin-side">
-                                    @if (item.HasSeats)
-                                    {
-                                        <strong>@item.ImportedSeats / @item.Capacity</strong>
-                                        <span>seats</span>
-
-                                        <button type="button"
-                                                class="ticket-action edit"
-                                                onclick="openGenerateSeatModal('@item.VenueZoneId', '@item.ZoneName', '@item.Capacity')">
-                                            Generate
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <strong>Skipped</strong>
-                                        <span>No seats required</span>
-                                    }
+                                    <strong>@ticket.Quantity</strong>
+                                    <span>seats</span>
+                                    <span class="wizard-pill mt-2" style="text-align:center;">
+                                        On Publish
+                                    </span>
                                 </div>
                             </div>
                         }
                     </div>
-                }
+                </div>
+            }
+
+            @if (standingTypes.Any())
+            {
+                <div class="mb-4">
+                    <h3 class="text-white mb-3">🧍 General Admission Ticket Types</h3>
+
+                    <div class="ticket-admin-list">
+                        @foreach (var ticket in standingTypes)
+                        {
+                            var priceLabel = ticket.Price <= 0 ? "Free" : $"{ticket.Price:N0} VND";
+
+                            <div class="ticket-admin-card">
+                                <div class="ticket-main">
+                                    <div class="ticket-title-row">
+                                        <h3>@ticket.Name</h3>
+                                        <span class="ticket-status" style="background:rgba(59,130,246,0.15);color:#60A5FA;">
+                                            No Seats
+                                        </span>
+                                    </div>
+
+                                    <p class="text-muted">
+                                        General admission — no individual seat assignment required.
+                                    </p>
+
+                                    <div class="ticket-admin-meta">
+                                        <span>Type: General Admission</span>
+                                        <span>Price: @priceLabel</span>
+                                        <span>Quantity: @ticket.Quantity</span>
+                                    </div>
+                                </div>
+
+                                <div class="ticket-admin-side">
+                                    <strong>Skipped</strong>
+                                    <span>no seats needed</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (!Model.TicketTypes.Any())
+            {
+                <div class="organizer-empty mb-4">
+                    <h2>No ticket types found</h2>
+                    <p>Please go back and add at least one ticket type.</p>
+                </div>
+            }
+
+            <div class="wizard-card mb-4" style="border-left: 3px solid #10B981;">
+                <div class="d-flex align-items-start gap-3">
+                    <span style="font-size:1.5rem;">ℹ️</span>
+                    <div>
+                        <h4 style="color:#10B981;">Automatic Seat Generation</h4>
+                        <p class="text-muted mb-0">
+                            When you publish the event, the system will automatically generate
+                            <strong>@totalSeats seat(s)</strong> across <strong>@seatedTypes.Count section(s)</strong>.
+                            Each section name will match the ticket type name, making it easy to identify on the venue map.
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <div class="wizard-actions">
@@ -197,8 +185,8 @@
 
                     <button type="submit"
                             class="wizard-btn-primary"
-                            @(Model.CanContinue ? "" : "disabled")>
-                        Continue →
+                            @(!Model.CanContinue ? "disabled" : "")>
+                        Continue to Map →
                     </button>
                 </form>
             </div>
@@ -206,140 +194,3 @@
         </div>
     </div>
 </section>
-
-<div id="generateSeatModal" class="wizard-modal-backdrop" style="display:none;">
-    <div class="wizard-modal">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h3 class="text-white mb-1">Generate Seats</h3>
-                <p class="text-muted mb-0" id="generateSeatZoneName"></p>
-            </div>
-
-            <button type="button"
-                    class="btn btn-sm btn-secondary"
-                    onclick="closeGenerateSeatModal()">
-                ×
-            </button>
-        </div>
-
-        <form id="generateSeatForm">
-            <input type="hidden" id="generateVenueZoneId" />
-
-            <div class="wizard-grid-2">
-                <div class="form-group mb-3">
-                    <label>Start Row</label>
-                    <input id="startRow" class="form-control" value="A" />
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>End Row</label>
-                    <input id="endRow" class="form-control" value="J" />
-                </div>
-            </div>
-
-            <div class="wizard-grid-2">
-                <div class="form-group mb-3">
-                    <label>Start Number</label>
-                    <input id="startNumber" type="number" class="form-control" value="1" />
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>End Number</label>
-                    <input id="endNumber" type="number" class="form-control" value="10" />
-                </div>
-            </div>
-
-            <div class="wizard-grid-2">
-                <div class="form-group mb-3">
-                    <label>Start X</label>
-                    <input id="startX" type="number" class="form-control" value="20" />
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Start Y</label>
-                    <input id="startY" type="number" class="form-control" value="20" />
-                </div>
-            </div>
-
-            <div class="wizard-grid-2">
-                <div class="form-group mb-3">
-                    <label>Gap X</label>
-                    <input id="gapX" type="number" class="form-control" value="40" />
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Gap Y</label>
-                    <input id="gapY" type="number" class="form-control" value="40" />
-                </div>
-            </div>
-
-            <div class="form-group mb-4">
-                <label class="d-flex align-items-center gap-2">
-                    <input id="overrideExisting" type="checkbox" />
-                    Override existing seats
-                </label>
-            </div>
-
-            <div class="wizard-actions">
-                <button type="button"
-                        class="wizard-btn-secondary"
-                        onclick="closeGenerateSeatModal()">
-                    Cancel
-                </button>
-
-                <button type="submit" class="wizard-btn-primary">
-                    Generate Seats
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-    const venueId = "@Model.VenueId";
-
-    function openGenerateSeatModal(zoneId, zoneName, capacity) {
-        document.getElementById("generateVenueZoneId").value = zoneId;
-        document.getElementById("generateSeatZoneName").innerText = `${zoneName} - Capacity ${capacity}`;
-        document.getElementById("generateSeatModal").style.display = "flex";
-    }
-
-    function closeGenerateSeatModal() {
-        document.getElementById("generateSeatModal").style.display = "none";
-    }
-
-    document.getElementById("generateSeatForm").addEventListener("submit", async function (e) {
-        e.preventDefault();
-
-        const payload = {
-            venueZoneId: document.getElementById("generateVenueZoneId").value,
-            startRow: document.getElementById("startRow").value,
-            endRow: document.getElementById("endRow").value,
-            startNumber: parseInt(document.getElementById("startNumber").value),
-            endNumber: parseInt(document.getElementById("endNumber").value),
-            startX: parseFloat(document.getElementById("startX").value),
-            startY: parseFloat(document.getElementById("startY").value),
-            gapX: parseFloat(document.getElementById("gapX").value),
-            gapY: parseFloat(document.getElementById("gapY").value),
-            overrideExisting: document.getElementById("overrideExisting").checked
-        };
-
-        const response = await fetch(`/EventWizard/GenerateSeats`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
-
-        if (!response.ok || !result.isSuccess) {
-            alert(result.message || "Cannot generate seats.");
-            return;
-        }
-
-
-        window.location.reload();
-    });
-</script>

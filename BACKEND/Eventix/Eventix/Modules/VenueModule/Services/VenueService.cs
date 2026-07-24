@@ -216,35 +216,29 @@ namespace Eventix.Modules.VenueModule.Services
             if (venue == null)
                 throw new BadRequestException(SystemError.VENUE_NOT_FOUND);
 
-            var zones = await _context.VenueZones
-                .Where(z => z.VenueId == venueId)
-                .ToListAsync();
-
-            foreach (var item in request)
-            {
-                var zone = zones.FirstOrDefault(z =>
-                    z.Name == item.Section);
-
-                if (zone == null)
-                    throw new BadRequestException(SystemError.INVALID_SECTION);
-            }
-
+            // Xóa layout cũ của venue
             var oldLayouts = await _context.VenueSectionLayouts
                 .Where(x => x.VenueId == venueId)
                 .ToListAsync();
 
             _context.VenueSectionLayouts.RemoveRange(oldLayouts);
 
+            // Tìm zone tương ứng nếu có (optional - luồng mới không cần zone)
+            var zones = await _context.VenueZones
+                .Where(z => z.VenueId == venueId)
+                .ToListAsync();
+
             var layouts = request.Select(x =>
             {
-                var zone = zones.First(z => z.Name == x.Section);
+                var zone = zones.FirstOrDefault(z => z.Name == x.Section);
 
                 return new VenueSectionLayout
                 {
                     Id = Guid.NewGuid(),
                     VenueId = venueId,
-                    VenueZoneId = zone.Id,
-                    Section = zone.Name,
+                    VenueZoneId = zone?.Id,   // null nếu không có zone (luồng mới)
+                    TicketTypeId = null,       // sẽ được liên kết khi event publish
+                    Section = x.Section,
                     X = x.X,
                     Y = x.Y,
                     Width = x.Width,

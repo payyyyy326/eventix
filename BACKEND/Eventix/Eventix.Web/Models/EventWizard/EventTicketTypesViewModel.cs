@@ -1,6 +1,5 @@
 ﻿using Eventix.Share.TicketType;
 using Eventix.Share.Venue;
-using Eventix.Share.VenueZone;
 
 namespace Eventix.Web.Models.EventWizard
 {
@@ -9,8 +8,6 @@ namespace Eventix.Web.Models.EventWizard
         public Guid VenueId { get; set; }
 
         public VenueResponse? Venue { get; set; }
-
-        public List<VenueZoneResponse> Zones { get; set; } = new();
 
         public List<CreateTicketTypeRequest> TicketTypes { get; set; } = new();
 
