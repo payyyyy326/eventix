@@ -41,12 +41,6 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage TICKET_TYPE_DELETED = new("045", "TicketType deleted successfully", true);
         public static readonly SystemMessage TICKET_TYPE_LEVEL_SORTED = new("046", "TicketType level sorted successfully", true);
 
-        // Notification Success Messages (120-139)
-        public static readonly SystemMessage NOTI_BY_USER_RETRIEVED = new("120", "Notifications retrieved successfully", true);
-        public static readonly SystemMessage NOTI_DETAIL_RETRIEVED = new("121", "Notification retrieved successfully", true);
-        public static readonly SystemMessage MARK_READ_SUCCESS = new("122", "Notification has been read", true);
-        public static readonly SystemMessage DELETE_NOTI_SUCCESS = new("122", "Delete notification successfully", true);
-
         // Goals Success Messages (141-160)
         public static readonly SystemMessage GOAL_RETRIEVED = new("141", "Goal retrieved successfully", true);
         public static readonly SystemMessage GOAL_CREATED = new("142", "Goal created successfully", true);
@@ -75,13 +69,6 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage REMINDER_CREATED = new("223", "Reminder created successfully", true);
         public static readonly SystemMessage REMINDER_UPDATED = new("224", "Reminder updated successfully", true);
         public static readonly SystemMessage REMINDER_DELETED = new("225", "Reminder deleted successfully", true);
-        //Notification Success Messages (241-260)
-        public static readonly SystemMessage NOTIFICATIONS_RETRIEVED = new("241", "Notifications retrieved successfully", true);
-        public static readonly SystemMessage NOTIFICATION_RETRIEVED = new("242", "Notification retrieved successfully", true);
-        public static readonly SystemMessage NOTIFICATION_CREATED = new("243", "Notification created successfully", true);
-        public static readonly SystemMessage NOTIFICATION_UPDATED = new("244", "Notification updated successfully", true);
-        public static readonly SystemMessage NOTIFICATION_READ = new("245", "Notification marked as read successfully", true);
-
         //Venue Success Messages (261-280)
         public static readonly SystemMessage VENUES_RETRIEVED = new("261", "Venues retrieved successfully", true);
         public static readonly SystemMessage VENUE_RETRIEVED = new("262", "Venue retrieved successfully", true);

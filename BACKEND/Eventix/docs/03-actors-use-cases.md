@@ -296,15 +296,10 @@ flowchart TD
 
 ## 11. Use case chưa hoàn thiện
 
-Các use case sau mới có entity hoặc tài liệu dự kiến, chưa nên demo như chức năng hoàn chỉnh:
+Các use case sau chưa có implementation:
 
-- Áp coupon tại checkout.
-- Hoàn tiền.
-- Review/rating.
-- Notification center.
-- AI tagging/gợi ý.
-- Giỏ hàng nhiều event.
-- Payment gateway và webhook thật.
+- AI tagging và gợi ý sự kiện.
+- Payment gateway thật (VNPay, MoMo) và webhook.
 
 ## 12. Kịch bản demo đề xuất
 

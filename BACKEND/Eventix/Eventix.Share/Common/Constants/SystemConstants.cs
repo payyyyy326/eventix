@@ -40,19 +40,6 @@
 
             public const string AdminOrOrganizer = "AdminOrOrganizer";
         }
-        public static class NotificationType
-        {
-            public const string REMINDER = "REMINDER";
-            public const string SYSTEM = "SYSTEM";
-            public const string AI = "AI";
-        }
-
-        public static class NotificationPriority
-        {
-            public const string LOW = "LOW";
-            public const string NORMAL = "NORMAL";
-            public const string HIGH = "HIGH";
-        }
         public static class StatusAccount
         {
             public const string ACTIVE = "ACTIVE";

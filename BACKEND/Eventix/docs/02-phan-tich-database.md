@@ -3,8 +3,8 @@
 ## 1. Tổng quan
 
 Eventix sử dụng SQL Server và Entity Framework Core 8 thông qua `AppDbContext`.
-Mô hình hiện có 31 entity/DbSet, bao phủ tài khoản, tổ chức sự kiện, địa điểm,
-booking, commerce, check-in và các chức năng dự kiến.
+Mô hình hiện có 22 bảng, bao phủ tài khoản, tổ chức sự kiện, địa điểm,
+booking, commerce và check-in.
 
 ```mermaid
 flowchart LR
@@ -12,7 +12,6 @@ flowchart LR
     EventDomain --> Booking[Booking & Inventory]
     Booking --> Commerce[Order, Payment, Ticket]
     Commerce --> CheckIn[Check-in]
-    Commerce --> Support[Coupon, Refund, Review, Notification]
 ```
 
 ## 2. Quy ước dữ liệu
@@ -35,7 +34,6 @@ flowchart LR
 | `UserRoles` | Bảng nối do EF tạo | PK ghép UserId + RoleId |
 | `UserRefreshTokens` | Refresh token và thời hạn | Index Token, UserId; N-1 User |
 | `EmailOtps` | OTP đăng ký/reset password | Index Email + Purpose; N-1 User |
-| `AuditLogs` | Nhật ký tác động entity | Index EntityType + EntityId; N-1 User |
 
 `Users.EmailVerified` phân biệt tài khoản đã xác thực. `Status` có các giá trị
 `ACTIVE`, `INACTIVE`, `BANNED`, `DELETED`.
@@ -48,8 +46,6 @@ flowchart LR
 | `Categories` | Phân loại sự kiện | Slug unique |
 | `Events` | Thông tin sự kiện và vòng đời | Slug unique; FK Category, Venue, Organizer |
 | `EventImages` | Bộ ảnh sự kiện | Thuộc Event |
-| `EventAitags` | Nhãn AI dự kiến | Entity đã có, chưa có service AI |
-| `UserEventInteractions` | Hành vi người dùng dự kiến cho gợi ý | N-1 User; chưa có recommendation flow |
 
 Index đáng chú ý của `Events`:
 
@@ -73,14 +69,17 @@ Bất kỳ trạng thái phù hợp → Cancelled
 | Bảng | Mục đích | Quan hệ/constraint chính |
 |---|---|---|
 | `Venues` | Địa điểm tổ chức | N-1 User tạo venue |
-| `VenueZones` | Khu vực vé trong venue | `(VenueId, Name)` unique |
-| `VenueSectionLayouts` | Layout/section và liên kết zone | `(VenueId, Section)` unique |
+| `VenueZones` | Khu vực tùy chọn trong venue | `(VenueId, Name)` unique |
+| `VenueSectionLayouts` | Ánh xạ section → venue, liên kết TicketType | `(VenueId, Section)` index |
 | `Seats` | Ghế vật lý, hàng, số, tọa độ | `(VenueId, Section, Row, Number)` unique |
 
-`VenueZone.HasSeats` quyết định mô hình bán vé:
+**Luồng tạo ghế hiện tại:**
 
-- `false`: khu đứng, người dùng chọn số lượng.
-- `true`: khu ngồi, người dùng chọn các `SeatId` cụ thể.
+- Section của ghế lấy từ **tên TicketType**, không bắt buộc cần VenueZone.
+- Ghế được generate tự động khi Publish event theo lưới Row × Col dựa trên `Quantity`.
+- `IsSeatRequired = true` trên TicketType → buyer chọn ghế cụ thể trên seat map.
+- `IsSeatRequired = false` → vé đứng, buyer nhập số lượng, không cần seat map.
+- `VenueZone` vẫn là entity có sẵn nhưng không bắt buộc trong luồng tạo event/booking.
 
 `Seat.XPosition/YPosition` phục vụ dựng seat map. Section/Row/Number là định danh
 nghiệp vụ; unique index ngăn tạo hai ghế trùng trong cùng venue.
@@ -140,7 +139,6 @@ Index `(ExpiresAt, Status)` giúp job tìm reservation Active quá hạn. Index 
 | `Orders` | Đơn hàng tổng | OrderCode unique; index UserId, Status |
 | `OrderItems` | Snapshot hạng vé/ghế/giá tại lúc tạo đơn | N-1 Order |
 | `Payments` | Giao dịch thanh toán | Index OrderId; FK User và Order |
-| `PaymentWebhookLogs` | Chống xử lý webhook trùng trong tương lai | `(Gateway, EventId)` unique |
 | `Tickets` | Vé điện tử đã phát hành | TicketCode và QrToken unique |
 
 Order lưu `SubTotal`, `ServiceFee`, `DiscountAmount`, `TotalAmount`, `ExpiresAt`,
@@ -170,16 +168,6 @@ Constraint quan trọng của Ticket:
 
 Khi QR hợp lệ, Ticket chuyển `Active → Used` và tạo CheckInLog. Ticket không còn
 Active bị từ chối, nhờ đó một QR không thể check-in thành công hai lần.
-
-### 3.7 Chức năng hỗ trợ/scaffold
-
-| Bảng | Mục đích dự kiến | Hiện trạng |
-|---|---|---|
-| `Carts`, `CartItems` | Giỏ hàng | Chưa có luồng hoàn chỉnh |
-| `Coupons`, `CouponUsages` | Mã giảm giá và lịch sử dùng | Chưa tích hợp checkout |
-| `RefundPolicies`, `RefundRequests` | Chính sách/yêu cầu hoàn tiền | Chưa có service hoàn chỉnh |
-| `Reviews` | Đánh giá sự kiện | Unique EventId+UserId; chưa có API hoàn chỉnh |
-| `Notifications` | Thông báo trong ứng dụng | Có entity, chưa có module hoàn chỉnh |
 
 ## 4. ERD rút gọn cho luồng cốt lõi
 
@@ -257,8 +245,6 @@ TicketType.ReservedQuantity và EventSeatStatus. Email được gửi sau commit
 | Reservations(ExpiresAt, Status) | Job expiration |
 | Orders.OrderCode unique | Tra cứu đơn |
 | Tickets.TicketCode/QrToken unique | Chống trùng vé/QR |
-| Reviews(Event, User) unique | Một đánh giá/người/sự kiện |
-| Coupons.Code unique | Mã giảm giá duy nhất |
 
 ## 7. Điểm mạnh
 
@@ -280,8 +266,6 @@ TicketType.ReservedQuantity và EventSeatStatus. Email được gửi sau commit
 7. **Outbox:** email hiện gửi sau commit nhưng chưa retry bền vững; nên dùng OutboxMessage.
 8. **PII và secret:** mã hóa/bảo vệ dữ liệu nhạy cảm, không commit credentials.
 9. **Concurrency test:** bắt buộc test hai transaction cùng giữ/thanh toán một ghế.
-10. **Foreign key đầy đủ:** rà soát các entity scaffold như EventAitag/EventImage để bảo đảm
-    navigation và delete rule thống nhất trước khi triển khai module.
 
 ## 9. Truy vấn kiểm tra tính toàn vẹn đề xuất
 

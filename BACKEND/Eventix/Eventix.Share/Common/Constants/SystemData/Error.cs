@@ -76,7 +76,6 @@ namespace Eventix.Common.Constants.SystemData
         public static readonly SystemMessage INVALID_TASK_STATUS = new("488", "Invalid task status", false);
         public static readonly SystemMessage SUBTASK_NOT_FOUND = new("489", "SubTask not found", false);
         public static readonly SystemMessage REMINDER_NOT_FOUND = new("490", "Reminder not found", false);
-        public static readonly SystemMessage NOTIFICATION_NOT_FOUND = new("491", "Notification not found", false);
         public static readonly SystemMessage VENUE_NOT_FOUND = new("492", "Venue not found", false);
         public static readonly SystemMessage ORGANIZER_NOT_FOUND = new("493", "Organizer not found", false);
         public static readonly SystemMessage EVENT_NOT_FOUND = new("494", "Event not found", false);

@@ -10,31 +10,17 @@ public partial class AppDbContext : DbContext
     {
     }
 
-    public virtual DbSet<AuditLog> AuditLogs { get; set; }
-
-    public virtual DbSet<Cart> Carts { get; set; }
-
-    public virtual DbSet<CartItem> CartItems { get; set; }
-
     public virtual DbSet<Category> Categories { get; set; }
 
     public virtual DbSet<CheckInLog> CheckInLogs { get; set; }
-
-    public virtual DbSet<Coupon> Coupons { get; set; }
-
-    public virtual DbSet<CouponUsage> CouponUsages { get; set; }
 
     public virtual DbSet<EmailOtp> EmailOtps { get; set; }
 
     public virtual DbSet<Event> Events { get; set; }
 
-    public virtual DbSet<EventAitag> EventAitags { get; set; }
-
     public virtual DbSet<EventImage> EventImages { get; set; }
 
     public virtual DbSet<EventSeatStatus> EventSeatStatuses { get; set; }
-
-    public virtual DbSet<Notification> Notifications { get; set; }
 
     public virtual DbSet<Order> Orders { get; set; }
 
@@ -44,15 +30,7 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<Payment> Payments { get; set; }
 
-    public virtual DbSet<PaymentWebhookLog> PaymentWebhookLogs { get; set; }
-
-    public virtual DbSet<RefundPolicy> RefundPolicies { get; set; }
-
-    public virtual DbSet<RefundRequest> RefundRequests { get; set; }
-
     public virtual DbSet<Reservation> Reservations { get; set; }
-
-    public virtual DbSet<Review> Reviews { get; set; }
 
     public virtual DbSet<Role> Roles { get; set; }
 
@@ -64,8 +42,6 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
-    public virtual DbSet<UserEventInteraction> UserEventInteractions { get; set; }
-
     public virtual DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
 
     public virtual DbSet<Venue> Venues { get; set; }
@@ -76,51 +52,6 @@ public partial class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<AuditLog>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__AuditLog__3214EC072C175FD0");
-
-            entity.HasIndex(e => new { e.EntityType, e.EntityId }, "IX_AuditLogs_Entity");
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.Action).HasMaxLength(255);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.EntityType).HasMaxLength(100);
-            entity.Property(e => e.IpAddress).HasMaxLength(100);
-
-            entity.HasOne(d => d.User).WithMany(p => p.AuditLogs)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK__AuditLogs__UserI__02C769E9");
-        });
-
-        modelBuilder.Entity<Cart>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__Carts__3214EC07E0B1B1AC");
-
-            entity.HasIndex(e => e.UserId, "UQ__Carts__1788CC4DEFCF52D3").IsUnique();
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
-
-            entity.HasOne(d => d.User).WithOne(p => p.Cart)
-                .HasForeignKey<Cart>(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Carts__UserId__160F4887");
-        });
-
-        modelBuilder.Entity<CartItem>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__CartItem__3214EC07FECD2426");
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 2)");
-
-            entity.HasOne(d => d.Cart).WithMany(p => p.CartItems)
-                .HasForeignKey(d => d.CartId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__CartItems__CartI__19DFD96B");
-        });
-
         modelBuilder.Entity<Category>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Categori__3214EC071EA4272C");
@@ -155,49 +86,6 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.TicketId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__CheckInLo__Ticke__76619304");
-        });
-
-        modelBuilder.Entity<Coupon>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__Coupons__3214EC07587D72C3");
-
-            entity.HasIndex(e => e.Code, "UQ__Coupons__A25C5AA744D7FCDF").IsUnique();
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.Code).HasMaxLength(100);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.DiscountType).HasMaxLength(50);
-            entity.Property(e => e.DiscountValue).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.MaxDiscountAmount).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.Name).HasMaxLength(255);
-            entity.Property(e => e.Scope)
-                .HasMaxLength(50)
-                .HasDefaultValue("Global");
-        });
-
-        modelBuilder.Entity<CouponUsage>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__CouponUs__3214EC07D1607D67");
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.DiscountAmount).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.UsedAt).HasDefaultValueSql("(sysdatetime())");
-
-            entity.HasOne(d => d.Coupon).WithMany(p => p.CouponUsages)
-                .HasForeignKey(d => d.CouponId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__CouponUsa__Coupo__5CA1C101");
-
-            entity.HasOne(d => d.Order).WithMany(p => p.CouponUsages)
-                .HasForeignKey(d => d.OrderId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__CouponUsa__Order__5E8A0973");
-
-            entity.HasOne(d => d.User).WithMany(p => p.CouponUsages)
-                .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__CouponUsa__UserI__5D95E53A");
         });
 
         modelBuilder.Entity<EmailOtp>(entity =>
@@ -260,17 +148,6 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_Events_Venues");
         });
 
-        modelBuilder.Entity<EventAitag>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__EventAIT__3214EC078C5161E6");
-
-            entity.ToTable("EventAITags");
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.Confidence).HasColumnType("decimal(5, 4)");
-            entity.Property(e => e.Tag).HasMaxLength(100);
-        });
-
         modelBuilder.Entity<EventImage>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__EventIma__3214EC077BAC8034");
@@ -309,24 +186,6 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_EventSeatStatuses_TicketTypes");
         });
 
-        modelBuilder.Entity<Notification>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__Notifica__3214EC07DFD7B911");
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.Status)
-                .HasMaxLength(50)
-                .HasDefaultValue("Pending");
-            entity.Property(e => e.Title).HasMaxLength(255);
-            entity.Property(e => e.Type).HasMaxLength(50);
-
-            entity.HasOne(d => d.User).WithMany(p => p.Notifications)
-                .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Notificat__UserI__7E02B4CC");
-        });
-
         modelBuilder.Entity<Order>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Orders__3214EC0762EC344E");
@@ -347,10 +206,6 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValue("Pending");
             entity.Property(e => e.SubTotal).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
-
-            entity.HasOne(d => d.Coupon).WithMany(p => p.Orders)
-                .HasForeignKey(d => d.CouponId)
-                .HasConstraintName("FK__Orders__CouponId__2A164134");
 
             entity.HasOne(d => d.User).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.UserId)
@@ -427,56 +282,6 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK__Payments__UserId__45BE5BA9");
         });
 
-        modelBuilder.Entity<PaymentWebhookLog>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__PaymentW__3214EC0736C99E57");
-
-            entity.HasIndex(e => new { e.Gateway, e.EventId }, "UQ_Webhook").IsUnique();
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.EventId).HasMaxLength(255);
-            entity.Property(e => e.Gateway).HasMaxLength(50);
-            entity.Property(e => e.TransactionCode).HasMaxLength(255);
-        });
-
-        modelBuilder.Entity<RefundPolicy>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__RefundPo__3214EC079B0D295E");
-
-            entity.HasIndex(e => e.EventId, "UQ__RefundPo__7944C8112F6A04C1").IsUnique();
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.RefundPercent).HasColumnType("decimal(5, 2)");
-        });
-
-        modelBuilder.Entity<RefundRequest>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__RefundRe__3214EC0744CA872E");
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.RefundAmount).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.RefundType).HasMaxLength(50);
-            entity.Property(e => e.Status)
-                .HasMaxLength(50)
-                .HasDefaultValue("Pending");
-
-            entity.HasOne(d => d.Order).WithMany(p => p.RefundRequests)
-                .HasForeignKey(d => d.OrderId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__RefundReq__Order__6DCC4D03");
-
-            entity.HasOne(d => d.ReviewedByNavigation).WithMany(p => p.RefundRequestReviewedByNavigations)
-                .HasForeignKey(d => d.ReviewedBy)
-                .HasConstraintName("FK__RefundReq__Revie__6FB49575");
-
-            entity.HasOne(d => d.User).WithMany(p => p.RefundRequestUsers)
-                .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__RefundReq__UserI__6EC0713C");
-        });
-
         modelBuilder.Entity<Reservation>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Reservat__3214EC07FDDFBED1");
@@ -501,21 +306,6 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Reservati__UserI__395884C4");
-        });
-
-        modelBuilder.Entity<Review>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__Reviews__3214EC07F15EAE48");
-
-            entity.HasIndex(e => new { e.EventId, e.UserId }, "UQ_Reviews_UserEvent").IsUnique();
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
-
-            entity.HasOne(d => d.User).WithMany(p => p.Reviews)
-                .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Reviews__UserId__09746778");
         });
 
         modelBuilder.Entity<Role>(entity =>
@@ -641,19 +431,6 @@ public partial class AppDbContext : DbContext
                         j.HasKey("UserId", "RoleId").HasName("PK__UserRole__AF2760AD8F16A7B5");
                         j.ToTable("UserRoles");
                     });
-        });
-
-        modelBuilder.Entity<UserEventInteraction>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__UserEven__3214EC07A41AE895");
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.InteractionType).HasMaxLength(50);
-
-            entity.HasOne(d => d.User).WithMany(p => p.UserEventInteractions)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK__UserEvent__UserI__0F2D40CE");
         });
 
         modelBuilder.Entity<UserRefreshToken>(entity =>

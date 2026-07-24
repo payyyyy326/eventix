@@ -25,12 +25,12 @@ Các đối tượng chính:
 - `CheckInLog`: lịch sử sử dụng vé tại cổng.
 - `EventSeatStatus`: trạng thái ghế của một sự kiện.
 
-Hệ thống chia vé thành hai loại:
+Hệ thống chia vé thành hai loại dựa trên `TicketType.IsSeatRequired`:
 
 | Loại vé | Cấu hình | Cách người dùng đặt |
 |---|---|---|
-| Vé đứng | `VenueZone.HasSeats = false` | Chọn khu vé và nhập số lượng |
-| Vé ngồi | `VenueZone.HasSeats = true` | Chọn khu vé rồi chọn các số ghế cụ thể |
+| Vé đứng | `IsSeatRequired = false` | Chọn hạng vé và nhập số lượng |
+| Vé ngồi | `IsSeatRequired = true` | Chọn hạng vé rồi chọn ghế cụ thể trên seat map |
 
 Với vé ngồi, số lượng không được nhập thủ công. Giao diện tự tính
 `Quantity = SeatIds.Count`.
@@ -38,19 +38,12 @@ Với vé ngồi, số lượng không được nhập thủ công. Giao diện 
 Thứ tự lựa chọn trên giao diện:
 
 ```text
-1. Chọn loại vé: Vé đứng hoặc Vé ngồi
-2. Chọn khu vé thuộc loại đã chọn
-3. Chọn hạng vé trong khu
-4. Chọn số lượng hoặc chọn số ghế
+1. Chọn hạng vé (TicketType)
+2. Nếu IsSeatRequired = true → hiển thị seat map, chọn ghế
+3. Nếu IsSeatRequired = false → nhập số lượng
 ```
 
-Nếu sự kiện chưa cấu hình một loại khu, lựa chọn tương ứng vẫn được hiển
-thị nhưng bị vô hiệu hóa và có thông báo, ví dụ
-`Sự kiện chưa có khu ghế`.
-
-Tên khu ưu tiên lấy từ `TicketType.ZoneName`. Với dữ liệu cũ chưa có
-`VenueZoneId/ZoneName`, giao diện dùng `TicketType.Section` làm tên khu
-dự phòng để người dùng vẫn có thể chọn khu.
+Tên section/khu hiển thị trên giao diện lấy từ **tên TicketType**.
 
 ---
 
@@ -479,15 +472,14 @@ GET /api/tickets/event/{eventId}
 
 ---
 
-## 11. Phân bổ ghế VIP
+## 11. Generate ghế khi Publish
 
 Khi publish sự kiện, hệ thống:
 
-1. Lấy các loại vé yêu cầu ghế.
-2. Nhóm loại vé theo `VenueZoneId`.
-3. Lấy danh sách ghế thuộc từng zone.
-4. Phân bổ ghế lần lượt cho các loại vé.
-5. Tạo `EventSeatStatus` với trạng thái `Available`.
+1. Lấy các TicketType có `IsSeatRequired = true`.
+2. Generate ghế theo lưới Row × Col từ `Quantity`, section = tên TicketType.
+3. Skip ghế đã tồn tại (tránh vi phạm unique index).
+4. Tạo `EventSeatStatus = Available` cho mỗi ghế mới.
 
 Luồng trạng thái ghế:
 

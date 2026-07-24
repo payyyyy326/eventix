@@ -1,4 +1,4 @@
-﻿namespace Eventix.Entities;
+namespace Eventix.Entities;
 
 public partial class Order
 {
@@ -18,8 +18,6 @@ public partial class Order
 
     public decimal TotalAmount { get; set; }
 
-    public Guid? CouponId { get; set; }
-
     public DateTime? ExpiresAt { get; set; }
 
     public DateTime? PaidAt { get; set; }
@@ -28,15 +26,9 @@ public partial class Order
 
     public DateTime? UpdatedAt { get; set; }
 
-    public virtual Coupon? Coupon { get; set; }
-
-    public virtual ICollection<CouponUsage> CouponUsages { get; set; } = new List<CouponUsage>();
-
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
-
-    public virtual ICollection<RefundRequest> RefundRequests { get; set; } = new List<RefundRequest>();
 
     public virtual ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
 
