@@ -407,15 +407,27 @@ Cả hai cùng mã hóa đúng `QrToken`.
 
 ### Endpoint
 
-`POST /api/checkin/scan`
+- Nhập token: `POST /api/checkin/scan` với JSON.
+- Tải ảnh: `POST /api/checkin/scan-image` với multipart, tối đa 5 MB.
 
 ```mermaid
 sequenceDiagram
     actor Staff
+    participant Web
     participant API as CheckIn API
+    participant Decoder as SkiaSharp + ZXing
     participant DB
 
-    Staff->>API: EventId + QrToken
+    alt Nhập token thủ công
+        Staff->>Web: EventId + QrToken
+        Web->>API: POST /api/checkin/scan
+    else Tải ảnh QR
+        Staff->>Web: EventId + ảnh PNG/JPG/WEBP/BMP
+        Web->>API: POST /api/checkin/scan-image (multipart)
+        API->>Decoder: Đọc ảnh và giải mã QR
+        Decoder-->>API: QrToken
+    end
+
     API->>DB: Kiểm tra quyền Admin/Organizer sở hữu event
     API->>DB: BEGIN Serializable
     API->>DB: Tìm Ticket theo QrToken
@@ -423,16 +435,19 @@ sequenceDiagram
         API->>DB: Ticket → Used, CheckedInAt = now
         API->>DB: Tạo CheckInLog
         API->>DB: COMMIT
-        API-->>Staff: Thông tin khách/vé/ghế
-    else QR sai, khác event hoặc đã dùng
-        API->>DB: ROLLBACK
-        API-->>Staff: Từ chối
+        API-->>Web: Thông tin khách/vé/ghế
+        Web-->>Staff: Check-in thành công
+    else Ảnh không có QR, QR sai, khác event hoặc đã dùng
+        API->>DB: ROLLBACK nếu đã mở transaction
+        API-->>Web: Từ chối và hiển thị lý do
     end
 ```
 
+Hai cách nhập chỉ khác bước lấy `QrToken`; authorization, ownership, kiểm tra trạng
+thái vé và chống check-in hai lần dùng chung `CommerceService.CheckInAsync`.
+
 Thống kê `GET /api/checkin/event/{eventId}/stats` trả tổng ticket không Cancelled,
 số Used và số còn lại.
-
 ## 19. Luồng lỗi và response
 
 API sử dụng response chuẩn:
