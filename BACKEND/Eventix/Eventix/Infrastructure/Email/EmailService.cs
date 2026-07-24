@@ -15,35 +15,68 @@ namespace Eventix.Infrastructure.Email
             _emailSettings = emailSettings.Value;
         }
 
-        public async Task SendEmailAsync(string to, string subject, string body)
+        public Task SendEmailAsync(string to, string subject, string body)
+        {
+            return SendEmailInternalAsync(to, subject, body, null);
+        }
+
+        public Task SendEmailWithInlineImagesAsync(
+            string to,
+            string subject,
+            string body,
+            IReadOnlyDictionary<string, byte[]> inlineImages)
+        {
+            return SendEmailInternalAsync(to, subject, body, inlineImages);
+        }
+
+        private async Task SendEmailInternalAsync(
+            string to,
+            string subject,
+            string body,
+            IReadOnlyDictionary<string, byte[]>? inlineImages)
         {
             var email = new MimeMessage();
-            email.From.Add(new MailboxAddress(_emailSettings.FromName, _emailSettings.FromEmail));
+            email.From.Add(new MailboxAddress(
+                _emailSettings.FromName,
+                _emailSettings.FromEmail));
             email.To.Add(MailboxAddress.Parse(to));
             email.Subject = subject;
 
-            var builder = new BodyBuilder
+            var builder = new BodyBuilder { HtmlBody = body };
+            if (inlineImages != null)
             {
-                HtmlBody = body
-            };
+                foreach (var image in inlineImages)
+                {
+                    var resource = builder.LinkedResources.Add(
+                        $"{image.Key}.png",
+                        image.Value);
+                    resource.ContentId = image.Key;
+                    resource.ContentDisposition = new ContentDisposition(
+                        ContentDisposition.Inline);
+                }
+            }
             email.Body = builder.ToMessageBody();
 
             using var smtp = new SmtpClient();
             try
             {
-                await smtp.ConnectAsync(_emailSettings.SmtpHost, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
-                await smtp.AuthenticateAsync(_emailSettings.Username, _emailSettings.Password);
+                await smtp.ConnectAsync(
+                    _emailSettings.SmtpHost,
+                    _emailSettings.SmtpPort,
+                    SecureSocketOptions.StartTls);
+                await smtp.AuthenticateAsync(
+                    _emailSettings.Username,
+                    _emailSettings.Password);
                 await smtp.SendAsync(email);
                 await smtp.DisconnectAsync(true);
             }
             catch (Exception ex)
             {
-                // Log exception in real scenario
-                Console.WriteLine($"[EMAIL ERROR] Failed to send email to {to}: {ex.Message}");
+                Console.WriteLine(
+                    $"[EMAIL ERROR] Failed to send email to {to}: {ex.Message}");
                 throw;
             }
         }
-
         public async Task SendOtpEmailAsync(string to, string otpCode)
         {
             var subject = "Your Eventix Verification Code";

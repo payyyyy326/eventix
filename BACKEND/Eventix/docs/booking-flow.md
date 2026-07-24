@@ -554,3 +554,72 @@ Eventix.Web/
         ├── Ticket.cshtml
         └── CheckIn.cshtml
 ```
+---
+
+## 15. Thông báo email trong vòng đời đặt vé
+
+Hệ thống sử dụng `IEmailService`/`EmailService` (MailKit + SMTP) để gửi thông báo tới
+email của tài khoản thực hiện thao tác.
+
+### Giữ vé thành công
+
+```text
+POST /api/bookings
+    → kiểm tra vé/ghế còn trống
+    → tạo Reservation và chuyển ghế sang Reserved
+    → commit transaction
+    → gửi email "Giữ vé thành công"
+```
+
+Email bao gồm tên sự kiện, hạng vé, số ghế, số lượng, tổng tiền và thời điểm hết hạn
+giữ vé theo GMT+7. Email ghi rõ đây mới là lượt giữ vé 15 phút; người dùng phải thanh
+toán trước hạn để nhận vé điện tử.
+
+### Thanh toán và đặt vé thành công
+
+```text
+POST /api/payments/demo/complete
+    → xác nhận Order còn hiệu lực
+    → chuyển Order sang Paid và Reservation sang Confirmed
+    → chuyển ghế sang Sold, phát hành Ticket/QR
+    → commit transaction
+    → gửi email "Đặt vé thành công"
+```
+
+Email xác nhận thời điểm thanh toán, mã đơn hàng, sự kiện, hạng vé, ghế và tổng tiền.
+Mỗi vé được tạo một ảnh QR PNG từ QrToken, nhúng trực tiếp vào email bằng Content-ID
+(cid:) và hiển thị cùng TicketCode. Người dùng có thể quét QR ngay trong email hoặc
+mở mục **Vé của tôi** để xem lại.
+### Hủy vé thành công
+
+```text
+DELETE /api/bookings/{id}
+    → chuyển Reservation sang Cancelled
+    → trả số lượng vé và ghế về Available
+    → hủy Order Pending liên quan (nếu có)
+    → commit transaction
+    → gửi email "Đã hủy vé"
+```
+
+Nếu một order chứa nhiều reservation, email hủy liệt kê toàn bộ vé/ghế được hủy cùng
+nhau.
+
+### Hết 15 phút chưa thanh toán
+
+```text
+BookingExpirationJob
+    → tìm Reservation Active đã quá ExpiresAt
+    → chuyển Reservation/Order sang Expired
+    → trả số lượng vé và ghế về Available
+    → commit transaction
+    → gửi email "Đặt vé thất bại"
+```
+
+Email giải thích lượt giữ vé đã hết hạn do chưa thanh toán, liệt kê vé/ghế được trả
+lại và hướng dẫn người dùng đặt lại nếu vé vẫn còn. Các reservation thuộc cùng một
+order được gộp trong một email.
+### Xử lý lỗi gửi mail
+
+Email luôn được gửi sau khi transaction dữ liệu đã commit. Nếu SMTP tạm thời lỗi,
+`BookingService` ghi lỗi qua `ILogger` nhưng không rollback kết quả đặt/hủy vé và
+không trả lỗi nghiệp vụ cho người dùng.
