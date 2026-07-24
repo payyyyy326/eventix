@@ -1,151 +1,426 @@
 @model Eventix.Web.Models.MyTicketsViewModel
+
 @{
     ViewData["Title"] = "Vé của tôi";
+
     var activeTab = ViewBag.ActiveTab as string ?? "bookings";
     var now = DateTime.UtcNow;
+
+    DateTime ToUtc(DateTime value)
+    {
+        return value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+        };
+    }
+
+    // Chỉ lấy các lượt giữ vé đang hoạt động và chưa hết hạn
+    var activeBookings = Model.Bookings
+        .Where(x =>
+            string.Equals(x.Status, "Active", StringComparison.OrdinalIgnoreCase) &&
+            ToUtc(x.ExpiresAt) > now)
+        .OrderBy(x => x.ExpiresAt)
+        .ToList();
+
+    var activeBookingCount = activeBookings.Count;
+    var ticketCount = Model.Tickets.Count;
 }
 
-<main class="commerce-page">
+<main class="commerce-page my-tickets-page">
 
-    <div class="my-tickets-header">
-        <h1>Vé của tôi</h1>
-        <p>Quản lí vé đang giữ và vé điện tử đã mua.</p>
-    </div>
+    <header class="my-tickets-header">
+        <div>
+            <h1>Vé của tôi</h1>
+            <p>Quản lý lượt giữ vé và vé điện tử của bạn.</p>
+        </div>
+    </header>
 
-    <div class="my-tickets-tabs">
+    <nav class="my-tickets-tabs">
         <a class="my-tab-btn @(activeTab == "bookings" ? "active" : "")"
            asp-action="MyTickets"
            asp-route-tab="bookings">
-            Vé đang giữ
-            @if (Model.Bookings.Count > 0)
+
+            <span>Vé đang giữ</span>
+
+            @if (activeBookingCount > 0)
             {
-                <span class="tab-badge">@Model.Bookings.Count</span>
+                <span id="booking-tab-badge"
+                      class="tab-badge">
+                    @activeBookingCount
+                </span>
             }
         </a>
+
         <a class="my-tab-btn @(activeTab == "tickets" ? "active" : "")"
            asp-action="MyTickets"
            asp-route-tab="tickets">
-            Vé đã mua
-            @if (Model.Tickets.Count > 0)
+
+            <span>Vé đã mua</span>
+
+            @if (ticketCount > 0)
             {
-                <span class="tab-badge">@Model.Tickets.Count</span>
+                <span class="tab-badge">
+                    @ticketCount
+                </span>
             }
         </a>
-    </div>
+    </nav>
 
-    @* ===== TAB: VÉ ĐANG GIỮ ===== *@
-    @if (activeTab == "bookings")
-    {
-        if (Model.Bookings.Count == 0)
-        {
-            <section class="commerce-card commerce-empty">
-                <p>Bạn chưa có lượt giữ vé nào.</p>
-                <a class="commerce-button" asp-controller="Event" asp-action="Index">Tìm sự kiện</a>
-            </section>
-        }
+    <div class="my-tickets-content">
 
-        @foreach (var booking in Model.Bookings)
+        @* ==================== VÉ ĐANG GIỮ ==================== *@
+        @if (activeTab == "bookings")
         {
-            var canPay = booking.Status == "Active" && booking.ExpiresAt > now;
-            <section class="commerce-card booking-hold"
-                     data-expires="@DateTime.SpecifyKind(booking.ExpiresAt, DateTimeKind.Utc).ToString("O")">
-                <div class="commerce-row">
-                    <div>
-                        <h2>@booking.EventTitle</h2>
-                        <p>@booking.TicketTypeName · @booking.Quantity vé</p>
-                        @if (!string.IsNullOrWhiteSpace(booking.SeatLabel))
-                        {
-                            <p>Ghế: <strong>@booking.SeatLabel</strong></p>
-                        }
-                    </div>
-                    <span class="commerce-status">@booking.Status</span>
-                </div>
-                <div class="commerce-total">
-                    <span>@booking.TotalAmount.ToString("#,##0") VND</span>
-                    @if (canPay)
-                    {
-                        <strong class="booking-countdown">Đang tính...</strong>
-                    }
-                    else
-                    {
-                        <strong class="expired-label">Đã hết hạn</strong>
-                    }
-                </div>
-                @if (canPay)
-                {
-                    <div class="booking-actions">
-                        <a class="commerce-button"
-                           asp-action="Checkout"
-                           asp-route-reservationIds="@booking.Id">
-                            Thanh toán ngay
-                        </a>
-                        <form asp-action="CancelBooking" method="post">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@booking.Id" />
-                            <button class="commerce-button commerce-button-danger"
-                                    type="submit"
-                                    onclick="return confirm('Bạn muốn huỷ lượt giữ vé này?')">
-                                Huỷ giữ vé
-                            </button>
-                        </form>
-                    </div>
-                }
-            </section>
-        }
-    }
+            if (activeBookingCount == 0)
+            {
+                <section id="booking-empty-state"
+                         class="commerce-empty-state">
 
-    @* ===== TAB: VÉ ĐÃ MUA ===== *@
-    @if (activeTab == "tickets")
-    {
-        if (Model.Tickets.Count == 0)
-        {
-            <section class="commerce-card commerce-empty">
-                <p>Bạn chưa có vé điện tử nào.</p>
-                <a class="commerce-button" asp-controller="Event" asp-action="Index">Tìm sự kiện</a>
-            </section>
-        }
-        else
-        {
-            <div class="ticket-grid">
-                @foreach (var ticket in Model.Tickets)
-                {
-                    <a class="commerce-card ticket-card"
-                       asp-action="Ticket"
-                       asp-route-id="@ticket.Id">
-                        <div class="commerce-row">
-                            <h2>@ticket.EventTitle</h2>
-                            <span class="commerce-status">@ticket.Status</span>
-                        </div>
-                        <p>@ticket.EventStartTime.ToString("HH:mm dd/MM/yyyy") · @ticket.VenueName</p>
-                        <p>@ticket.TicketTypeName @ticket.SeatLabel</p>
-                        <strong>@ticket.TicketCode</strong>
+                    <div class="empty-state-icon">🎟️</div>
+
+                    <h2>Không có vé đang giữ</h2>
+
+                    <p>
+                        Bạn chưa có lượt giữ vé nào hoặc các lượt giữ vé
+                        trước đó đã hết hạn.
+                    </p>
+
+                    <a class="commerce-button"
+                       asp-controller="Event"
+                       asp-action="Index">
+                        Khám phá sự kiện
                     </a>
-                }
-            </div>
+                </section>
+            }
+            else
+            {
+                <div id="booking-list" class="booking-list">
+
+                    @foreach (var booking in activeBookings)
+                    {
+                        var expiresAtUtc = ToUtc(booking.ExpiresAt);
+
+                        <section class="commerce-card booking-card booking-hold"
+                                 data-expires="@expiresAtUtc.ToString("O")">
+
+                            <div class="booking-card-header">
+
+                                <div class="booking-event-info">
+                                    <div class="booking-status-row">
+                                        <span class="commerce-status status-active">
+                                            Đang giữ vé
+                                        </span>
+                                    </div>
+
+                                    <h2>@booking.EventTitle</h2>
+
+                                    <div class="booking-meta">
+                                        <span>
+                                            <span class="meta-icon">🎫</span>
+                                            @booking.TicketTypeName
+                                        </span>
+
+                                        <span>
+                                            <span class="meta-icon">×</span>
+                                            @booking.Quantity vé
+                                        </span>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(booking.SeatLabel))
+                                    {
+                                        <p class="booking-seat">
+                                            Ghế:
+                                            <strong>@booking.SeatLabel</strong>
+                                        </p>
+                                    }
+                                </div>
+
+                                <div class="booking-time-box">
+                                    <span class="booking-time-label">
+                                        Thời gian giữ vé
+                                    </span>
+
+                                    <strong class="booking-countdown">
+                                        Đang tính...
+                                    </strong>
+                                </div>
+
+                            </div>
+
+                            <div class="booking-card-footer">
+
+                                <div class="booking-price">
+                                    <span>Tổng thanh toán</span>
+
+                                    <strong>
+                                        @booking.TotalAmount.ToString("#,##0") VND
+                                    </strong>
+                                </div>
+
+                                <div class="booking-actions">
+
+                                    <form asp-action="CancelBooking"
+                                          method="post">
+
+                                        @Html.AntiForgeryToken()
+
+                                        <input type="hidden"
+                                               name="id"
+                                               value="@booking.Id" />
+
+                                        <button class="commerce-button commerce-button-secondary"
+                                                type="submit"
+                                                onclick="return confirm('Bạn muốn huỷ lượt giữ vé này?')">
+                                            Huỷ giữ vé
+                                        </button>
+                                    </form>
+
+                                    <a class="commerce-button"
+                                       asp-action="Checkout"
+                                       asp-route-reservationIds="@booking.Id">
+                                        Thanh toán ngay
+                                    </a>
+
+                                </div>
+
+                            </div>
+
+                        </section>
+                    }
+
+                </div>
+            }
         }
-    }
+
+        @* ==================== VÉ ĐÃ MUA ==================== *@
+        @if (activeTab == "tickets")
+        {
+            if (ticketCount == 0)
+            {
+                <section class="commerce-empty-state">
+
+                    <div class="empty-state-icon">🎫</div>
+
+                    <h2>Bạn chưa có vé điện tử</h2>
+
+                    <p>
+                        Vé đã thanh toán thành công sẽ được hiển thị tại đây.
+                    </p>
+
+                    <a class="commerce-button"
+                       asp-controller="Event"
+                       asp-action="Index">
+                        Tìm sự kiện
+                    </a>
+
+                </section>
+            }
+            else
+            {
+                <div class="ticket-grid">
+
+                    @foreach (var ticket in Model.Tickets)
+                    {
+                        var ticketStatusClass =
+                        ticket.Status?.ToLowerInvariant() switch
+                        {
+                            "confirmed" => "status-confirmed",
+                            "used" => "status-used",
+                            "cancelled" => "status-cancelled",
+                            "expired" => "status-expired",
+                            _ => "status-default"
+                        };
+
+                        var ticketStatusText =
+                        ticket.Status?.ToLowerInvariant() switch
+                        {
+                            "confirmed" => "Có hiệu lực",
+                            "used" => "Đã sử dụng",
+                            "cancelled" => "Đã huỷ",
+                            "expired" => "Đã hết hạn",
+                            _ => ticket.Status
+                        };
+
+                        <a class="commerce-card ticket-card"
+                           asp-action="Ticket"
+                           asp-route-id="@ticket.Id">
+
+                            <div class="ticket-card-top">
+
+                                <div>
+                                    <span class="ticket-type-label">
+                                        @ticket.TicketTypeName
+                                    </span>
+
+                                    <h2>@ticket.EventTitle</h2>
+                                </div>
+
+                                <span class="commerce-status @ticketStatusClass">
+                                    @ticketStatusText
+                                </span>
+
+                            </div>
+
+                            <div class="ticket-card-details">
+
+                                <div class="ticket-detail-item">
+                                    <span>Thời gian</span>
+
+                                    <strong>
+                                        @ticket.EventStartTime.ToString("HH:mm - dd/MM/yyyy")
+                                    </strong>
+                                </div>
+
+                                <div class="ticket-detail-item">
+                                    <span>Địa điểm</span>
+
+                                    <strong>@ticket.VenueName</strong>
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(ticket.SeatLabel))
+                                {
+                                    <div class="ticket-detail-item">
+                                        <span>Vị trí</span>
+
+                                        <strong>@ticket.SeatLabel</strong>
+                                    </div>
+                                }
+
+                            </div>
+
+                            <div class="ticket-card-code">
+                                <span>Mã vé</span>
+                                <strong>@ticket.TicketCode</strong>
+                            </div>
+
+                        </a>
+                    }
+
+                </div>
+            }
+        }
+
+    </div>
 
 </main>
 
 <script>
+    function updateBookingBadge() {
+        const activeCards = document.querySelectorAll(
+            ".booking-hold:not([data-expired='true'])"
+        );
+
+        const badge = document.getElementById("booking-tab-badge");
+
+        if (activeCards.length === 0) {
+            badge?.remove();
+            return;
+        }
+
+        if (badge) {
+            badge.textContent = activeCards.length;
+        }
+    }
+
+    function showEmptyBookingState() {
+        const bookingList = document.getElementById("booking-list");
+
+        if (!bookingList) {
+            return;
+        }
+
+        const activeCards = bookingList.querySelectorAll(
+            ".booking-hold:not([data-expired='true'])"
+        );
+
+        if (activeCards.length > 0) {
+            return;
+        }
+
+        bookingList.innerHTML = `
+            <section class="commerce-empty-state">
+                <div class="empty-state-icon">🎟️</div>
+                <h2>Không có vé đang giữ</h2>
+                <p>Các lượt giữ vé của bạn đã hết hạn.</p>
+                <a class="commerce-button" href="/Event">
+                    Khám phá sự kiện
+                </a>
+            </section>
+        `;
+    }
+
+    function expireBookingCard(card) {
+        if (card.dataset.expired === "true") {
+            return;
+        }
+
+        card.dataset.expired = "true";
+
+        const countdown = card.querySelector(".booking-countdown");
+        const actions = card.querySelector(".booking-actions");
+        const status = card.querySelector(".commerce-status");
+
+        if (countdown) {
+            countdown.textContent = "Đã hết hạn";
+            countdown.classList.add("expired-label");
+        }
+
+        if (status) {
+            status.textContent = "Đã hết hạn";
+            status.classList.remove("status-active");
+            status.classList.add("status-expired");
+        }
+
+        actions?.remove();
+
+        card.classList.add("booking-expired");
+
+        updateBookingBadge();
+
+        // Xóa card sau một khoảng ngắn để người dùng thấy trạng thái thay đổi
+        window.setTimeout(() => {
+            card.remove();
+            showEmptyBookingState();
+        }, 1500);
+    }
+
     function updateBookingCountdowns() {
         document.querySelectorAll(".booking-hold").forEach(card => {
-            const output = card.querySelector(".booking-countdown");
-            if (!output) return;
-            const expires = new Date(card.dataset.expires).getTime();
-            const remaining = expires - Date.now();
-            if (remaining <= 0) {
-                output.textContent = "Đã hết hạn";
-                output.classList.add("expired-label");
-                output.classList.remove("booking-countdown");
-                card.querySelectorAll(".booking-actions").forEach(x => x.remove());
+            if (card.dataset.expired === "true") {
                 return;
             }
-            const minutes = Math.floor(remaining / 60000);
-            const seconds = Math.floor((remaining % 60000) / 1000);
-            output.textContent = `Còn ${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+            const output = card.querySelector(".booking-countdown");
+            const expiresValue = card.dataset.expires;
+
+            if (!output || !expiresValue) {
+                return;
+            }
+
+            const expires = new Date(expiresValue).getTime();
+            const remaining = expires - Date.now();
+
+            if (Number.isNaN(expires) || remaining <= 0) {
+                expireBookingCard(card);
+                return;
+            }
+
+            const totalSeconds = Math.floor(remaining / 1000);
+
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+
+            output.textContent =
+                `Còn ${minutes}:${seconds.toString().padStart(2, "0")}`;
         });
     }
+
     updateBookingCountdowns();
-    setInterval(updateBookingCountdowns, 1000);
+
+    const bookingTimer = window.setInterval(
+        updateBookingCountdowns,
+        1000
+    );
 </script>
