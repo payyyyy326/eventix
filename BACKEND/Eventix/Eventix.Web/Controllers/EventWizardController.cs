@@ -49,38 +49,47 @@ namespace Eventix.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> Step1(EventInfoViewModel model)
         {
-
             var token = Request.Cookies[CookieNames.Token];
 
             if (string.IsNullOrWhiteSpace(token))
                 return RedirectToAction("Login", "Auth");
 
             var client = _httpClientFactory.CreateClient("Eventix");
-
-
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
 
-            if (model.StartTime <= DateTime.Now)
+            // Safety net: nếu DateTime được deserialize với Kind = Unspecified
+            // (trường hợp browser không support ISO string), ép về UTC.
+            if (model.StartTime.Kind == DateTimeKind.Unspecified)
+                model.StartTime = DateTime.SpecifyKind(model.StartTime, DateTimeKind.Utc);
+
+            if (model.EndTime.Kind == DateTimeKind.Unspecified)
+                model.EndTime = DateTime.SpecifyKind(model.EndTime, DateTimeKind.Utc);
+
+            // Kiểm tra ModelState trước (bao gồm [Required] và binding errors)
+            if (!ModelState.IsValid)
             {
-                TempData["Error"] = "Start time must be in the future.";
+                model.Categories = await LoadCategoriesAsync(client);
+                return View(model);
+            }
+
+            // Business rules sau khi model hợp lệ
+            if (model.StartTime <= DateTime.UtcNow)
+            {
+                ModelState.AddModelError(nameof(model.StartTime), "Start time must be in the future.");
                 model.Categories = await LoadCategoriesAsync(client);
                 return View(model);
             }
 
             if (model.EndTime <= model.StartTime)
             {
-                TempData["Error"] = "End time must be after start time.";
+                ModelState.AddModelError(nameof(model.EndTime), "End time must be after start time.");
                 model.Categories = await LoadCategoriesAsync(client);
                 return View(model);
             }
 
-
-            if (!ModelState.IsValid)
-            {
-                model.Categories = await LoadCategoriesAsync(client);
-                return View(model);
-            }
+            // Xóa Categories trước khi lưu vào session (lookup data, không cần persist)
+            model.Categories = new();
 
             HttpContext.Session.SetString(
                 "EventWizard_Info",
@@ -90,7 +99,7 @@ namespace Eventix.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Step2()
+        public async Task<IActionResult> Step2(int venuePage = 1)
         {
             ViewBag.CurrentStep = 2;
 
@@ -111,7 +120,7 @@ namespace Eventix.Web.Controllers
 
             var model = new EventVenueViewModel
             {
-                Venues = await LoadVenuesAsync(client)
+                VenuePage = await LoadVenuesAsync(client, venuePage)
             };
 
             return View(model);
@@ -171,15 +180,17 @@ namespace Eventix.Web.Controllers
                 if (model.SelectedVenueId == null || model.SelectedVenueId == Guid.Empty)
                 {
                     TempData["Error"] = "Please select a venue.";
-                    model.Venues = await LoadVenuesAsync(client);
+                    model.VenuePage = await LoadVenuesAsync(client, model.VenuePage.CurrentPage);
                     return View(model);
                 }
 
                 HttpContext.Session.SetString(
                     "EventWizard_VenueId",
                     model.SelectedVenueId.Value.ToString());
+                InvalidateSeatMapSave();
 
-                return RedirectToAction("Step3");
+                // Skip Step 3 (Venue Zones) - go directly to Ticket Types
+                return RedirectToAction("Step4");
             }
 
             if (model.Mode == "create")
@@ -196,7 +207,7 @@ namespace Eventix.Web.Controllers
                 if (!ModelState.IsValid)
                 {
                     model.Mode = "create";
-                    model.Venues = await LoadVenuesAsync(client);
+                    model.VenuePage = await LoadVenuesAsync(client, model.VenuePage.CurrentPage);
                     return View(model);
                 }
 
@@ -210,19 +221,21 @@ namespace Eventix.Web.Controllers
                 {
                     ModelState.AddModelError("", result?.Message ?? "Cannot create venue.");
                     model.Mode = "create";
-                    model.Venues = await LoadVenuesAsync(client);
+                    model.VenuePage = await LoadVenuesAsync(client, model.VenuePage.CurrentPage);
                     return View(model);
                 }
 
                 HttpContext.Session.SetString(
                     "EventWizard_VenueId",
                     result.Data.Id.ToString());
+                InvalidateSeatMapSave();
 
-                return RedirectToAction("Step3");
+                // Skip Step 3 (Venue Zones) - go directly to Ticket Types
+                return RedirectToAction("Step4");
             }
 
             ModelState.AddModelError("", "Invalid venue mode.");
-            model.Venues = await LoadVenuesAsync(client);
+            model.VenuePage = await LoadVenuesAsync(client, model.VenuePage.CurrentPage);
             return View(model);
         }
 
@@ -472,7 +485,7 @@ namespace Eventix.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> Step4()
         {
-            ViewBag.CurrentStep = 4;
+            ViewBag.CurrentStep = 3; // Renumbered: step 3 (Zones) removed, Ticket Types is now step 3
 
             var token = Request.Cookies[CookieNames.Token];
 
@@ -494,8 +507,7 @@ namespace Eventix.Web.Controllers
             var model = new EventTicketTypesViewModel
             {
                 VenueId = venueId,
-                Venue = await LoadVenueAsync(client, venueId),
-                Zones = await LoadVenueZonesAsync(client, venueId)
+                Venue = await LoadVenueAsync(client, venueId)
             };
 
             var ticketTypesJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
@@ -510,6 +522,8 @@ namespace Eventix.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> AddTicketType(EventTicketTypesViewModel model)
         {
+            ViewBag.CurrentStep = 3;
+
             var token = Request.Cookies[CookieNames.Token];
 
             if (string.IsNullOrWhiteSpace(token))
@@ -521,104 +535,76 @@ namespace Eventix.Web.Controllers
                 return RedirectToAction("Step2");
 
             var venueId = Guid.Parse(venueIdString);
+            var client = _httpClientFactory.CreateClient("Eventix");
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", token);
 
             var currentJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
-
             var ticketTypes = string.IsNullOrWhiteSpace(currentJson)
                 ? new List<CreateTicketTypeRequest>()
                 : JsonSerializer.Deserialize<List<CreateTicketTypeRequest>>(currentJson) ?? new();
 
             var ticket = model.NewTicketType;
 
-            if (string.IsNullOrWhiteSpace(ticket.Name))
-            {
-                TempData["Error"] = "Ticket type name is required.";
-                return RedirectToAction("Step4");
-            }
+            // Safety net: ép Kind = UTC (ISO string từ browser parse thành Utc tự động,
+            // nhưng phòng trường hợp model binder trả về Unspecified)
+            if (ticket.SaleStartTime.Kind == DateTimeKind.Unspecified)
+                ticket.SaleStartTime = DateTime.SpecifyKind(ticket.SaleStartTime, DateTimeKind.Utc);
+            if (ticket.SaleEndTime.Kind == DateTimeKind.Unspecified)
+                ticket.SaleEndTime = DateTime.SpecifyKind(ticket.SaleEndTime, DateTimeKind.Utc);
 
-            if (ticket.VenueZoneId == null || ticket.VenueZoneId == Guid.Empty)
-            {
-                TempData["Error"] = "Please select a zone.";
-                return RedirectToAction("Step4");
-            }
+            // ── Validate từng trường, thêm lỗi vào ModelState ────────────────
+            if (string.IsNullOrWhiteSpace(ticket.Name))
+                ModelState.AddModelError("NewTicketType.Name", "Ticket type name is required.");
+            else if (ticketTypes.Any(t => string.Equals(t.Name.Trim(), ticket.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
+                ModelState.AddModelError("NewTicketType.Name", $"A ticket type named '{ticket.Name}' already exists.");
 
             if (ticket.Quantity <= 0)
-            {
-                TempData["Error"] = "Quantity must be greater than 0.";
-                return RedirectToAction("Step4");
-            }
+                ModelState.AddModelError("NewTicketType.Quantity", "Quantity must be greater than 0.");
 
             if (ticket.Price < 0)
+                ModelState.AddModelError("NewTicketType.Price", "Price cannot be negative.");
+
+            if (ticket.SaleStartTime == default)
+                ModelState.AddModelError("NewTicketType.SaleStartTime", "Sale start time is required.");
+            else if (ticket.SaleStartTime <= DateTime.UtcNow)
+                ModelState.AddModelError("NewTicketType.SaleStartTime", "Sale start time must be in the future.");
+
+            if (ticket.SaleEndTime == default)
+                ModelState.AddModelError("NewTicketType.SaleEndTime", "Sale end time is required.");
+            else if (ticket.SaleStartTime != default && ticket.SaleEndTime <= ticket.SaleStartTime)
+                ModelState.AddModelError("NewTicketType.SaleEndTime", "Sale end time must be after sale start time.");
+
+            // Kiểm tra tổng quantity không vượt venue capacity
+            if (ticket.Quantity > 0)
             {
-                TempData["Error"] = "Price cannot be negative.";
-                return RedirectToAction("Step4");
+                var venue = await LoadVenueAsync(client, venueId);
+                if (venue != null)
+                {
+                    var currentTotal = ticketTypes.Sum(t => t.Quantity);
+                    if (currentTotal + ticket.Quantity > venue.Capacity)
+                        ModelState.AddModelError("NewTicketType.Quantity",
+                            $"Total quantity ({currentTotal + ticket.Quantity}) would exceed venue capacity ({venue.Capacity}).");
+                }
             }
 
-            if (ticket.SaleStartTime <= DateTime.Now)
+            // ── Nếu có lỗi: trả về View với model đầy đủ ─────────────────────
+            if (!ModelState.IsValid)
             {
-                TempData["Error"] = "Sale start time must be in the future.";
-                return RedirectToAction("Step4");
+                model.VenueId = venueId;
+                model.Venue = await LoadVenueAsync(client, venueId);
+                model.TicketTypes = ticketTypes;
+                return View("Step4", model);
             }
 
-            if (ticket.SaleEndTime <= ticket.SaleStartTime)
-            {
-                TempData["Error"] = "Sale end time must be after sale start time.";
-                return RedirectToAction("Step4");
-            }
-
-            var client = _httpClientFactory.CreateClient("Eventix");
-
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
-
-            var zones = await LoadVenueZonesAsync(client, venueId);
-
-            var selectedZone = zones.FirstOrDefault(z => z.Id == ticket.VenueZoneId);
-
-            if (selectedZone == null)
-            {
-                TempData["Error"] = "Please select a valid zone.";
-                return RedirectToAction("Step4");
-            }
-
-            if (ticket.IsSeatRequired && !selectedZone.HasSeats)
-            {
-                TempData["Error"] = "This ticket requires seats, but the selected zone has no assigned seats.";
-                return RedirectToAction("Step4");
-            }
-
-            if (!ticket.IsSeatRequired && selectedZone.HasSeats)
-            {
-                TempData["Error"] = "This zone has assigned seats. Please enable seat selection for this ticket.";
-                return RedirectToAction("Step4");
-            }
-
-            if (ticket.Quantity > selectedZone.Capacity)
-            {
-                TempData["Error"] = "Ticket quantity cannot exceed zone capacity.";
-                return RedirectToAction("Step4");
-            }
-
-            var currentZoneQuantity = ticketTypes
-                .Where(t => t.VenueZoneId == ticket.VenueZoneId)
-                .Sum(t => t.Quantity);
-
-            if (currentZoneQuantity + ticket.Quantity > selectedZone.Capacity)
-            {
-                TempData["Error"] = "Total ticket quantity in this zone cannot exceed zone capacity.";
-                return RedirectToAction("Step4");
-            }
-
-            ticket.Section = selectedZone.Name;
-            ticket.VenueZoneId = selectedZone.Id;
+            // ── Thành công: lưu vào session ───────────────────────────────────
             ticketTypes.Add(ticket);
-
             HttpContext.Session.SetString(
                 "EventWizard_TicketTypes",
                 JsonSerializer.Serialize(ticketTypes));
+            InvalidateSeatMapSave();
 
             TempData["Success"] = "Ticket type added successfully.";
-
             return RedirectToAction("Step4");
         }
         [HttpPost]
@@ -667,6 +653,7 @@ namespace Eventix.Web.Controllers
                 return BadRequest(result?.Message ?? "Cannot save seat map.");
             }
 
+            HttpContext.Session.SetString("EventWizard_SeatMapSaved", "true");
             return Ok(result);
         }
 
@@ -674,7 +661,9 @@ namespace Eventix.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> Step5()
         {
-            ViewBag.CurrentStep = 5;
+            // Step 5 is now "Seat Preview" - shows which ticket types will have seats auto-generated
+            // Actual seat generation happens during Publish (TicketTypeService auto-generates seats)
+            ViewBag.CurrentStep = 4; // Renumbered: step 3 removed, so seat preview is visual step 4
 
             var token = Request.Cookies[CookieNames.Token];
 
@@ -693,46 +682,31 @@ namespace Eventix.Web.Controllers
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
 
+            var ticketTypesJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
+
+            var ticketTypes = string.IsNullOrWhiteSpace(ticketTypesJson)
+                ? new List<CreateTicketTypeRequest>()
+                : JsonSerializer.Deserialize<List<CreateTicketTypeRequest>>(ticketTypesJson) ?? new();
+
             var model = new EventSeatAssignmentViewModel
             {
                 VenueId = venueId,
                 Venue = await LoadVenueAsync(client, venueId),
-                SeatStatuses = await LoadSeatImportStatusAsync(client, venueId)
+                TicketTypes = ticketTypes
             };
 
             return View(model);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Step5Continue()
+        public IActionResult Step5Continue()
         {
-            var token = Request.Cookies[CookieNames.Token];
+            var ticketTypesJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
 
-            if (string.IsNullOrWhiteSpace(token))
-                return RedirectToAction("Login", "Auth");
-
-            var venueIdString = HttpContext.Session.GetString("EventWizard_VenueId");
-
-            if (string.IsNullOrWhiteSpace(venueIdString))
-                return RedirectToAction("Step2");
-
-            var venueId = Guid.Parse(venueIdString);
-
-            var client = _httpClientFactory.CreateClient("Eventix");
-
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
-
-            var statuses = await LoadSeatImportStatusAsync(client, venueId);
-
-            var incomplete = statuses
-                .Where(x => !x.Completed)
-                .ToList();
-
-            if (incomplete.Any())
+            if (string.IsNullOrWhiteSpace(ticketTypesJson))
             {
-                TempData["Error"] = "Please complete seat assignment for all seated zones.";
-                return RedirectToAction("Step5");
+                TempData["Error"] = "Please add at least one ticket type before continuing.";
+                return RedirectToAction("Step4");
             }
 
             return RedirectToAction("Step6");
@@ -776,7 +750,8 @@ namespace Eventix.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> Step6()
         {
-            ViewBag.CurrentStep = 6;
+            ViewBag.CurrentStep = 5; // Renumbered: step 3 removed
+            ViewBag.IsSeatMapSaved = IsSeatMapSaved();
 
             var token = Request.Cookies[CookieNames.Token];
 
@@ -795,12 +770,30 @@ namespace Eventix.Web.Controllers
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
 
+            // Load ticket types from session to build preview sections for the map
+            var ticketTypesJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
+
+            var ticketTypes = string.IsNullOrWhiteSpace(ticketTypesJson)
+                ? new List<CreateTicketTypeRequest>()
+                : JsonSerializer.Deserialize<List<CreateTicketTypeRequest>>(ticketTypesJson) ?? new();
+
+            // Build preview sections from ticket types (map will be arranged after publish)
+            // Use VenueSectionLayouts from the venue if they exist (from previous events)
+            var layouts = await LoadSeatMapAsync(client, venueId);
+
+            // Filter layouts to only those matching current ticket type names
+            var ticketTypeNames = ticketTypes.Select(t => t.Name.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var filteredLayouts = layouts
+                .Where(l => ticketTypeNames.Contains(l.Section ?? string.Empty))
+                .ToList();
+
             var model = new EventSeatMapViewModel
             {
                 VenueId = venueId,
                 Venue = await LoadVenueAsync(client, venueId),
-                Zones = await LoadVenueZonesAsync(client, venueId),
-                Layouts = await LoadSeatMapAsync(client, venueId)
+                TicketTypes = ticketTypes,
+                Layouts = filteredLayouts
             };
 
             return View(model);
@@ -809,13 +802,19 @@ namespace Eventix.Web.Controllers
         [HttpPost]
         public IActionResult Step6Continue()
         {
+            if (!IsSeatMapSaved())
+            {
+                TempData["Error"] = "Please save the venue map before continuing to review.";
+                return RedirectToAction("Step6");
+            }
+
             return RedirectToAction("Step7");
         }
 
         [HttpGet]
         public async Task<IActionResult> Step7()
         {
-            ViewBag.CurrentStep = 7;
+            ViewBag.CurrentStep = 6; // Renumbered: step 3 removed
 
             var token = Request.Cookies[CookieNames.Token];
 
@@ -899,11 +898,6 @@ namespace Eventix.Web.Controllers
                 new AuthenticationHeaderValue("Bearer", token);
 
             var venue = await LoadVenueAsync(client, venueId);
-            var zones = await LoadVenueZonesAsync(client, venueId);
-            var statuses =
-                await LoadSeatImportStatusAsync(client, venueId);
-            var layouts =
-                await LoadSeatMapAsync(client, venueId);
 
             if (venue == null)
             {
@@ -913,26 +907,14 @@ namespace Eventix.Web.Controllers
                 return RedirectToAction("Step2");
             }
 
+            // Load categories để dropdown trong inline-edit form có dữ liệu
+            eventInfo.Categories = await LoadCategoriesAsync(client);
+
             var model = new EventReviewViewModel
             {
                 EventInfo = eventInfo,
                 Venue = venue,
-                Zones = zones,
-                TicketTypes = ticketTypes,
-
-                SeatStatuses = statuses
-                    .Select(x => new SeatReviewItemViewModel
-                    {
-                        VenueZoneId = x.VenueZoneId,
-                        ZoneName = x.ZoneName,
-                        HasSeats = x.HasSeats,
-                        Capacity = x.Capacity,
-                        SeatCount = x.ImportedSeats,
-                        Completed = x.Completed
-                    })
-                    .ToList(),
-
-                HasSavedMap = layouts.Count > 0
+                TicketTypes = ticketTypes
             };
 
             return View(model);
@@ -1015,6 +997,14 @@ namespace Eventix.Web.Controllers
                     "At least one ticket type is required.";
 
                 return RedirectToAction("Step4");
+            }
+
+            if (!IsSeatMapSaved())
+            {
+                TempData["Error"] =
+                    "Please save the venue map before publishing the event.";
+
+                return RedirectToAction("Step6");
             }
 
             var client =
@@ -1160,11 +1150,186 @@ namespace Eventix.Web.Controllers
             }
         }
 
+        // ── Inline-edit actions cho Review page (Step 7) ──────────────────────
+
+        /// <summary>
+        /// AJAX POST: cập nhật thông tin sự kiện (EventInfo) trong session từ Review page.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateEventInfo(EventInfoViewModel model)
+        {
+            var token = Request.Cookies[CookieNames.Token];
+            if (string.IsNullOrWhiteSpace(token))
+                return Json(new { success = false, message = "Unauthorized" });
+
+            if (string.IsNullOrWhiteSpace(model.Title))
+                return Json(new { success = false, message = "Event title is required." });
+
+            if (model.CategoryId == Guid.Empty)
+                return Json(new { success = false, message = "Category is required." });
+
+            if (model.StartTime <= DateTime.UtcNow)
+                return Json(new { success = false, message = "Start time must be in the future." });
+
+            if (model.EndTime <= model.StartTime)
+                return Json(new { success = false, message = "End time must be after start time." });
+
+            // Xóa Categories trước khi lưu vào session (lookup data, load lại từ API khi cần)
+            model.Categories = new();
+
+            HttpContext.Session.SetString(
+                "EventWizard_Info",
+                JsonSerializer.Serialize(model));
+
+            return Json(new { success = true, message = "Event information updated." });
+        }
+
+        /// <summary>
+        /// AJAX POST: thêm ticket type mới từ Review page.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult AddTicketTypeFromReview([FromBody] CreateTicketTypeRequest ticket)
+        {
+            if (ticket == null || string.IsNullOrWhiteSpace(ticket.Name))
+                return Json(new { success = false, message = "Ticket name is required." });
+
+            if (ticket.Quantity <= 0)
+                return Json(new { success = false, message = "Quantity must be greater than 0." });
+
+            if (ticket.Price < 0)
+                return Json(new { success = false, message = "Price cannot be negative." });
+
+            if (ticket.SaleStartTime <= DateTime.UtcNow)
+                return Json(new { success = false, message = "Sale start time must be in the future." });
+
+            if (ticket.SaleEndTime <= ticket.SaleStartTime)
+                return Json(new { success = false, message = "Sale end time must be after sale start time." });
+
+            var currentJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
+            var ticketTypes = string.IsNullOrWhiteSpace(currentJson)
+                ? new List<CreateTicketTypeRequest>()
+                : JsonSerializer.Deserialize<List<CreateTicketTypeRequest>>(currentJson) ?? new();
+
+            if (ticketTypes.Any(t => string.Equals(t.Name.Trim(), ticket.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
+                return Json(new { success = false, message = $"A ticket type named '{ticket.Name}' already exists." });
+
+            ticketTypes.Add(ticket);
+
+            HttpContext.Session.SetString(
+                "EventWizard_TicketTypes",
+                JsonSerializer.Serialize(ticketTypes));
+            InvalidateSeatMapSave();
+
+            return Json(new { success = true, message = "Ticket type added.", count = ticketTypes.Count });
+        }
+
+        /// <summary>
+        /// AJAX POST: xóa ticket type theo index từ Review page.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult RemoveTicketTypeFromReview([FromBody] int index)
+        {
+            var currentJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
+            var ticketTypes = string.IsNullOrWhiteSpace(currentJson)
+                ? new List<CreateTicketTypeRequest>()
+                : JsonSerializer.Deserialize<List<CreateTicketTypeRequest>>(currentJson) ?? new();
+
+            if (index < 0 || index >= ticketTypes.Count)
+                return Json(new { success = false, message = "Invalid ticket index." });
+
+            if (ticketTypes.Count == 1)
+                return Json(new { success = false, message = "At least one ticket type is required." });
+
+            ticketTypes.RemoveAt(index);
+
+            HttpContext.Session.SetString(
+                "EventWizard_TicketTypes",
+                JsonSerializer.Serialize(ticketTypes));
+            InvalidateSeatMapSave();
+
+            return Json(new { success = true, message = "Ticket type removed.", count = ticketTypes.Count });
+        }
+
+        /// <summary>
+        /// AJAX POST: cập nhật ticket type theo index từ Review page.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult UpdateTicketTypeFromReview([FromBody] UpdateTicketTypeFromReviewRequest request)
+        {
+            if (request == null)
+                return Json(new { success = false, message = "Invalid request." });
+
+            var currentJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
+            var ticketTypes = string.IsNullOrWhiteSpace(currentJson)
+                ? new List<CreateTicketTypeRequest>()
+                : JsonSerializer.Deserialize<List<CreateTicketTypeRequest>>(currentJson) ?? new();
+
+            if (request.Index < 0 || request.Index >= ticketTypes.Count)
+                return Json(new { success = false, message = "Invalid ticket index." });
+
+            var ticket = request.Ticket;
+
+            // Validate
+            if (string.IsNullOrWhiteSpace(ticket?.Name))
+                return Json(new { success = false, field = "Name", message = "Ticket name is required." });
+
+            // Safety net: ép Kind = UTC
+            if (ticket.SaleStartTime.Kind == DateTimeKind.Unspecified)
+                ticket.SaleStartTime = DateTime.SpecifyKind(ticket.SaleStartTime, DateTimeKind.Utc);
+            if (ticket.SaleEndTime.Kind == DateTimeKind.Unspecified)
+                ticket.SaleEndTime = DateTime.SpecifyKind(ticket.SaleEndTime, DateTimeKind.Utc);
+
+            // Kiểm tra tên trùng (bỏ qua chính nó)
+            if (ticketTypes
+                .Where((_, i) => i != request.Index)
+                .Any(t => string.Equals(t.Name.Trim(), ticket.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
+                return Json(new { success = false, field = "Name", message = $"A ticket type named '{ticket.Name}' already exists." });
+
+            if (ticket.Quantity <= 0)
+                return Json(new { success = false, field = "Quantity", message = "Quantity must be greater than 0." });
+
+            if (ticket.Price < 0)
+                return Json(new { success = false, field = "Price", message = "Price cannot be negative." });
+
+            if (ticket.SaleStartTime == default)
+                return Json(new { success = false, field = "SaleStartTime", message = "Sale start time is required." });
+
+            if (ticket.SaleStartTime <= DateTime.UtcNow)
+                return Json(new { success = false, field = "SaleStartTime", message = "Sale start time must be in the future." });
+
+            if (ticket.SaleEndTime == default)
+                return Json(new { success = false, field = "SaleEndTime", message = "Sale end time is required." });
+
+            if (ticket.SaleEndTime <= ticket.SaleStartTime)
+                return Json(new { success = false, field = "SaleEndTime", message = "Sale end time must be after sale start time." });
+
+            // Cập nhật
+            var existing = ticketTypes[request.Index];
+            existing.Name = ticket.Name.Trim();
+            existing.Description = ticket.Description;
+            existing.Price = ticket.Price;
+            existing.Quantity = ticket.Quantity;
+            existing.SaleStartTime = ticket.SaleStartTime;
+            existing.SaleEndTime = ticket.SaleEndTime;
+            existing.IsSeatRequired = ticket.IsSeatRequired;
+
+            HttpContext.Session.SetString(
+                "EventWizard_TicketTypes",
+                JsonSerializer.Serialize(ticketTypes));
+            InvalidateSeatMapSave();
+
+            return Json(new { success = true, message = "Ticket type updated.", count = ticketTypes.Count });
+        }
+
         private static CreateEventRequest BuildCreateEventRequest(EventInfoViewModel eventInfo, Guid venueId)
         {
             return new CreateEventRequest
             {
-                CategoryId = eventInfo.CategoryId,
+                CategoryId = eventInfo.CategoryId ?? Guid.Empty,
                 VenueId = venueId,
 
                 Title = eventInfo.Title?.Trim() ?? string.Empty,
@@ -1202,13 +1367,13 @@ namespace Eventix.Web.Controllers
             };
         }
 
-        private async Task<List<VenueResponse>> LoadVenuesAsync(HttpClient client)
+        private async Task<PaginationResponse<VenueResponse>> LoadVenuesAsync(HttpClient client, int page = 1, int pageSize = 6)
         {
             var response = await client.GetFromJsonAsync<
                 ApiResponseModel<PaginationResponse<VenueResponse>>>(
-                "api/Venue/venues");
+                $"api/Venue/venues?CurrentPage={page}&PageSize={pageSize}");
 
-            return response?.Data?.DataList ?? new List<VenueResponse>();
+            return response?.Data ?? new PaginationResponse<VenueResponse>();
         }
         private async Task<List<CategoryResponse>> LoadCategoriesAsync(HttpClient client)
         {
@@ -1266,6 +1431,91 @@ namespace Eventix.Web.Controllers
             HttpContext.Session.Remove("EventWizard_VenueId");
             HttpContext.Session.Remove("EventWizard_TicketTypes");
             HttpContext.Session.Remove("EventWizard_EventId");
+            HttpContext.Session.Remove("EventWizard_SeatMapSaved");
+        }
+
+        private bool IsSeatMapSaved() =>
+            HttpContext.Session.GetString("EventWizard_SeatMapSaved") == "true";
+
+        private void InvalidateSeatMapSave() =>
+            HttpContext.Session.Remove("EventWizard_SeatMapSaved");
+
+        // Proxy upload ảnh: Web nhận file → gọi API → trả URL về browser
+        [HttpPost]
+        [IgnoreAntiforgeryToken]
+        public async Task<IActionResult> UploadEventImage(IFormFile? file)
+        {
+            var token = Request.Cookies[CookieNames.Token];
+            if (string.IsNullOrWhiteSpace(token))
+                return Unauthorized(new { success = false, message = "Not logged in." });
+
+            if (file == null || file.Length == 0)
+                return BadRequest(new { success = false, message = "No file provided." });
+
+            var client = _httpClientFactory.CreateClient("Eventix");
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                using var content = new MultipartFormDataContent();
+                await using var stream = file.OpenReadStream();
+                var fileContent = new StreamContent(stream);
+                fileContent.Headers.ContentType =
+                    new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                content.Add(fileContent, "file", file.FileName);
+
+                var response = await client.PostAsync("api/events/upload-image", content);
+                var raw = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                    return StatusCode((int)response.StatusCode,
+                        new { success = false, message = $"API error {(int)response.StatusCode}: {raw}" });
+
+                var json = System.Text.Json.JsonSerializer.Deserialize<ApiResponseModel<UploadImageProxyResponse>>(
+                    raw,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (json == null || !json.IsSuccess || json.Data == null)
+                    return BadRequest(new { success = false, message = json?.Message ?? "Upload failed." });
+
+                var relativeUrl = json.Data.RelativeUrl;
+
+                var fullUrl = json.Data.Url;
+
+                if (string.IsNullOrWhiteSpace(fullUrl))
+                {
+                    fullUrl = $"https://localhost:7162{relativeUrl}";
+                }
+                else if (!fullUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                {
+                    fullUrl = $"https://localhost:7162{fullUrl}";
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    relativeUrl,
+                    url = fullUrl
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        private sealed class UploadImageProxyResponse
+        {
+            public string Url { get; set; } = string.Empty;
+            public string RelativeUrl { get; set; } = string.Empty;
+        }
+
+        // DTO nội bộ cho UpdateTicketTypeFromReview
+        public sealed class UpdateTicketTypeFromReviewRequest
+        {
+            public int Index { get; set; }
+            public CreateTicketTypeRequest? Ticket { get; set; }
         }
 
         private async Task<(bool IsValid, string Message)> ValidateWizardBeforePublishAsync(
@@ -1278,124 +1528,22 @@ namespace Eventix.Web.Controllers
             if (venue == null)
                 return (false, "The selected venue does not exist.");
 
-            var zones =
-                await LoadVenueZonesAsync(client, venueId);
-
-            if (zones.Count == 0)
-                return (false, "At least one venue zone is required.");
-
-            var seatStatuses =
-                await LoadSeatImportStatusAsync(client, venueId);
-
-            var incompleteZones = seatStatuses
-                .Where(x => x.HasSeats && !x.Completed)
-                .Select(x => x.ZoneName)
-                .ToList();
-
-            if (incompleteZones.Count > 0)
-            {
-                return (
-                    false,
-                    $"Seat assignment is incomplete for: " +
-                    $"{string.Join(", ", incompleteZones)}."
-                );
-            }
-
-            var totalCapacity = zones.Sum(x => x.Capacity);
-
-            if (totalCapacity > venue.Capacity)
-            {
-                return (
-                    false,
-                    $"Total zone capacity ({totalCapacity}) exceeds " +
-                    $"venue capacity ({venue.Capacity})."
-                );
-            }
-
-            var layouts =
-                await LoadSeatMapAsync(client, venueId);
-
-            var mappedSections = layouts
-                .Select(x => x.Section)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            var zonesWithoutLayout = zones
-                .Where(z => !mappedSections.Contains(z.Name))
-                .Select(z => z.Name)
-                .ToList();
-
-            if (zonesWithoutLayout.Count > 0)
-            {
-                return (
-                    false,
-                    $"Map layout is missing for: " +
-                    $"{string.Join(", ", zonesWithoutLayout)}."
-                );
-            }
+            if (ticketTypes.Count == 0)
+                return (false, "At least one ticket type is required.");
 
             foreach (var ticket in ticketTypes)
             {
-                if (!ticket.VenueZoneId.HasValue)
-                {
-                    return (
-                        false,
-                        $"Ticket type '{ticket.Name}' has no venue zone."
-                    );
-                }
-
-                var zone = zones.FirstOrDefault(
-                    x => x.Id == ticket.VenueZoneId.Value);
-
-                if (zone == null)
-                {
-                    return (
-                        false,
-                        $"Ticket type '{ticket.Name}' has an invalid zone."
-                    );
-                }
+                if (string.IsNullOrWhiteSpace(ticket.Name))
+                    return (false, "All ticket types must have a name.");
 
                 if (ticket.Quantity <= 0)
-                {
-                    return (
-                        false,
-                        $"Ticket type '{ticket.Name}' has an invalid quantity."
-                    );
-                }
+                    return (false, $"Ticket type '{ticket.Name}' has an invalid quantity.");
 
-                if (ticket.IsSeatRequired != zone.HasSeats)
-                {
-                    return (
-                        false,
-                        $"Ticket type '{ticket.Name}' does not match " +
-                        $"zone '{zone.Name}'."
-                    );
-                }
-            }
+                if (ticket.Price < 0)
+                    return (false, $"Ticket type '{ticket.Name}' has an invalid price.");
 
-            var ticketGroups = ticketTypes
-                .Where(x => x.VenueZoneId.HasValue)
-                .GroupBy(x => x.VenueZoneId!.Value);
-
-            foreach (var group in ticketGroups)
-            {
-                var zone = zones.FirstOrDefault(
-                    x => x.Id == group.Key);
-
-                if (zone == null)
-                    return (false, "A ticket type has an invalid zone.");
-
-                var totalTicketQuantity =
-                    group.Sum(x => x.Quantity);
-
-                if (totalTicketQuantity > zone.Capacity)
-                {
-                    return (
-                        false,
-                        $"Total ticket quantity in zone '{zone.Name}' " +
-                        $"exceeds its capacity."
-                    );
-                }
+                if (ticket.SaleStartTime >= ticket.SaleEndTime)
+                    return (false, $"Ticket type '{ticket.Name}' has invalid sale times.");
             }
 
             return (true, string.Empty);

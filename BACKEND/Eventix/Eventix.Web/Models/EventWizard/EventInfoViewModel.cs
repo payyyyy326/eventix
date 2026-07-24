@@ -5,8 +5,8 @@ namespace Eventix.Web.Models.EventWizard
 {
     public class EventInfoViewModel
     {
-        [Required]
-        public Guid CategoryId { get; set; }
+        [Required(ErrorMessage = "Please select a category.")]
+        public Guid? CategoryId { get; set; }
 
         public List<CategoryResponse> Categories { get; set; } = new();
 

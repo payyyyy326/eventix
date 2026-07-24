@@ -8,6 +8,7 @@ using Eventix.Modules.SeatModule.Interfaces;
 using Eventix.Share.Common.Constants;
 using Eventix.Share.Common.Models;
 using Eventix.Share.Seat;
+using Eventix.Share.SeatMap;
 using Microsoft.EntityFrameworkCore;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -331,7 +332,61 @@ namespace Eventix.Modules.SeatModule.Services
                 .ToListAsync();
         }
 
+        public async Task<List<TicketTypeSeatStatusResponse>> GetSeatAssignmentStatusByEventAsync(Guid eventId)
+        {
+            var eventEntity = await _context.Events
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => e.Id == eventId);
+
+            if (eventEntity == null)
+                throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
+
+            // Lấy tất cả TicketType của event
+            var ticketTypes = await _context.TicketTypes
+                .AsNoTracking()
+                .Where(tt => tt.EventId == eventId)
+                .ToListAsync();
+
+            // Đếm số ghế đã generate cho từng TicketType
+            var generatedCounts = await _context.EventSeatStatuses
+                .AsNoTracking()
+                .Where(s => s.EventId == eventId)
+                .GroupBy(s => s.TicketTypeId)
+                .Select(g => new { TicketTypeId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.TicketTypeId, x => x.Count);
+
+            // Lấy màu từ VenueSectionLayout
+            var colorMap = await _context.VenueSectionLayouts
+                .AsNoTracking()
+                .Where(l => l.TicketTypeId != null && l.VenueId == eventEntity.VenueId)
+                .ToDictionaryAsync(l => l.TicketTypeId!.Value, l => l.Color);
+
+            return ticketTypes.Select(tt => new TicketTypeSeatStatusResponse
+            {
+                TicketTypeId   = tt.Id,
+                TicketTypeName = tt.Name,
+                IsSeatRequired = tt.IsSeatRequired,
+                Quantity       = tt.Quantity,
+                GeneratedSeats = generatedCounts.TryGetValue(tt.Id, out var c) ? c : 0,
+                SectionColor   = colorMap.TryGetValue(tt.Id, out var col) ? col : null
+            }).ToList();
+        }
+
         public async Task<ImportSeatResult> GenerateSeatsAsync(Guid venueId, GenerateSeatsRequest request)
+        {
+            // Chỉ hỗ trợ TicketType-based generate
+            if (!request.TicketTypeId.HasValue || request.TicketTypeId.Value == Guid.Empty)
+                throw new BadRequestException(SystemError.INVALID_DATA);
+
+            return await GenerateSeatsByTicketTypeAsync(venueId, request);
+        }
+
+        /// <summary>
+        /// Generate seats theo TicketType (luồng mới).
+        /// Seats gắn với Venue, Section = TicketType.Name, VenueZoneId = null.
+        /// Tự động tạo EventSeatStatus cho event của ticketType đó.
+        /// </summary>
+        private async Task<ImportSeatResult> GenerateSeatsByTicketTypeAsync(Guid venueId, GenerateSeatsRequest request)
         {
             var result = new ImportSeatResult
             {
@@ -348,9 +403,253 @@ namespace Eventix.Modules.SeatModule.Services
             if (venue == null)
                 throw new BadRequestException(SystemError.VENUE_NOT_FOUND);
 
+            var ticketType = await _context.TicketTypes
+                .FirstOrDefaultAsync(tt => tt.Id == request.TicketTypeId!.Value);
+
+            if (ticketType == null)
+                throw new BadRequestException(SystemError.TICKET_TYPE_NOT_FOUND);
+
+            if (!ticketType.IsSeatRequired)
+                throw new BadRequestException(SystemError.INVALID_DATA);
+
+            var startRow = request.StartRow.Trim().ToUpper();
+            var endRow = request.EndRow.Trim().ToUpper();
+
+            if (!SeatHelper.IsValidRowLabel(startRow) || !SeatHelper.IsValidRowLabel(endRow))
+                throw new BadRequestException(SystemError.INVALID_FORMAT);
+
+            var startRowIndex = SeatHelper.RowLabelToIndex(startRow);
+            var endRowIndex = SeatHelper.RowLabelToIndex(endRow);
+
+            if (startRowIndex > endRowIndex ||
+                request.StartNumber <= 0 ||
+                request.EndNumber <= 0 ||
+                request.StartNumber > request.EndNumber)
+            {
+                throw new BadRequestException(SystemError.INVALID_FORMAT);
+            }
+
+            var sectionName = ticketType.Section ?? ticketType.Name;
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                var existingSeats = await _context.Seats
+                    .Where(s => s.VenueId == venueId && s.Section == sectionName)
+                    .ToListAsync();
+
+                var existingSeatDict = existingSeats.ToDictionary(
+                    s => SeatHelper.BuildSeatKey(s.Section, s.Row, s.Number),
+                    s => s);
+
+                var newSeats = new List<Seat>();
+
+                for (int r = startRowIndex; r <= endRowIndex; r++)
+                {
+                    var rowLabel = SeatHelper.IndexToRowLabel(r);
+
+                    for (int n = request.StartNumber; n <= request.EndNumber; n++)
+                    {
+                        result.TotalRows++;
+                        var seatNumber = n.ToString();
+                        var seatKey = SeatHelper.BuildSeatKey(sectionName, rowLabel, seatNumber);
+
+                        var xPos = request.StartX + ((n - request.StartNumber) * request.GapX);
+                        var yPos = request.StartY + ((r - startRowIndex) * request.GapY);
+
+                        if (existingSeatDict.TryGetValue(seatKey, out var existingSeat))
+                        {
+                            if (!request.OverrideExisting)
+                            {
+                                result.Errors.Add($"Seat {sectionName}-{rowLabel}-{seatNumber} already exists.");
+                                continue;
+                            }
+
+                            existingSeat.Xposition = xPos;
+                            existingSeat.Yposition = yPos;
+                            existingSeat.Status = SystemConstants.SeatStatus.AVAILABLE;
+                            result.UpdatedCount++;
+                        }
+                        else
+                        {
+                            newSeats.Add(new Seat
+                            {
+                                Id = Guid.NewGuid(),
+                                VenueId = venueId,
+                                VenueZoneId = null,
+                                Section = sectionName,
+                                Row = rowLabel,
+                                Number = seatNumber,
+                                Xposition = xPos,
+                                Yposition = yPos,
+                                Status = SystemConstants.SeatStatus.AVAILABLE
+                            });
+                            result.CreatedCount++;
+                        }
+                    }
+                }
+
+                if (newSeats.Any())
+                    await _context.Seats.AddRangeAsync(newSeats);
+
+                await _context.SaveChangesAsync();
+
+                // Tạo EventSeatStatus cho ghế mới
+                if (newSeats.Any())
+                {
+                    var eventSeatStatuses = newSeats.Select(seat => new EventSeatStatus
+                    {
+                        Id = Guid.NewGuid(),
+                        EventId = ticketType.EventId,
+                        SeatId = seat.Id,
+                        TicketTypeId = ticketType.Id,
+                        Status = SystemConstants.SeatStatus.AVAILABLE
+                    });
+
+                    await _context.EventSeatStatuses.AddRangeAsync(eventSeatStatuses);
+                    await _context.SaveChangesAsync();
+                }
+
+                await transaction.CommitAsync();
+                result.FailedCount = result.Errors.Count;
+
+                return result;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<List<VenueSectionLayoutResponse>> GetSeatMapByEventAsync(Guid eventId)
+        {
+            var eventEntity = await _context.Events
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => e.Id == eventId);
+
+            if (eventEntity == null)
+                throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
+
+            // Lấy tất cả layout thuộc venue của event, chỉ các block có TicketTypeId
+            var layouts = await _context.VenueSectionLayouts
+                .AsNoTracking()
+                .Where(l => l.VenueId == eventEntity.VenueId && l.TicketTypeId != null)
+                .Include(l => l.TicketType)
+                .ToListAsync();
+
+            var ticketTypeIds = layouts
+                .Where(l => l.TicketType != null && l.TicketType.IsSeatRequired)
+                .Select(l => l.TicketTypeId!.Value)
+                .Distinct()
+                .ToList();
+
+            // Đếm tổng ghế theo TicketType trong event
+            var totalSeatsMap = await _context.EventSeatStatuses
+                .AsNoTracking()
+                .Where(s => s.EventId == eventId && ticketTypeIds.Contains(s.TicketTypeId))
+                .GroupBy(s => s.TicketTypeId)
+                .Select(g => new { TicketTypeId = g.Key, Total = g.Count() })
+                .ToDictionaryAsync(x => x.TicketTypeId, x => x.Total);
+
+            // Đếm ghế available theo TicketType
+            var availableSeatsMap = await _context.EventSeatStatuses
+                .AsNoTracking()
+                .Where(s =>
+                    s.EventId == eventId &&
+                    ticketTypeIds.Contains(s.TicketTypeId) &&
+                    s.Status == SystemConstants.SeatStatus.AVAILABLE)
+                .GroupBy(s => s.TicketTypeId)
+                .Select(g => new { TicketTypeId = g.Key, Available = g.Count() })
+                .ToDictionaryAsync(x => x.TicketTypeId, x => x.Available);
+
+            return layouts.Select(l =>
+            {
+                var isSeatRequired = l.TicketType?.IsSeatRequired ?? false;
+                var ttId = l.TicketTypeId!.Value;
+
+                return new VenueSectionLayoutResponse
+                {
+                    Id = l.Id,
+                    VenueId = l.VenueId,
+                    TicketTypeId = l.TicketTypeId,
+                    Section = l.Section,
+                    X = l.X,
+                    Y = l.Y,
+                    Width = l.Width,
+                    Height = l.Height,
+                    Color = l.Color,
+                    IsSeatRequired = isSeatRequired,
+                    TotalSeats = isSeatRequired && totalSeatsMap.TryGetValue(ttId, out var total)
+                        ? total
+                        : null,
+                    AvailableSeats = isSeatRequired && availableSeatsMap.TryGetValue(ttId, out var avail)
+                        ? avail
+                        : null
+                };
+            }).ToList();
+        }
+
+        public async Task<List<SeatWithStatusResponse>> GetSeatsByTicketTypeAsync(Guid eventId, Guid ticketTypeId)
+        {
+            var ticketType = await _context.TicketTypes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(tt => tt.Id == ticketTypeId && tt.EventId == eventId);
+
+            if (ticketType == null)
+                throw new BadRequestException(SystemError.TICKET_TYPE_NOT_FOUND);
+
+            if (!ticketType.IsSeatRequired)
+                throw new BadRequestException(SystemError.INVALID_DATA);
+
+            // JOIN Seat + EventSeatStatus để lấy trạng thái ghế trong event này
+            var seats = await (
+                from ess in _context.EventSeatStatuses
+                join seat in _context.Seats on ess.SeatId equals seat.Id
+                where ess.EventId == eventId && ess.TicketTypeId == ticketTypeId
+                orderby seat.Row, seat.Number
+                select new SeatWithStatusResponse
+                {
+                    SeatId = seat.Id,
+                    Section = seat.Section,
+                    Row = seat.Row,
+                    Number = seat.Number,
+                    Xposition = seat.Xposition,
+                    Yposition = seat.Yposition,
+                    Status = ess.Status
+                }
+            ).AsNoTracking().ToListAsync();
+
+            return seats;
+        }
+
+        /// <summary>
+        /// Generate seats theo VenueZone (luồng cũ, giữ lại để tương thích).
+        /// </summary>
+        private async Task<ImportSeatResult> GenerateSeatsByZoneAsync(Guid venueId, GenerateSeatsRequest request)
+        {
+            var result = new ImportSeatResult
+            {
+                TotalRows = 0,
+                CreatedCount = 0,
+                UpdatedCount = 0,
+                FailedCount = 0,
+                Errors = new List<string>()
+            };
+
+            var venue = await _context.Venues
+                .FirstOrDefaultAsync(v => v.Id == venueId);
+
+            if (venue == null)
+                throw new BadRequestException(SystemError.VENUE_NOT_FOUND);
+
+            if (!request.VenueZoneId.HasValue || request.VenueZoneId.Value == Guid.Empty)
+                throw new BadRequestException(SystemError.INVALID_DATA);
+
             var zone = await _context.VenueZones
                 .FirstOrDefaultAsync(z =>
-                    z.Id == request.VenueZoneId &&
+                    z.Id == request.VenueZoneId.Value &&
                     z.VenueId == venueId);
 
             if (zone == null)
@@ -398,9 +697,7 @@ namespace Eventix.Modules.SeatModule.Services
                 throw new BadRequestException(SystemError.INVALID_QUANTITY);
 
             if (expectedSeatCount > zone.Capacity)
-            {
                 throw new BadRequestException(SystemError.INVALID_QUANTITY);
-            }
 
             using var transaction = await _context.Database.BeginTransactionAsync();
 

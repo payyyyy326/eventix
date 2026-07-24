@@ -1,5 +1,7 @@
 ﻿let zones = [];
 
+let isLayoutSaved = false;
+
 document.addEventListener("DOMContentLoaded", function () {
     initSeatMap();
 
@@ -8,11 +10,23 @@ document.addEventListener("DOMContentLoaded", function () {
     if (saveButton) {
         saveButton.addEventListener("click", saveSeatMap);
     }
+
+    document.getElementById("seatMapContinueForm")?.addEventListener("submit", function (event) {
+        if (isLayoutSaved) return;
+
+        event.preventDefault();
+        const status = document.getElementById("saveMapStatus");
+        if (status) {
+            status.textContent = "Please save the layout before continuing.";
+            status.style.color = "#ef4444";
+        }
+    });
 });
 
 function initSeatMap() {
     const sections = window.eventixSeatMap.sections || [];
     const layouts = window.eventixSeatMap.layouts || [];
+    isLayoutSaved = window.eventixSeatMap.isSaved === true;
 
     console.log("Seat map sections:", sections);
     console.log("Seat map layouts:", layouts);
@@ -127,6 +141,7 @@ function enableDragResize() {
 
                     zone.x += event.dx;
                     zone.y += event.dy;
+                    markLayoutDirty();
 
                     target.style.left = `${zone.x}px`;
                     target.style.top = `${zone.y}px`;
@@ -164,6 +179,7 @@ function enableDragResize() {
 
                     zone.x += event.deltaRect.left;
                     zone.y += event.deltaRect.top;
+                    markLayoutDirty();
 
                     target.style.width = `${zone.width}px`;
                     target.style.height = `${zone.height}px`;
@@ -214,5 +230,18 @@ async function saveSeatMap() {
     if (status) {
         status.textContent = "Layout saved successfully.";
         status.style.color = "#22c55e";
+    }
+
+    isLayoutSaved = true;
+}
+
+function markLayoutDirty() {
+    if (!isLayoutSaved) return;
+
+    isLayoutSaved = false;
+    const status = document.getElementById("saveMapStatus");
+    if (status) {
+        status.textContent = "Layout has changed. Save it before continuing.";
+        status.style.color = "#facc15";
     }
 }

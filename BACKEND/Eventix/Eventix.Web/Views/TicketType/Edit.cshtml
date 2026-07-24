@@ -4,10 +4,9 @@
     ViewData["Title"] = "Edit Ticket Type";
     Layout = "_OrganizerLayout";
 
-    var eventId       = (Guid)ViewBag.EventId;
-    var ticketTypeId  = (Guid)ViewBag.TicketTypeId;
-    var zoneName      = ViewBag.ZoneName as string ?? "N/A";
-    var hasSeats      = ViewBag.HasSeats is bool b && b;
+    var eventId        = (Guid)ViewBag.EventId;
+    var ticketTypeId   = (Guid)ViewBag.TicketTypeId;
+    var sectionName    = ViewBag.Section as string ?? "N/A";
     var isSeatRequired = ViewBag.IsSeatRequired is bool sr && sr;
 }
 
@@ -34,16 +33,14 @@
             <div class="ticket-type-card mb-4">
                 <div class="ticket-type-card-header">
                     <div>
-                        <h4>Zone Assignment</h4>
+                        <h4>Ticket Configuration</h4>
                         <div class="wizard-meta" style="margin-top:10px;">
-                            <span class="wizard-pill neutral">@zoneName</span>
-                            <span class="wizard-pill @(hasSeats ? "" : "info")">
-                                @(hasSeats ? "Assigned Seating" : "General Admission")
-                            </span>
-                            <span class="wizard-pill @(isSeatRequired ? "" : "neutral")">
-                                Seat Required: @(isSeatRequired ? "Yes" : "No")
+                            <span class="wizard-pill neutral">Section: @sectionName</span>
+                            <span class="wizard-pill @(isSeatRequired ? "" : "info")">
+                                @(isSeatRequired ? "Assigned Seating" : "General Admission")
                             </span>
                         </div>
+                        <small class="text-muted">Zone and seat settings cannot be changed after creation.</small>
                     </div>
                 </div>
             </div>
@@ -96,6 +93,17 @@
                                    min="1"
                                    class="form-control" />
                             <span asp-validation-for="Quantity" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="SectionColor">Section Color</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input asp-for="SectionColor"
+                                       type="color"
+                                       class="form-control"
+                                       style="width:3rem;height:2.5rem;padding:.2rem;" />
+                                <small class="text-muted">Color displayed on the venue map.</small>
+                            </div>
                         </div>
 
                     </div>

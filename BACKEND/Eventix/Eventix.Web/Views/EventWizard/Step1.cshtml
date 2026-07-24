@@ -1,4 +1,4 @@
-﻿@using Eventix.Web.Models.EventWizard
+@using Eventix.Web.Models.EventWizard
 @model EventInfoViewModel
 @using Microsoft.AspNetCore.Mvc.Rendering
 
@@ -6,7 +6,6 @@
     ViewData["Title"] = "Create Event - Step 1";
     Layout = "_OrganizerLayout";
     @await Html.PartialAsync("_WizardProgress")
-
 }
 
 <section class="organizer-page">
@@ -22,53 +21,410 @@
         <form asp-controller="EventWizard"
               asp-action="Step1"
               method="post"
-              class="organizer-form">
+              class="organizer-form"
+              id="step1Form"
+              novalidate>
 
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <div id="formError" class="text-danger mb-3" style="display:none;"></div>
 
             <div class="form-group mb-3">
-                <label asp-for="Title"></label>
-                <input asp-for="Title" class="form-control" />
+                <label asp-for="Title">Event Title <span class="text-danger">*</span></label>
+                <input asp-for="Title" class="form-control" autocomplete="off" />
                 <span asp-validation-for="Title" class="text-danger"></span>
+                <span id="err-title" class="text-danger" style="display:none;"></span>
             </div>
 
             <div class="form-group mb-3">
-                <label asp-for="CategoryId">Category</label>
-
+                <label asp-for="CategoryId">Category <span class="text-danger">*</span></label>
                 <select asp-for="CategoryId"
                         asp-items="@(new SelectList(Model.Categories, "Id", "Name"))"
                         class="form-select">
                     <option value="">-- Select Category --</option>
                 </select>
-
                 <span asp-validation-for="CategoryId" class="text-danger"></span>
+                <span id="err-category" class="text-danger" style="display:none;"></span>
             </div>
 
             <div class="form-group mb-3">
-                <label asp-for="Summary"></label>
-                <input asp-for="Summary" class="form-control" />
+                <label asp-for="Summary">Summary</label>
+                <input asp-for="Summary" class="form-control" autocomplete="off" />
             </div>
 
             <div class="form-group mb-3">
-                <label asp-for="Description"></label>
+                <label asp-for="Description">Description</label>
                 <textarea asp-for="Description" rows="5" class="form-control"></textarea>
             </div>
 
-            <div class="form-group mb-3">
-                <label asp-for="StartTime"></label>
-                <input asp-for="StartTime" type="datetime-local" class="form-control" />
-            </div>
+            <!-- ── Upload Banner & Thumbnail ───────────────────────────────── -->
+            <div class="wizard-grid-2 mb-3">
 
-            <div class="form-group mb-3">
-                <label asp-for="EndTime"></label>
-                <input asp-for="EndTime" type="datetime-local" class="form-control" />
+                <!-- Banner -->
+                <div class="form-group">
+                    <label>Banner Image
+                        <small class="text-muted">(1200×400 recommended · max 5 MB)</small>
+                    </label>
+
+                    <div class="upload-zone" id="bannerZone"
+                         onclick="document.getElementById('bannerFileInput').click()"
+                         ondragover="event.preventDefault();this.classList.add('upload-zone--over')"
+                         ondragleave="this.classList.remove('upload-zone--over')"
+                         ondrop="handleDrop(event,'banner')">
+
+                        <img id="bannerPreview" alt="Banner preview"
+                             src="@MediaUrl.Img(Model.BannerUrl, "")"
+                             style="display:@(string.IsNullOrWhiteSpace(Model.BannerUrl) ? "none" : "block")" />
+
+                        <div id="bannerPlaceholder"
+                             style="display:@(string.IsNullOrWhiteSpace(Model.BannerUrl) ? "flex" : "none")">
+                            <span style="font-size:2rem">🖼️</span>
+                            <span>Click or drag &amp; drop banner</span>
+                            <span class="upload-hint">JPG · PNG · WEBP · GIF</span>
+                        </div>
+
+                        <div id="bannerSpinner" class="upload-spinner" style="display:none">
+                            <span>Uploading…</span>
+                        </div>
+                    </div>
+
+                    <input type="file" id="bannerFileInput" accept="image/*" style="display:none"
+                           onchange="handleFileSelect(event,'banner')" />
+                    <span id="err-banner" class="text-danger" style="display:none;font-size:.85rem"></span>
+
+                    <input asp-for="BannerUrl" id="bannerUrlInput" type="hidden" />
+
+                    <button type="button" id="bannerClearBtn"
+                            class="upload-clear-btn"
+                            style="display:@(string.IsNullOrWhiteSpace(Model.BannerUrl) ? "none" : "inline-block")"
+                            onclick="clearUpload('banner')">
+                        ✕ Remove banner
+                    </button>
+                </div>
+
+                <!-- Thumbnail -->
+                <div class="form-group">
+                    <label>Thumbnail Image
+                        <small class="text-muted">(400×400 recommended · max 5 MB)</small>
+                    </label>
+
+                    <div class="upload-zone upload-zone--square" id="imageZone"
+                         onclick="document.getElementById('imageFileInput').click()"
+                         ondragover="event.preventDefault();this.classList.add('upload-zone--over')"
+                         ondragleave="this.classList.remove('upload-zone--over')"
+                         ondrop="handleDrop(event,'image')">
+
+                        <img id="imagePreview" alt="Thumbnail preview"
+                             src="@MediaUrl.Img(Model.ImageUrl, "")"
+                             style="display:@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "none" : "block")" />
+
+                        <div id="imagePlaceholder"
+                             style="display:@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "flex" : "none")">
+                            <span style="font-size:2rem">📷</span>
+                            <span>Click or drag &amp; drop thumbnail</span>
+                            <span class="upload-hint">JPG · PNG · WEBP · GIF</span>
+                        </div>
+
+                        <div id="imageSpinner" class="upload-spinner" style="display:none">
+                            <span>Uploading…</span>
+                        </div>
+                    </div>
+
+                    <input type="file" id="imageFileInput" accept="image/*" style="display:none"
+                           onchange="handleFileSelect(event,'image')" />
+                    <span id="err-image" class="text-danger" style="display:none;font-size:.85rem"></span>
+
+                    <input asp-for="ImageUrl" id="imageUrlInput" type="hidden" />
+
+                    <button type="button" id="imageClearBtn"
+                            class="upload-clear-btn"
+                            style="display:@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "none" : "inline-block")"
+                            onclick="clearUpload('image')">
+                        ✕ Remove thumbnail
+                    </button>
+                </div>
+            </div>
+            <!-- ─────────────────────────────────────────────────────────────── -->
+
+            <div class="wizard-grid-2">
+                <div class="form-group mb-3">
+                    <label asp-for="StartTime">Start Time <span class="text-danger">*</span></label>
+                    <input name="_startTimeLocal"
+                           id="startTimeInput"
+                           type="datetime-local"
+                           class="form-control"
+                           value="@(Model.StartTime == default ? "" : Model.StartTime.ToString("yyyy-MM-ddTHH:mm"))" />
+                    <input type="hidden" name="StartTime" id="startTimeUtc" />
+                    <span asp-validation-for="StartTime" class="text-danger"></span>
+                    <span id="err-start" class="text-danger" style="display:none;"></span>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label asp-for="EndTime">End Time <span class="text-danger">*</span></label>
+                    <input name="_endTimeLocal"
+                           id="endTimeInput"
+                           type="datetime-local"
+                           class="form-control"
+                           value="@(Model.EndTime == default ? "" : Model.EndTime.ToString("yyyy-MM-ddTHH:mm"))" />
+                    <input type="hidden" name="EndTime" id="endTimeUtc" />
+                    <span asp-validation-for="EndTime" class="text-danger"></span>
+                    <span id="err-end" class="text-danger" style="display:none;"></span>
+                </div>
             </div>
 
             <div class="d-flex justify-content-end mt-4">
                 <button type="submit" class="dashboard-create-btn">
-                    Continue to Venue
+                    Continue to Venue →
                 </button>
             </div>
         </form>
     </div>
 </section>
+
+@section Scripts {
+<style>
+/* ── Upload Zone ─────────────────────────────────────────────────────────── */
+.upload-zone {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+    border: 2px dashed rgba(255,255,255,0.2);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color .2s, background .2s;
+}
+.upload-zone:hover,
+.upload-zone--over {
+    border-color: rgba(99,102,241,.7);
+    background: rgba(99,102,241,.08);
+}
+.upload-zone--square { min-height: 180px; }
+
+.upload-zone img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+}
+.upload-zone [id$="Placeholder"] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255,255,255,.5);
+    font-size: .9rem;
+    pointer-events: none;
+}
+.upload-hint {
+    font-size: .75rem;
+    color: rgba(255,255,255,.3);
+}
+.upload-spinner {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: .9rem;
+    border-radius: 10px;
+}
+.upload-clear-btn {
+    margin-top: 6px;
+    background: rgba(239,68,68,.15);
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,.3);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: .8rem;
+    cursor: pointer;
+}
+.upload-clear-btn:hover { background: rgba(239,68,68,.25); }
+</style>
+<script>
+(function () {
+    const API_UPLOAD = '/EventWizard/UploadEventImage';
+
+    // ── helpers ───────────────────────────────────────────────────────────
+    function showError(id, msg) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = msg;
+        el.style.display = msg ? 'inline' : 'none';
+    }
+    function clearError(id) { showError(id, ''); }
+
+    function setUploadState(type, state) {
+        const spinner     = document.getElementById(`${type}Spinner`);
+        const placeholder = document.getElementById(`${type}Placeholder`);
+        const preview     = document.getElementById(`${type}Preview`);
+        const clearBtn    = document.getElementById(`${type}ClearBtn`);
+        if (spinner)     spinner.style.display     = state === 'loading' ? 'flex'         : 'none';
+        if (placeholder) placeholder.style.display = state === 'idle'    ? 'flex'         : 'none';
+        if (preview)     preview.style.display     = state === 'done'    ? 'block'        : 'none';
+        if (clearBtn)    clearBtn.style.display    = state === 'done'    ? 'inline-block' : 'none';
+    }
+
+    async function uploadFile(type, file) {
+        const errId = `err-${type === 'banner' ? 'banner' : 'image'}`;
+        showError(errId, '');
+
+        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (!allowed.includes(file.type)) { showError(errId, 'Only JPG, PNG, WEBP, GIF are allowed.'); return; }
+        if (file.size > 5 * 1024 * 1024) { showError(errId, 'File must not exceed 5 MB.'); return; }
+
+        // Hiện preview ngay lập tức từ local blob
+        const previewImg = document.getElementById(`${type}Preview`);
+        const localUrl   = URL.createObjectURL(file);
+        if (previewImg) previewImg.src = localUrl;
+        setUploadState(type, 'done');
+
+        const spinner = document.getElementById(`${type}Spinner`);
+        if (spinner) spinner.style.display = 'flex';
+
+        const form = new FormData();
+        form.append('file', file);
+
+        try {
+            const res  = await fetch(API_UPLOAD, { method: 'POST', body: form });
+            const json = await res.json();
+            console.log('[Upload]', res.status, json);
+
+            if (spinner) spinner.style.display = 'none';
+
+            const inputId = type === 'banner' ? 'bannerUrlInput' : 'imageUrlInput';
+            if (!res.ok || !json.success) {
+                document.getElementById(inputId).value = '';
+                showError(errId, json.message || 'Upload failed. Image will not be saved.');
+                return;
+            }
+
+            document.getElementById(inputId).value = json.relativeUrl;
+            URL.revokeObjectURL(localUrl);
+
+        } catch (err) {
+            console.error('[Upload error]', err);
+            if (spinner) spinner.style.display = 'none';
+            const inputId = type === 'banner' ? 'bannerUrlInput' : 'imageUrlInput';
+            document.getElementById(inputId).value = '';
+            showError(errId, 'Network error. Please try again.');
+        }
+    }
+
+    // ── expose upload handlers to inline HTML ─────────────────────────────
+    window.handleFileSelect = function (event, type) {
+        const file = event.target.files[0];
+        if (file) uploadFile(type, file);
+        event.target.value = '';
+    };
+    window.handleDrop = function (event, type) {
+        event.preventDefault();
+        const zone = document.getElementById(`${type}Zone`);
+        if (zone) zone.classList.remove('upload-zone--over');
+        const file = event.dataTransfer.files[0];
+        if (file) uploadFile(type, file);
+    };
+    window.clearUpload = function (type) {
+        const inputId  = type === 'banner' ? 'bannerUrlInput' : 'imageUrlInput';
+        const inputEl  = document.getElementById(inputId);
+        const preview  = document.getElementById(`${type}Preview`);
+        if (inputEl) inputEl.value = '';
+        if (preview)  preview.src  = '';
+        setUploadState(type, 'idle');
+    };
+
+    // Khởi tạo trạng thái upload ban đầu
+    ['banner', 'image'].forEach(type => {
+        const inputId = type === 'banner' ? 'bannerUrlInput' : 'imageUrlInput';
+        const hasUrl  = !!document.getElementById(inputId)?.value;
+        setUploadState(type, hasUrl ? 'done' : 'idle');
+    });
+
+    // ── datetime ──────────────────────────────────────────────────────────
+    function toLocalDatetimeValue(date) {
+        const pad = n => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    const startInput = document.getElementById('startTimeInput');
+    const endInput   = document.getElementById('endTimeInput');
+
+    if (startInput && endInput) {
+        const now    = new Date();
+        const nowStr = toLocalDatetimeValue(now);
+        startInput.setAttribute('min', nowStr);
+        endInput.setAttribute('min', nowStr);
+
+        if (!startInput.value) {
+            const d = new Date(now);
+            d.setHours(d.getHours() + 1, 0, 0, 0);
+            startInput.value = toLocalDatetimeValue(d);
+        }
+        if (!endInput.value) {
+            const d = startInput.value ? new Date(startInput.value) : new Date(now);
+            d.setHours(d.getHours() + 2, 0, 0, 0);
+            endInput.value = toLocalDatetimeValue(d);
+        }
+
+        // Sync hidden UTC fields ngay khi page load
+        const startUtcEl = document.getElementById('startTimeUtc');
+        const endUtcEl   = document.getElementById('endTimeUtc');
+        if (startInput.value && startUtcEl) startUtcEl.value = new Date(startInput.value).toISOString();
+        if (endInput.value   && endUtcEl)   endUtcEl.value   = new Date(endInput.value).toISOString();
+
+        startInput.addEventListener('change', function () {
+            endInput.setAttribute('min', this.value);
+            if (endInput.value && endInput.value <= this.value) endInput.value = '';
+            clearError('err-start');
+        });
+        endInput.addEventListener('change', function () { clearError('err-end'); });
+    } else {
+        console.warn('[Step1] datetime inputs not found - skipping init');
+    }
+
+    // ── form submit validation ────────────────────────────────────────────
+    const formEl = document.getElementById('step1Form');
+    if (formEl) {
+        formEl.addEventListener('submit', function (e) {
+            ['err-title','err-category','err-start','err-end','formError'].forEach(clearError);
+            let hasError = false;
+
+            const title    = (document.querySelector('[name="Title"]')?.value ?? '').trim();
+            const catId    = document.querySelector('[name="CategoryId"]')?.value ?? '';
+            const startVal = startInput?.value ?? '';
+            const endVal   = endInput?.value ?? '';
+
+            if (!title)  { showError('err-title',    'Event title is required.');      hasError = true; }
+            if (!catId)  { showError('err-category', 'Please select a category.');     hasError = true; }
+
+            if (!startVal) {
+                showError('err-start', 'Start time is required.'); hasError = true;
+            } else if (new Date(startVal) <= new Date()) {
+                showError('err-start', 'Start time must be in the future.'); hasError = true;
+            }
+
+            if (!endVal) {
+                showError('err-end', 'End time is required.'); hasError = true;
+            } else if (startVal && new Date(endVal) <= new Date(startVal)) {
+                showError('err-end', 'End time must be after start time.'); hasError = true;
+            }
+
+            if (hasError) { e.preventDefault(); return; }
+
+            // Convert local → UTC ISO trước khi submit
+            const startUtcEl = document.getElementById('startTimeUtc');
+            const endUtcEl   = document.getElementById('endTimeUtc');
+            if (startUtcEl && startVal) startUtcEl.value = new Date(startVal).toISOString();
+            if (endUtcEl   && endVal)   endUtcEl.value   = new Date(endVal).toISOString();
+        });
+    }
+
+})();
+</script>
+}

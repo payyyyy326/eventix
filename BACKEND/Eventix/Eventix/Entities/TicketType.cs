@@ -43,4 +43,6 @@ public partial class TicketType
     public virtual ICollection<EventSeatStatus> EventSeatStatuses { get; set; } = new List<EventSeatStatus>();
 
     public virtual VenueZone? VenueZone { get; set; }
+
+    public virtual ICollection<VenueSectionLayout> VenueSectionLayouts { get; set; } = new List<VenueSectionLayout>();
 }
