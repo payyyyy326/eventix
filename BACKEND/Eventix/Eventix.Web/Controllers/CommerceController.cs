@@ -107,6 +107,7 @@ public class CommerceController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CheckIn(CheckInRequest request)
     {
+        ViewBag.CheckInMode = "manual";
         var client = AuthorizedClient();
         if (client == null) return RedirectToAction("Login", "Auth");
         var response = await client.PostAsJsonAsync("api/checkin/scan", request);
@@ -120,6 +121,58 @@ public class CommerceController : Controller
         return View(request);
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CheckInImage(
+        Guid eventId,
+        IFormFile? qrImage)
+    {
+        ViewBag.CheckInMode = "image";
+        var request = new CheckInRequest { EventId = eventId };
+        var client = AuthorizedClient();
+        if (client == null)
+            return RedirectToAction("Login", "Auth");
+
+        if (eventId == Guid.Empty)
+        {
+            ModelState.AddModelError("", "Vui lòng nhập Event ID.");
+            return View("CheckIn", request);
+        }
+        if (qrImage == null || qrImage.Length == 0)
+        {
+            ModelState.AddModelError("", "Vui lòng chọn ảnh chứa mã QR.");
+            return View("CheckIn", request);
+        }
+        if (qrImage.Length > 5 * 1024 * 1024)
+        {
+            ModelState.AddModelError("", "Ảnh QR không được vượt quá 5 MB.");
+            return View("CheckIn", request);
+        }
+
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent(eventId.ToString()), "eventId");
+        await using var imageStream = qrImage.OpenReadStream();
+        using var imageContent = new StreamContent(imageStream);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue(
+            string.IsNullOrWhiteSpace(qrImage.ContentType)
+                ? "application/octet-stream"
+                : qrImage.ContentType);
+        form.Add(imageContent, "qrImage", qrImage.FileName);
+
+        var response = await client.PostAsync("api/checkin/scan-image", form);
+        var result = await response.Content
+            .ReadFromJsonAsync<ApiResponseModel<CheckInResponse>>();
+        if (!response.IsSuccessStatusCode || result?.Data == null)
+        {
+            ModelState.AddModelError(
+                "",
+                result?.Message ?? "Không thể đọc hoặc check-in QR từ ảnh.");
+            return View("CheckIn", request);
+        }
+
+        ViewBag.Result = result.Data;
+        return View("CheckIn", request);
+    }
     private HttpClient? AuthorizedClient()
     {
         var token = Request.Cookies[SystemConstants.CookieNames.Token];

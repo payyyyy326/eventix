@@ -1,11 +1,151 @@
 @model Eventix.Share.Commerce.TicketResponse
-@{ ViewData["Title"] = "Vé điện tử"; }
-<main class="commerce-page"><section class="commerce-card ticket-detail">
-    <span class="commerce-status">@Model.Status</span><h1>@Model.EventTitle</h1>
-    <p>@Model.EventStartTime.ToString("HH:mm dd/MM/yyyy")</p><p>@Model.VenueName</p>
-    <h2>@Model.TicketTypeName @Model.SeatLabel</h2><div id="ticket-qr" class="ticket-qr"></div>
-    <strong>@Model.TicketCode</strong><p class="qr-token">@Model.QrToken</p>
-    <button class="commerce-button" onclick="window.print()">In / Lưu PDF</button>
-</section></main>
+@{
+    ViewData["Title"] = "Vé điện tử";
+}
+
+<main class="commerce-page">
+    <section class="commerce-card ticket-detail">
+        <span class="commerce-status">@Model.Status</span>
+        <h1>@Model.EventTitle</h1>
+        <p>@Model.EventStartTime.ToString("HH:mm dd/MM/yyyy")</p>
+        <p>@Model.VenueName</p>
+        <h2>@Model.TicketTypeName @Model.SeatLabel</h2>
+        <div id="ticket-qr" class="ticket-qr"></div>
+        <strong>@Model.TicketCode</strong>
+        <p class="qr-token">@Model.QrToken</p>
+    </section>
+
+    <div class="ticket-save-actions">
+        <button id="save-ticket-image"
+                class="commerce-button"
+                type="button">
+            Lưu ảnh vé
+        </button>
+    </div>
+</main>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>new QRCode(document.getElementById("ticket-qr"),{text:@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.QrToken)),width:220,height:220});</script>
+<script>
+    const ticketData = {
+        eventTitle: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.EventTitle)),
+        eventTime: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.EventStartTime.ToString("HH:mm dd/MM/yyyy"))),
+        venue: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.VenueName)),
+        ticketType: @Html.Raw(System.Text.Json.JsonSerializer.Serialize($"{Model.TicketTypeName} {Model.SeatLabel}".Trim())),
+        ticketCode: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TicketCode)),
+        qrToken: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.QrToken)),
+        status: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Status))
+    };
+
+    new QRCode(document.getElementById("ticket-qr"), {
+        text: ticketData.qrToken,
+        width: 220,
+        height: 220
+    });
+
+    function drawCenteredWrappedText(context, text, centerX, startY, maxWidth, lineHeight) {
+        const words = text.split(" ");
+        const lines = [];
+        let line = "";
+
+        for (const word of words) {
+            const candidate = line ? `${line} ${word}` : word;
+            if (context.measureText(candidate).width > maxWidth && line) {
+                lines.push(line);
+                line = word;
+            } else {
+                line = candidate;
+            }
+        }
+        if (line) lines.push(line);
+
+        lines.forEach((value, index) => {
+            context.fillText(value, centerX, startY + index * lineHeight);
+        });
+        return startY + lines.length * lineHeight;
+    }
+
+    document.getElementById("save-ticket-image").addEventListener("click", function () {
+        const button = this;
+        const qrCanvas = document.querySelector("#ticket-qr canvas");
+        const qrImage = document.querySelector("#ticket-qr img");
+        const qrSource = qrCanvas || qrImage;
+
+        if (!qrSource) {
+            alert("QR chưa sẵn sàng. Vui lòng thử lại.");
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "Đang tạo ảnh...";
+
+        try {
+            const canvas = document.createElement("canvas");
+            canvas.width = 900;
+            canvas.height = 1200;
+            const context = canvas.getContext("2d");
+            const centerX = canvas.width / 2;
+
+            context.fillStyle = "#ffffff";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            context.fillStyle = "#6c4cff";
+            context.fillRect(0, 0, canvas.width, 150);
+            context.fillStyle = "#ffffff";
+            context.textAlign = "center";
+            context.font = "bold 54px Arial";
+            context.fillText("EVENTIX", centerX, 92);
+
+            context.fillStyle = "#172033";
+            context.font = "bold 42px Arial";
+            let nextY = drawCenteredWrappedText(
+                context,
+                ticketData.eventTitle,
+                centerX,
+                225,
+                760,
+                54);
+
+            context.fillStyle = "#566076";
+            context.font = "30px Arial";
+            context.fillText(ticketData.eventTime, centerX, nextY + 25);
+            context.fillText(ticketData.venue, centerX, nextY + 70);
+
+            context.fillStyle = "#172033";
+            context.font = "bold 34px Arial";
+            context.fillText(ticketData.ticketType, centerX, nextY + 130);
+
+            const qrSize = 390;
+            const qrY = nextY + 175;
+            context.drawImage(
+                qrSource,
+                centerX - qrSize / 2,
+                qrY,
+                qrSize,
+                qrSize);
+
+            context.font = "bold 34px Arial";
+            context.fillText(ticketData.ticketCode, centerX, qrY + qrSize + 60);
+
+            context.fillStyle = "#6c4cff";
+            context.font = "bold 28px Arial";
+            context.fillText(ticketData.status, centerX, qrY + qrSize + 115);
+
+            context.fillStyle = "#667085";
+            context.font = "24px Arial";
+            context.fillText(
+                "Xuất trình mã QR này khi check-in",
+                centerX,
+                canvas.height - 65);
+
+            const downloadLink = document.createElement("a");
+            downloadLink.download = `Eventix-${ticketData.ticketCode}.png`;
+            downloadLink.href = canvas.toDataURL("image/png");
+            downloadLink.click();
+        } catch {
+            alert("Không thể lưu ảnh vé. Vui lòng thử lại.");
+        } finally {
+            button.disabled = false;
+            button.textContent = "Lưu ảnh vé";
+        }
+    });
+</script>

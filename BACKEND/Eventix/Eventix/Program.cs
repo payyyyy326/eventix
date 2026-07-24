@@ -1,10 +1,11 @@
-﻿using Eventix.Common.Constants.SystemData;
+using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Settings;
 using Eventix.Data;
 using Eventix.Extensions;
 using Eventix.Infrastructure.Email;
 using Eventix.Infrastructure.Hubs;
 using Eventix.Infrastructure.Jobs;
+using Eventix.Infrastructure.QrCode;
 using Eventix.Modules.Auth.Interfaces;
 using Eventix.Modules.Auth.Services;
 using Eventix.Modules.BookingModule.Interfaces;
@@ -184,6 +185,7 @@ namespace Eventix
             builder.Services.AddScoped<IBookingService, BookingService>();
             builder.Services.AddScoped<ICommerceService, CommerceService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IQrCodeImageDecoder, QrCodeImageDecoder>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<IVenueService, VenueService>();

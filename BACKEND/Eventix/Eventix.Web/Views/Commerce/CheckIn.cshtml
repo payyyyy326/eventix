@@ -1,9 +1,104 @@
 @model Eventix.Share.Commerce.CheckInRequest
-@{ ViewData["Title"] = "Check-in vé"; var result = ViewBag.Result as Eventix.Share.Commerce.CheckInResponse; }
-<main class="commerce-page"><section class="commerce-card"><h1>Check-in vé</h1>
-<p>Nhập Event ID và token đọc được từ QR.</p><div asp-validation-summary="All" class="validation-summary-errors"></div>
-<form asp-action="CheckIn" method="post">@Html.AntiForgeryToken()
-<label>Event ID</label><input asp-for="EventId" /><label>QR token</label><input asp-for="QrToken" autofocus />
-<button class="commerce-button" type="submit">Xác nhận check-in</button></form>
-@if (result != null) { <div class="checkin-success"><h2>✓ Check-in thành công</h2><p>@result.CustomerName · @result.TicketTypeName @result.SeatLabel</p><strong>@result.TicketCode</strong></div> }
-</section></main>
+@{
+    ViewData["Title"] = "Check-in vé";
+    var result = ViewBag.Result as Eventix.Share.Commerce.CheckInResponse;
+    var selectedMode = ViewBag.CheckInMode as string ?? string.Empty;
+}
+
+<main class="commerce-page">
+    <section class="commerce-card">
+        <h1>Check-in vé</h1>
+        <p>Chọn một trong hai cách bên dưới để xác nhận vé của khách.</p>
+
+        <div class="checkin-notice" role="note">
+            <strong>Lưu ý trước khi check-in</strong>
+            <ul>
+                <li>Chỉ tài khoản Organizer hoặc Admin mới được phép check-in.</li>
+                <li>Phải nhập đúng Event ID của sự kiện đang tổ chức.</li>
+                <li>Vé phải đang ở trạng thái Active. Vé đã check-in, bị hủy hoặc hết hiệu lực sẽ bị từ chối.</li>
+                <li>Mỗi vé chỉ được check-in một lần.</li>
+            </ul>
+        </div>
+
+        <div asp-validation-summary="All" class="validation-summary-errors"></div>
+
+        <h2 class="checkin-choice-title">Bạn muốn check-in bằng cách nào?</h2>
+        <div class="checkin-mode-picker" role="group" aria-label="Chọn phương thức check-in">
+            <button type="button" class="checkin-mode-button" data-checkin-mode="manual" aria-selected="false">
+                <strong>Nhập mã QR</strong>
+                <span>Dán QR token hiển thị trên vé</span>
+            </button>
+            <button type="button" class="checkin-mode-button" data-checkin-mode="image" aria-selected="false">
+                <strong>Tải ảnh QR</strong>
+                <span>Chọn ảnh vé đã lưu trong máy</span>
+            </button>
+        </div>
+
+        <section class="checkin-method" data-checkin-panel="manual" hidden>
+            <h2>Nhập QR token</h2>
+            <div class="checkin-method-notice">
+                Nhập chuỗi <strong>QR token</strong> nằm dưới mã QR trên vé, không nhập mã vé dạng <strong>EVT-...</strong>.
+            </div>
+            <form asp-action="CheckIn" method="post">
+                @Html.AntiForgeryToken()
+                <label asp-for="EventId">Event ID</label>
+                <input asp-for="EventId" />
+                <label asp-for="QrToken">QR token</label>
+                <input asp-for="QrToken" />
+                <button class="commerce-button" type="submit">Check-in bằng token</button>
+            </form>
+        </section>
+
+        <section class="checkin-method" data-checkin-panel="image" hidden>
+            <h2>Tải ảnh chứa mã QR</h2>
+            <div class="checkin-method-notice">
+                Chọn ảnh vé rõ nét, không bị cắt mất mã QR. Hỗ trợ PNG, JPG, WEBP hoặc BMP, tối đa 5 MB.
+            </div>
+            <form asp-action="CheckInImage" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <label for="imageEventId">Event ID</label>
+                <input id="imageEventId" name="eventId" type="text" value="@Model.EventId" />
+                <label for="qrImage">Ảnh chứa mã QR</label>
+                <input id="qrImage" name="qrImage" type="file"
+                       accept="image/png,image/jpeg,image/webp,image/bmp" required />
+                <button class="commerce-button" type="submit">Tải ảnh và check-in</button>
+            </form>
+        </section>
+
+        @if (result != null)
+        {
+            <div class="checkin-success" role="status">
+                <h2>✓ Check-in thành công</h2>
+                <p>@result.CustomerName · @result.TicketTypeName @result.SeatLabel</p>
+                <strong>@result.TicketCode</strong>
+            </div>
+        }
+    </section>
+</main>
+
+<script>
+    (() => {
+        const buttons = document.querySelectorAll('[data-checkin-mode]');
+        const panels = document.querySelectorAll('[data-checkin-panel]');
+
+        function selectMode(mode) {
+            buttons.forEach(button => {
+                const active = button.dataset.checkinMode === mode;
+                button.classList.toggle('is-selected', active);
+                button.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            panels.forEach(panel => {
+                panel.hidden = panel.dataset.checkinPanel !== mode;
+            });
+        }
+
+        buttons.forEach(button => {
+            button.addEventListener('click', () => selectMode(button.dataset.checkinMode));
+        });
+
+        const selectedMode = '@selectedMode';
+        if (selectedMode === 'manual' || selectedMode === 'image') {
+            selectMode(selectedMode);
+        }
+    })();
+</script>

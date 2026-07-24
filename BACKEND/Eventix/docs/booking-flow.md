@@ -418,14 +418,28 @@ POST /api/checkin/scan
 Authorization: Bearer {organizer-or-admin-token}
 ```
 
-Request:
+Cách 1 - nhập token thủ công:
 
 ```json
+POST /api/checkin/scan
 {
   "qrToken": "ticket-qr-token",
   "eventId": "event-guid"
 }
 ```
+
+Cách 2 - tải ảnh QR từ máy:
+
+```http
+POST /api/checkin/scan-image
+Content-Type: multipart/form-data
+
+eventId={event-guid}
+qrImage={png-jpg-webp-bmp, tối đa 5 MB}
+```
+
+API dùng SkiaSharp đọc ảnh và ZXing giải mã QR thành `QrToken`, sau đó cả hai cách
+đều gọi chung nghiệp vụ `CommerceService.CheckInAsync`.
 
 Hệ thống kiểm tra:
 
