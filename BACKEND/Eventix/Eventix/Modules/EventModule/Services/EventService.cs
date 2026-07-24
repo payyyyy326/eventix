@@ -664,10 +664,21 @@ namespace Eventix.Modules.EventModule.Services
                 }
             }
 
-            eventEntity.Status = "Published";
-            eventEntity.PublishedAt = DateTime.UtcNow;
             eventEntity.UpdatedAt = DateTime.UtcNow;
             eventEntity.UpdatedBy = userId;
+
+            // Nếu PublishedAt đã được đặt trong tương lai → giữ Draft, job sẽ tự chuyển Published khi đến giờ
+            if (eventEntity.PublishedAt.HasValue && eventEntity.PublishedAt.Value > DateTime.UtcNow)
+            {
+                eventEntity.Status = "Draft";
+                // Giữ nguyên PublishedAt đã lưu sẵn trong entity
+            }
+            else
+            {
+                // Công bố ngay lập tức
+                eventEntity.Status = "Published";
+                eventEntity.PublishedAt = DateTime.UtcNow;
+            }
 
             await _context.SaveChangesAsync();
 

@@ -1,6 +1,7 @@
-@model Eventix.Web.Models.HomeViewModel
+﻿@model Eventix.Web.Models.HomeViewModel
+
 @{
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = "Trang chủ";
     Layout = "_Layout";
 }
 
@@ -8,7 +9,7 @@
     <a asp-controller="Event"
        asp-action="Index"
        class="category-chip active">
-        T?t c?
+        Tất cả
     </a>
 
     @foreach (var category in Model.Categories)
@@ -25,9 +26,9 @@
 <section class="featured-section">
 
     <div class="section-header">
-        <span>Upcoming</span>
-        <h2>Upcoming Events</h2>
-        <p>Don't miss the next big events.</p>
+        <span>Sắp diễn ra</span>
+        <h2>Sự kiện sắp diễn ra</h2>
+        <p>Đừng bỏ lỡ những sự kiện nổi bật sắp tới.</p>
     </div>
 
     <div class="featured-slider">
@@ -54,7 +55,7 @@
                            asp-controller="Event"
                            asp-action="Details"
                            asp-route-id="@item.Id">
-                            Xem chi ti?t
+                            Xem chi tiết
                         </a>
 
                     </div>
@@ -64,19 +65,19 @@
     </div>
 </section>
 
-
 <section class="home-section">
 
     <div class="section-header">
-        <span>Trending</span>
-        <h2>Most Viewed Events</h2>
-        <p>Popular events based on audience interest.</p>
+        <span>Xu hướng</span>
+        <h2>Sự kiện được xem nhiều nhất</h2>
+        <p>Những sự kiện phổ biến dựa trên sự quan tâm của người dùng.</p>
     </div>
 
     <div class="slider-wrapper">
 
-        <button class="slider-btn prev" onclick="scrollSlider('trendingSlider', -1)">
-            ?
+        <button class="slider-btn prev"
+                onclick="scrollSlider('trendingSlider', -1)">
+            &#10094;
         </button>
 
         <div class="event-slider" id="trendingSlider">
@@ -87,24 +88,40 @@
                    asp-controller="Event"
                    asp-action="Details"
                    asp-route-id="@item.Id">
-                    <img src="@MediaUrl.Img(item.ImageUrl)" alt="@item.Title" />
+
+                    <img src="@MediaUrl.Img(item.ImageUrl)"
+                         alt="@item.Title" />
 
                     <div class="event-card-body">
                         <span>@item.CategoryName</span>
-                        <h3>@item.Title</h3>
-                        <p>@item.StartTime.ToString("dd/MM/yyyy")</p>
 
-                        <p class="event-price">
-                            From @item.MinPrice?.ToString("N0") VND
+                        <h3>@item.Title</h3>
+
+                        <p>
+                            @item.StartTime.ToString("dd/MM/yyyy")
                         </p>
+
+                        @if (item.MinPrice.HasValue)
+                        {
+                            <p class="event-price">
+                                Từ @item.MinPrice.Value.ToString("#,##0") VND
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="event-price">
+                                Liên hệ ban tổ chức
+                            </p>
+                        }
                     </div>
                 </a>
             }
 
         </div>
 
-        <button class="slider-btn next" onclick="scrollSlider('trendingSlider', 1)">
-            ?
+        <button class="slider-btn next"
+                onclick="scrollSlider('trendingSlider', 1)">
+            &#10095;
         </button>
 
     </div>
@@ -114,15 +131,16 @@
 <section class="home-section">
 
     <div class="section-header">
-        <span>Featured</span>
-        <h2>Featured Events</h2>
-        <p>Highlighted events selected by our team.</p>
+        <span>Nổi bật</span>
+        <h2>Sự kiện nổi bật</h2>
+        <p>Những sự kiện nổi bật được đội ngũ của chúng tôi lựa chọn.</p>
     </div>
 
     <div class="slider-wrapper">
 
-        <button class="slider-btn prev" onclick="scrollSlider('featuredSlider', -1)">
-            ?
+        <button class="slider-btn prev"
+                onclick="scrollSlider('featuredSlider', -1)">
+            &#10094;
         </button>
 
         <div class="event-slider" id="featuredSlider">
@@ -133,17 +151,29 @@
                    asp-controller="Event"
                    asp-action="Details"
                    asp-route-id="@item.Id">
-                    <img src="@MediaUrl.Img(item.ImageUrl)" alt="@item.Title" />
+
+                    <img src="@MediaUrl.Img(item.ImageUrl)"
+                         alt="@item.Title" />
 
                     <div class="event-card-body">
                         <span>@item.CategoryName</span>
+
                         <h3>@item.Title</h3>
-                        <p>@item.StartTime.ToString("dd/MM/yyyy")</p>
+
+                        <p>
+                            @item.StartTime.ToString("dd/MM/yyyy")
+                        </p>
 
                         @if (item.MinPrice.HasValue)
                         {
                             <p class="event-price">
-                                From @item.MinPrice.Value.ToString("N0") d
+                                Từ @item.MinPrice.Value.ToString("#,##0") VND
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="event-price">
+                                Liên hệ ban tổ chức
                             </p>
                         }
                     </div>
@@ -152,26 +182,28 @@
 
         </div>
 
-        <button class="slider-btn next" onclick="scrollSlider('featuredSlider', 1)">
-            ?
+        <button class="slider-btn next"
+                onclick="scrollSlider('featuredSlider', 1)">
+            &#10095;
         </button>
 
     </div>
 
 </section>
+
 <section class="home-section">
 
     <div class="section-header section-header-row">
         <div>
-            <span>Events</span>
-            <h2>Explore Events</h2>
-            <p>Discover more events across all categories.</p>
+            <span>Sự kiện</span>
+            <h2>Khám phá sự kiện</h2>
+            <p>Khám phá thêm nhiều sự kiện thuộc các danh mục khác nhau.</p>
         </div>
 
         <a class="view-all-btn"
            asp-controller="Event"
            asp-action="Index">
-            View all
+            Xem tất cả
         </a>
     </div>
 
@@ -191,18 +223,20 @@
 
                     <h3>@item.Title</h3>
 
-                    <p>@item.StartTime.ToString("dd/MM/yyyy")</p>
+                    <p>
+                        @item.StartTime.ToString("dd/MM/yyyy")
+                    </p>
 
                     @if (item.MinPrice.HasValue)
                     {
                         <p class="event-price">
-                            From @item.MinPrice.Value.ToString("N0") VND
+                            Từ @item.MinPrice.Value.ToString("#,##0") VND
                         </p>
                     }
                     else
                     {
                         <p class="event-price">
-                            Contact organizer
+                            Liên hệ ban tổ chức
                         </p>
                     }
                 </div>
@@ -231,14 +265,14 @@
         const prevBtn = wrapper.querySelector('.prev');
         const nextBtn = wrapper.querySelector('.next');
 
-        // �ang ? d?u
+        // Đang ở đầu danh sách
         if (slider.scrollLeft <= 5) {
             prevBtn.style.display = 'none';
         } else {
             prevBtn.style.display = 'flex';
         }
 
-        // �ang ? cu?i
+        // Đang ở cuối danh sách
         if (
             slider.scrollLeft + slider.clientWidth >=
             slider.scrollWidth - 5
@@ -261,3 +295,4 @@
         });
     });
 </script>
+```

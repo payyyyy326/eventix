@@ -10,14 +10,12 @@
     <div class="dashboard-header">
         <div>
             <span>Organizer</span>
-            <h1>My Events</h1>
+            <h1>Sự kiện của tôi</h1>
             <p>Manage your events, ticket sales and revenue.</p>
         </div>
 
-        <a class="dashboard-create-btn"
-           asp-controller="Organizer"
-           asp-action="CreateEvent">
-            + Create Event
+        <a class="dashboard-create-btn" asp-controller="EventWizard" asp-action="Step1">
+            + Tạo sự kiện
         </a>
     </div>
 
@@ -26,8 +24,8 @@
         @if (Model == null || !Model.DataList.Any())
         {
             <div class="organizer-empty">
-                <h2>No events yet</h2>
-                <p>Create your first event and start selling tickets.</p>
+                <h2>Chưa có sự kiện nào</h2>
+                <p>Tạo sự kiện đầu tiên của bạn và bắt đầu bán vé.</p>
 
                 <a class="dashboard-create-btn"
                    asp-controller="Organizer"
@@ -88,7 +86,7 @@
                         </span>
 
                         <span class="revenue-text">
-                            @item.TotalRevenue.ToString("N0") đ
+                            @item.TotalRevenue.ToString("#,##0") d
                         </span>
 
                         <div class="row-actions">
@@ -128,7 +126,7 @@
                        asp-action="Events"
                        asp-route-currentPage="@(Model.CurrentPage - 1)"
                        asp-route-pageSize="@Model.PageSize">
-                        ← Prev
+                        ? Prev
                     </a>
                 }
 
@@ -150,7 +148,7 @@
                        asp-action="Events"
                        asp-route-currentPage="@(Model.CurrentPage + 1)"
                        asp-route-pageSize="@Model.PageSize">
-                        Next →
+                        Next >
                     </a>
                 }
 

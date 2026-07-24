@@ -1,7 +1,8 @@
-﻿using Eventix.Share.Common.Models;
-using Eventix.Share.Event;
-using Eventix.Share.Booking;
+﻿using Eventix.Share.Booking;
+using Eventix.Share.Category;
 using Eventix.Share.Common.Constants;
+using Eventix.Share.Common.Models;
+using Eventix.Share.Event;
 using Eventix.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
@@ -26,7 +27,7 @@ namespace Eventix.Web.Controllers
 
             var client = _httpClientFactory.CreateClient("Eventix");
 
-            var query = QueryHelpers.AddQueryString(
+            var eventQuery = QueryHelpers.AddQueryString(
                 "api/events",
                 new Dictionary<string, string?>
                 {
@@ -43,15 +44,39 @@ namespace Eventix.Web.Controllers
                     ["PageSize"] = request.PageSize.ToString()
                 });
 
-            var response = await client.GetAsync(query);
+            var categoryQuery = QueryHelpers.AddQueryString(
+                "api/category/categories",
+                new Dictionary<string, string?>
+                {
+                    ["CurrentPage"] = "1",
+                    ["PageSize"] = "100"
+                });
 
-            var result = await response.Content
-                .ReadFromJsonAsync<ApiResponseModel<PaginationResponse<EventResponse>>>();
+            var eventTask = client.GetAsync(eventQuery);
+            var categoryTask = client.GetAsync(categoryQuery);
+
+            await Task.WhenAll(eventTask, categoryTask);
+
+            var eventResponse = await eventTask;
+            var categoryResponse = await categoryTask;
+
+            var eventResult = await eventResponse.Content
+                .ReadFromJsonAsync<
+                    ApiResponseModel<PaginationResponse<EventResponse>>>();
+
+            var categoryResult = await categoryResponse.Content
+                .ReadFromJsonAsync<
+                    ApiResponseModel<PaginationResponse<CategoryResponse>>>();
 
             var model = new EventViewModel
             {
                 Filter = request,
-                Events = result?.Data ?? new PaginationResponse<EventResponse>()
+
+                Events = eventResult?.Data
+                    ?? new PaginationResponse<EventResponse>(),
+
+                Categories = categoryResult?.Data?.DataList?.ToList()
+                    ?? []
             };
 
             return View(model);

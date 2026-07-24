@@ -14,5 +14,6 @@ namespace Eventix.Modules.OrganizerModule.Interfaces
         Task<PaginationResponse<OrganizerEventResponse>> GetEventsByOrganizerAsync(Guid organizerId, PaginationRequest<OrganizerEventResponse> request);
         Task<OrganizerEventDetailResponse> GetOrganizerEventDetailAsync(Guid userId, Guid eventId);
         Task<List<string>> GetEventSectionsAsync(Guid userId, Guid eventId);
+        Task<OrganizerProfileResponse> UpdateMyProfileAsync(Guid userId, UpdateOrganizerProfileRequest request);
     }
 }

@@ -1,4 +1,4 @@
-﻿@using Eventix.Share.Venue
+@using Eventix.Share.Venue
 @model List<VenueResponse>
 
 @{
@@ -58,7 +58,7 @@
                         </div>
 
                         <div class="ticket-admin-side">
-                            <strong>@venue.Capacity.ToString("N0") seats</strong>
+                            <strong>@venue.Capacity.ToString("#,##0") seats</strong>
                             <span>@venue.City</span>
 
                             <div class="ticket-actions">

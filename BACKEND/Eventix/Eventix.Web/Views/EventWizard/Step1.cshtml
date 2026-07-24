@@ -11,9 +11,9 @@
 <section class="organizer-page">
     <div class="dashboard-header">
         <div class="page-heading">
-            <span>Create Event</span>
-            <h1>Step 1: Event Information</h1>
-            <p>Enter the basic information for your event.</p>
+            <span>Tạo sự kiện</span>
+            <h1>Bước 1: Thông tin sự kiện</h1>
+            <p>Nhập các thông tin cơ bản cho sự kiện của bạn.</p>
         </div>
     </div>
 
@@ -28,30 +28,30 @@
             <div id="formError" class="text-danger mb-3" style="display:none;"></div>
 
             <div class="form-group mb-3">
-                <label asp-for="Title">Event Title <span class="text-danger">*</span></label>
+                <label asp-for="Title">Tên sự kiện <span class="text-danger">*</span></label>
                 <input asp-for="Title" class="form-control" autocomplete="off" />
                 <span asp-validation-for="Title" class="text-danger"></span>
                 <span id="err-title" class="text-danger" style="display:none;"></span>
             </div>
 
             <div class="form-group mb-3">
-                <label asp-for="CategoryId">Category <span class="text-danger">*</span></label>
+                <label asp-for="CategoryId">Danh mục <span class="text-danger">*</span></label>
                 <select asp-for="CategoryId"
                         asp-items="@(new SelectList(Model.Categories, "Id", "Name"))"
                         class="form-select">
-                    <option value="">-- Select Category --</option>
+                    <option value="">-- Chọn danh mục --</option>
                 </select>
                 <span asp-validation-for="CategoryId" class="text-danger"></span>
                 <span id="err-category" class="text-danger" style="display:none;"></span>
             </div>
 
             <div class="form-group mb-3">
-                <label asp-for="Summary">Summary</label>
+                <label asp-for="Summary">Mô tả ngắn</label>
                 <input asp-for="Summary" class="form-control" autocomplete="off" />
             </div>
 
             <div class="form-group mb-3">
-                <label asp-for="Description">Description</label>
+                <label asp-for="Description">Mô tả chi tiết</label>
                 <textarea asp-for="Description" rows="5" class="form-control"></textarea>
             </div>
 
@@ -60,8 +60,8 @@
 
                 <!-- Banner -->
                 <div class="form-group">
-                    <label>Banner Image
-                        <small class="text-muted">(1200×400 recommended · max 5 MB)</small>
+                    <label>Ảnh Banner
+                        <small class="text-muted">(khuyến nghị 1200×400 · tối đa 5 MB)</small>
                     </label>
 
                     <div class="upload-zone" id="bannerZone"
@@ -70,19 +70,19 @@
                          ondragleave="this.classList.remove('upload-zone--over')"
                          ondrop="handleDrop(event,'banner')">
 
-                        <img id="bannerPreview" alt="Banner preview"
+                        <img id="bannerPreview" alt="Xem trước banner"
                              src="@MediaUrl.Img(Model.BannerUrl, "")"
                              style="display:@(string.IsNullOrWhiteSpace(Model.BannerUrl) ? "none" : "block")" />
 
                         <div id="bannerPlaceholder"
                              style="display:@(string.IsNullOrWhiteSpace(Model.BannerUrl) ? "flex" : "none")">
                             <span style="font-size:2rem">🖼️</span>
-                            <span>Click or drag &amp; drop banner</span>
+                            <span>Nhấp hoặc kéo thả ảnh banner</span>
                             <span class="upload-hint">JPG · PNG · WEBP · GIF</span>
                         </div>
 
                         <div id="bannerSpinner" class="upload-spinner" style="display:none">
-                            <span>Uploading…</span>
+                            <span>Đang tải lên…</span>
                         </div>
                     </div>
 
@@ -96,14 +96,14 @@
                             class="upload-clear-btn"
                             style="display:@(string.IsNullOrWhiteSpace(Model.BannerUrl) ? "none" : "inline-block")"
                             onclick="clearUpload('banner')">
-                        ✕ Remove banner
+                        ✕ Xóa banner
                     </button>
                 </div>
 
                 <!-- Thumbnail -->
                 <div class="form-group">
-                    <label>Thumbnail Image
-                        <small class="text-muted">(400×400 recommended · max 5 MB)</small>
+                    <label>Ảnh đại diện
+                        <small class="text-muted">(khuyến nghị 400×400 · tối đa 5 MB)</small>
                     </label>
 
                     <div class="upload-zone upload-zone--square" id="imageZone"
@@ -112,19 +112,19 @@
                          ondragleave="this.classList.remove('upload-zone--over')"
                          ondrop="handleDrop(event,'image')">
 
-                        <img id="imagePreview" alt="Thumbnail preview"
+                        <img id="imagePreview" alt="Xem trước ảnh đại diện"
                              src="@MediaUrl.Img(Model.ImageUrl, "")"
                              style="display:@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "none" : "block")" />
 
                         <div id="imagePlaceholder"
                              style="display:@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "flex" : "none")">
                             <span style="font-size:2rem">📷</span>
-                            <span>Click or drag &amp; drop thumbnail</span>
+                            <span>Nhấp hoặc kéo thả ảnh đại diện</span>
                             <span class="upload-hint">JPG · PNG · WEBP · GIF</span>
                         </div>
 
                         <div id="imageSpinner" class="upload-spinner" style="display:none">
-                            <span>Uploading…</span>
+                            <span>Đang tải lên…</span>
                         </div>
                     </div>
 
@@ -138,7 +138,7 @@
                             class="upload-clear-btn"
                             style="display:@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "none" : "inline-block")"
                             onclick="clearUpload('image')">
-                        ✕ Remove thumbnail
+                        ✕ Xóa ảnh đại diện
                     </button>
                 </div>
             </div>
@@ -146,7 +146,7 @@
 
             <div class="wizard-grid-2">
                 <div class="form-group mb-3">
-                    <label asp-for="StartTime">Start Time <span class="text-danger">*</span></label>
+                    <label asp-for="StartTime">Thời gian bắt đầu <span class="text-danger">*</span></label>
                     <input name="_startTimeLocal"
                            id="startTimeInput"
                            type="datetime-local"
@@ -158,7 +158,7 @@
                 </div>
 
                 <div class="form-group mb-3">
-                    <label asp-for="EndTime">End Time <span class="text-danger">*</span></label>
+                    <label asp-for="EndTime">Thời gian kết thúc <span class="text-danger">*</span></label>
                     <input name="_endTimeLocal"
                            id="endTimeInput"
                            type="datetime-local"
@@ -172,7 +172,7 @@
 
             <div class="d-flex justify-content-end mt-4">
                 <button type="submit" class="dashboard-create-btn">
-                    Continue to Venue →
+                    Tiếp theo: Địa điểm →
                 </button>
             </div>
         </form>

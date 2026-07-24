@@ -1,20 +1,15 @@
 ﻿@using Eventix.Web.Models.EventWizard
-@model EventZonesViewModel
+@model EventTicketTypesViewModel
 
 @{
-    ViewData["Title"] = "Create Event - Step 3";
+    ViewData["Title"] = "Tạo sự kiện - Bước 3";
     Layout = "_OrganizerLayout";
 
-    var zones = Model.Zones ?? new List<Eventix.Share.VenueZone.VenueZoneResponse>();
+    var ticketTypes = Model.TicketTypes ?? new();
 
-    var totalCapacity = zones.Sum(z => z.Capacity);
-    var seatedZones = zones.Count(z => z.HasSeats);
-    var generalZones = zones.Count(z => !z.HasSeats);
-    var venueCapacity = Model.Venue?.Capacity ?? 0;
-
-    var capacityPercent = venueCapacity <= 0
-        ? 0
-        : Math.Min(100, (int)Math.Round((double)totalCapacity / venueCapacity * 100));
+    var totalTickets   = ticketTypes.Sum(t => t.Quantity);
+    var seatedTickets  = ticketTypes.Count(t => t.IsSeatRequired);
+    var generalTickets = ticketTypes.Count(t => !t.IsSeatRequired);
 }
 
 <section class="organizer-page">
@@ -24,15 +19,15 @@
             <a class="wizard-back-link"
                asp-controller="EventWizard"
                asp-action="Step2">
-                ← Back to Venue
+                ← Quay lại Địa điểm
             </a>
 
             <div class="wizard-title">
-                <span>Create Event</span>
-                <h1>Step 3: Venue Zones</h1>
+                <span>Tạo sự kiện</span>
+                <h1>Bước 3: Loại vé</h1>
                 <p>
-                    Create areas such as VIP, Gold, Standing, Workshop,
-                    or Online Pass.
+                    Tạo các loại vé và thiết lập giá.
+                    Vé có ghế ngồi sẽ tự động tạo ghế khi sự kiện được công bố.
                 </p>
             </div>
 
@@ -43,250 +38,252 @@
 
             <div class="wizard-grid-3 mb-4">
                 <div class="wizard-stat">
-                    <span>Total Zones</span>
-                    <strong>@zones.Count</strong>
+                    <span>Loại vé</span>
+                    <strong>@ticketTypes.Count</strong>
                 </div>
-
                 <div class="wizard-stat">
-                    <span>Current Capacity</span>
-                    <strong>@totalCapacity / @venueCapacity</strong>
+                    <span>Tổng số vé</span>
+                    <strong>@totalTickets</strong>
                 </div>
-
                 <div class="wizard-stat">
-                    <span>Seated / General</span>
-                    <strong>@seatedZones / @generalZones</strong>
+                    <span>Có ghế / Đứng</span>
+                    <strong>@seatedTickets / @generalTickets</strong>
                 </div>
             </div>
 
             <div class="wizard-card mb-4">
-                <h3>@(Model.Venue?.Name ?? "Selected Venue")</h3>
-                <p>@(Model.Venue?.Address ?? "No address")</p>
-
-                <div class="wizard-meta">
-                    <span class="wizard-pill">
-                        City: @(Model.Venue?.City ?? "N/A")
-                    </span>
-
-                    <span class="wizard-pill">
-                        Venue Capacity: @venueCapacity
-                    </span>
-                </div>
-
-                <div class="wizard-progress-bar mt-3">
-                    <div class="wizard-progress-fill"
-                         style="width: @capacityPercent%">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                        <h3>@(Model.Venue?.Name ?? "Địa điểm đã chọn")</h3>
+                        <p>@(Model.Venue?.Address ?? "Chưa có địa chỉ")</p>
                     </div>
                 </div>
-
-                <small class="text-muted">
-                    @capacityPercent% of venue capacity is currently assigned.
-                    Seated-zone capacity will be updated after seats are generated or imported.
-                </small>
+                <div class="wizard-meta">
+                    <span class="wizard-pill neutral">
+                        Số vé đã tạo: @totalTickets.ToString("#,##0")
+                    </span>
+                </div>
             </div>
 
             <div class="wizard-card mb-4">
-                <h3>Add New Zone</h3>
+                <h3>Thêm loại vé</h3>
                 <p>
-                    For seated zones, capacity will be calculated automatically
-                    from generated or imported seats.
+                    Chọn Vào tự do hoặc Có ghế ngồi.
+                    Vé có ghế ngồi sẽ tự động tạo ghế bằng số lượng vé.
                 </p>
 
                 <form asp-controller="EventWizard"
-                      asp-action="CreateZone"
+                      asp-action="AddTicketType"
                       method="post"
-                      class="mt-3"
-                      id="createZoneForm">
+                      class="mt-4"
+                      id="addTicketTypeForm">
 
-                    <div asp-validation-summary="ModelOnly"
-                         class="text-danger mb-3">
-                    </div>
+                    @Html.AntiForgeryToken()
 
-                    <div class="wizard-grid-2">
-                        <div class="form-group mb-3">
-                            <label asp-for="NewZone.Name">Zone Name</label>
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-                            <input asp-for="NewZone.Name"
-                                   class="form-control"
-                                   placeholder="VIP, Gold, Standing..."
-                                   autocomplete="off" />
-
-                            <span asp-validation-for="NewZone.Name"
-                                  class="text-danger">
-                            </span>
+                    <div class="wizard-card ticket-form-section mb-3">
+                        <div class="ticket-form-heading">
+                            <h4>Thông tin cơ bản</h4>
+                            <p>Tên, loại và số lượng vé.</p>
                         </div>
 
-                        <div class="form-group mb-3"
-                             id="zoneCapacityBox">
+                        <div class="wizard-grid-2 mt-3">
+                            <div class="form-group">
+                                <label asp-for="NewTicketType.Name">Tên loại vé</label>
+                                <input asp-for="NewTicketType.Name"
+                                       class="form-control"
+                                       placeholder="VIP, Thường, Đứng, Early Bird..."
+                                       autocomplete="off" />
+                                <span asp-validation-for="NewTicketType.Name" class="text-danger"></span>
+                            </div>
 
-                            <label asp-for="NewZone.Capacity">
-                                Capacity
-                            </label>
+                            <div class="form-group">
+                                <label>Loại vé</label>
+                                <div class="d-flex gap-3 mt-2">
+                                    <label class="d-flex align-items-center gap-2" style="cursor:pointer;">
+                                        <input asp-for="NewTicketType.IsSeatRequired"
+                                               type="radio"
+                                               value="false"
+                                               id="radioStanding"
+                                               checked="checked" />
+                                        <span>Vào tự do</span>
+                                    </label>
+                                    <label class="d-flex align-items-center gap-2" style="cursor:pointer;">
+                                        <input asp-for="NewTicketType.IsSeatRequired"
+                                               type="radio"
+                                               value="true"
+                                               id="radioSeated" />
+                                        <span>Có ghế ngồi</span>
+                                    </label>
+                                </div>
+                                <small class="text-muted mt-1">
+                                    Vé có ghế ngồi sẽ tự động tạo ghế bằng số lượng bạn nhập.
+                                </small>
+                            </div>
+                        </div>
 
-                            <input asp-for="NewZone.Capacity"
-                                   id="zoneCapacityInput"
-                                   type="number"
-                                   min="1"
-                                   class="form-control"
-                                   placeholder="Example: 500" />
+                        <div class="wizard-grid-2 mt-3">
+                            <div class="form-group">
+                                <label asp-for="NewTicketType.Quantity">Số lượng</label>
+                                <input asp-for="NewTicketType.Quantity"
+                                       type="number"
+                                       min="1"
+                                       class="form-control"
+                                       placeholder="100"
+                                       id="ticketQuantityInput" />
+                                <span asp-validation-for="NewTicketType.Quantity" class="text-danger"></span>
+                                <small class="text-muted" id="zoneCapacityHint"></small>
+                            </div>
 
-                            <span asp-validation-for="NewZone.Capacity"
-                                  class="text-danger">
-                            </span>
-
-                            <small class="text-muted">
-                                Required only for zones without assigned seats.
-                            </small>
+                            <div class="form-group">
+                                <label asp-for="NewTicketType.Price">Giá vé</label>
+                                <div class="ticket-price-input">
+                                    <input asp-for="NewTicketType.Price"
+                                           type="number"
+                                           min="0"
+                                           step="1000"
+                                           class="form-control"
+                                           placeholder="500,000" />
+                                    <span>VND</span>
+                                </div>
+                                <span asp-validation-for="NewTicketType.Price" class="text-danger"></span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="wizard-grid-2">
-                        <div class="form-group mb-3">
-                            <label asp-for="NewZone.Color">Color</label>
-
-                            <input asp-for="NewZone.Color"
-                                   type="color"
-                                   class="form-control form-control-color" />
+                    <div class="wizard-card ticket-form-section mb-3">
+                        <div class="ticket-form-heading">
+                            <h4>Thời gian bán vé</h4>
+                            <p>Xác định khoảng thời gian khách hàng có thể mua vé này.</p>
                         </div>
 
-                        <div class="form-group mb-3">
-                            <label asp-for="NewZone.SortOrder">
-                                Sort Order
-                            </label>
+                        <div class="wizard-grid-2 mt-3">
+                            <div class="form-group">
+                                <label asp-for="NewTicketType.SaleStartTime">Bắt đầu bán</label>
+                                <input name="_saleStartLocal"
+                                       id="saleStartInput"
+                                       type="datetime-local"
+                                       class="form-control"
+                                       value="@(Model.NewTicketType.SaleStartTime == default ? "" : Model.NewTicketType.SaleStartTime.ToString("yyyy-MM-ddTHH:mm"))" />
+                                <input type="hidden" name="NewTicketType.SaleStartTime" id="saleStartUtc" />
+                                <span asp-validation-for="NewTicketType.SaleStartTime" class="text-danger"></span>
+                            </div>
 
-                            <input asp-for="NewZone.SortOrder"
-                                   type="number"
-                                   min="0"
-                                   class="form-control"
-                                   placeholder="1" />
+                            <div class="form-group">
+                                <label asp-for="NewTicketType.SaleEndTime">Kết thúc bán</label>
+                                <input name="_saleEndLocal"
+                                       id="saleEndInput"
+                                       type="datetime-local"
+                                       class="form-control"
+                                       value="@(Model.NewTicketType.SaleEndTime == default ? "" : Model.NewTicketType.SaleEndTime.ToString("yyyy-MM-ddTHH:mm"))" />
+                                <input type="hidden" name="NewTicketType.SaleEndTime" id="saleEndUtc" />
+                                <span asp-validation-for="NewTicketType.SaleEndTime" class="text-danger"></span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-group mb-4">
-                        <label class="d-flex align-items-center gap-2">
-                            <input asp-for="NewZone.HasSeats"
-                                   id="hasSeatsCheckbox"
-                                   type="checkbox" />
+                    <div class="wizard-card ticket-form-section mb-4">
+                        <div class="ticket-form-heading">
+                            <h4>Chi tiết vé</h4>
+                            <p>Thêm mô tả và xem cấu hình ghế ngồi.</p>
+                        </div>
 
-                            This zone has assigned seats
-                        </label>
+                        <div class="form-group mt-3">
+                            <label asp-for="NewTicketType.Description">Mô tả</label>
+                            <textarea asp-for="NewTicketType.Description"
+                                      rows="4"
+                                      class="form-control"
+                                      placeholder="Mô tả quyền lợi, điều kiện vào cổng...">
+                            </textarea>
+                            <span asp-validation-for="NewTicketType.Description" class="text-danger"></span>
+                        </div>
 
-                        <small class="text-muted">
-                            Enable this for VIP, Gold, cinema-style, or numbered-seat areas.
-                            Disable it for Standing, General Admission, Workshop, or Online Pass.
-                        </small>
+                        <div class="ticket-seat-status mt-3" id="ticketSeatStatus">
+                            <input asp-for="NewTicketType.IsSeatRequired"
+                                   type="checkbox"
+                                   id="seatRequiredCheckbox"
+                                   hidden />
+                            <div>
+                                <span class="wizard-pill neutral" id="seatTypeBadge">Chọn loại vé</span>
+                                <p id="seatTypeDescription">
+                                    Cấu hình ghế ngồi sẽ được xác định theo loại vé bạn chọn.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
-                    <div id="seatedZoneNotice"
-                         class="wizard-card mb-4"
-                         style="display: none;">
-
-                        <strong>Capacity is calculated automatically</strong>
-
-                        <p class="text-muted mb-0">
-                            After creating this zone, generate or import its seats
-                            in Step 5. The number of seats will become the zone capacity.
-                        </p>
-                    </div>
-
-                    <button type="submit"
-                            class="wizard-btn-primary">
-                        + Add Zone
+                    <button type="submit" class="wizard-btn-primary">
+                        + Thêm loại vé
                     </button>
                 </form>
             </div>
 
             <div class="mb-4">
-                <h3 class="mb-3 text-white">Zone Overview</h3>
+                <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+                    <div>
+                        <h3 class="text-white mb-1">Danh sách loại vé</h3>
+                        <p class="text-muted mb-0">Xem lại tất cả loại vé đã tạo cho sự kiện này.</p>
+                    </div>
+                    <span class="wizard-pill info">@ticketTypes.Count loại vé</span>
+                </div>
 
-                @if (!zones.Any())
+                @if (!ticketTypes.Any())
                 {
                     <div class="organizer-empty">
-                        <h2>No zones yet</h2>
-                        <p>
-                            Create at least one venue zone before continuing.
-                        </p>
+                        <h2>Chưa có loại vé nào</h2>
+                        <p>Thêm ít nhất một loại vé trước khi tiếp tục.</p>
                     </div>
                 }
                 else
                 {
-                    <div class="wizard-grid-3">
-                        @foreach (var zone in zones
-                                            .OrderBy(z => z.SortOrder)
-                                            .ThenBy(z => z.Name))
+                    <div class="ticket-type-grid">
+                        @foreach (var ticket in ticketTypes.OrderBy(t => t.Price).ThenBy(t => t.Name))
                         {
-                            var zonePercent = venueCapacity <= 0
-                            ? 0
-                            : Math.Min(
-                            100,
-                            (int)Math.Round(
-                            (double)zone.Capacity / venueCapacity * 100
-                            )
-                            );
+                            var priceLabel = ticket.Price <= 0
+                                ? "Miễn phí"
+                                : $"{ticket.Price:#,##0} VND";
 
-                            <div class="wizard-section-card">
-                                <div class="d-flex justify-content-between align-items-start">
+                            <article class="ticket-type-card">
+                                <div class="ticket-type-card-header">
                                     <div>
-                                        <h4>@zone.Name</h4>
-
-                                        <span class="wizard-pill">
-                                            @(zone.HasSeats
-                                                                                ? "Assigned Seating"
-                                                                                : "General Admission")
-                                </span>
-                            </div>
-
-                                    <div style="
-                                                width: 18px;
-                                                height: 18px;
-                                                border-radius: 999px;
-                                                background: @(string.IsNullOrWhiteSpace(zone.Color)
-                                                                             ? "#60A5FA"
-                                                                             : zone.Color);">
-                            </div>
-                        </div>
-
-                        @if (zone.HasSeats)
-                                {
-                                    <strong>@zone.SeatCount</strong>
-                                    <p class="text-muted mb-0">
-                                        seats imported or generated
-                                    </p>
-
-                                    @if (zone.SeatCount == 0)
-                                    {
-                                        <div class="wizard-meta mt-3">
-                                            <span class="wizard-pill">
-                                                Waiting for seat assignment
+                                        <h4>@ticket.Name</h4>
+                                        <div class="wizard-meta">
+                                            <span class="wizard-pill @(ticket.IsSeatRequired ? "" : "info")">
+                                                @(ticket.IsSeatRequired ? "Có ghế ngồi" : "Vào tự do")
                                             </span>
                                         </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="wizard-meta mt-3">
-                                            <span class="wizard-pill">
-                                                Capacity: @zone.Capacity
-                                            </span>
-                                        </div>
-                                    }
-                                }
-                                else
-                                {
-                                    <strong>@zone.Capacity</strong>
-                                    <p class="text-muted mb-0">
-                                        general admission capacity
-                                    </p>
-                                }
-
-                                <div class="wizard-progress-bar mt-3">
-                                    <div class="wizard-progress-fill"
-                                         style="width: @zonePercent%">
+                                    </div>
+                                    <div class="ticket-type-price">
+                                        <strong>@priceLabel</strong>
+                                        <span>mỗi vé</span>
                                     </div>
                                 </div>
 
-                                <small class="text-muted">
-                                    @zonePercent% of venue capacity
-                                </small>
-                            </div>
+                                @if (!string.IsNullOrWhiteSpace(ticket.Description))
+                                {
+                                    <p class="ticket-type-description">@ticket.Description</p>
+                                }
+
+                                <div class="ticket-type-details">
+                                    <div>
+                                        <span>Số lượng</span>
+                                        <strong>@ticket.Quantity.ToString("#,##0")</strong>
+                                    </div>
+                                    <div>
+                                        <span>Loại</span>
+                                        <strong>@(ticket.IsSeatRequired ? "Có ghế" : "Đứng")</strong>
+                                    </div>
+                                    <div>
+                                        <span>Bắt đầu bán</span>
+                                        <strong>@ticket.SaleStartTime.ToString("dd/MM/yyyy HH:mm")</strong>
+                                    </div>
+                                    <div>
+                                        <span>Kết thúc bán</span>
+                                        <strong>@ticket.SaleEndTime.ToString("dd/MM/yyyy HH:mm")</strong>
+                                    </div>
+                                </div>
+                            </article>
                         }
                     </div>
                 }
@@ -296,17 +293,17 @@
                 <a asp-controller="EventWizard"
                    asp-action="Step2"
                    class="wizard-btn-secondary">
-                    ← Back
+                    ← Quay lại
                 </a>
 
                 <form asp-controller="EventWizard"
                       asp-action="Step3Continue"
                       method="post">
-
+                    @Html.AntiForgeryToken()
                     <button type="submit"
                             class="wizard-btn-primary"
-                            disabled="@(!zones.Any())">
-                        Continue →
+                            disabled="@(!ticketTypes.Any())">
+                        Tiếp theo: Xem trước ghế →
                     </button>
                 </form>
             </div>
@@ -320,67 +317,67 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const hasSeatsCheckbox =
-                document.getElementById("hasSeatsCheckbox");
+            const radioStanding = document.getElementById("radioStanding");
+            const radioSeated   = document.getElementById("radioSeated");
+            const badge         = document.getElementById("seatTypeBadge");
+            const desc          = document.getElementById("seatTypeDescription");
 
-            const capacityBox =
-                document.getElementById("zoneCapacityBox");
-
-            const capacityInput =
-                document.getElementById("zoneCapacityInput");
-
-            const seatedZoneNotice =
-                document.getElementById("seatedZoneNotice");
-
-            const createZoneForm =
-                document.getElementById("createZoneForm");
-
-            if (!hasSeatsCheckbox ||
-                !capacityBox ||
-                !capacityInput) {
-                return;
-            }
-
-            function updateCapacityField() {
-                const hasSeats = hasSeatsCheckbox.checked;
-
-                capacityBox.style.display =
-                    hasSeats ? "none" : "block";
-
-                if (seatedZoneNotice) {
-                    seatedZoneNotice.style.display =
-                        hasSeats ? "block" : "none";
+            function updateBadge() {
+                const isSeated = radioSeated?.checked;
+                if (badge) {
+                    badge.textContent = isSeated ? "Có ghế ngồi" : "Vào tự do";
+                    badge.className   = isSeated ? "wizard-pill" : "wizard-pill info";
                 }
-
-                if (hasSeats) {
-                    capacityInput.value = "0";
-                    capacityInput.required = false;
-                    capacityInput.removeAttribute("min");
-                } else {
-                    if (Number(capacityInput.value) <= 0) {
-                        capacityInput.value = "";
-                    }
-
-                    capacityInput.required = true;
-                    capacityInput.setAttribute("min", "1");
+                if (desc) {
+                    desc.textContent = isSeated
+                        ? "Ghế sẽ được tự động tạo bằng số lượng bạn nhập."
+                        : "Khách hàng chọn số lượng vé, không cần chỉ định ghế cụ thể.";
                 }
             }
 
-            hasSeatsCheckbox.addEventListener(
-                "change",
-                updateCapacityField
-            );
+            radioStanding?.addEventListener("change", updateBadge);
+            radioSeated?.addEventListener("change", updateBadge);
+            updateBadge();
 
-            createZoneForm?.addEventListener(
-                "submit",
-                function () {
-                    if (hasSeatsCheckbox.checked) {
-                        capacityInput.value = "0";
-                    }
+            function toLocalDatetimeValue(date) {
+                const pad = n => String(n).padStart(2, '0');
+                return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+            }
+
+            const now       = new Date();
+            const nowStr    = toLocalDatetimeValue(now);
+            const saleStart = document.getElementById('saleStartInput');
+            const saleEnd   = document.getElementById('saleEndInput');
+
+            if (saleStart) {
+                saleStart.setAttribute('min', nowStr);
+                if (!saleStart.value) {
+                    const d = new Date(now);
+                    d.setHours(d.getHours() + 1, 0, 0, 0);
+                    saleStart.value = toLocalDatetimeValue(d);
                 }
-            );
+                saleStart.addEventListener('change', function () {
+                    if (saleEnd) saleEnd.setAttribute('min', this.value);
+                    if (saleEnd?.value && saleEnd.value <= this.value) saleEnd.value = '';
+                });
+            }
 
-            updateCapacityField();
+            if (saleEnd) {
+                saleEnd.setAttribute('min', nowStr);
+                if (!saleEnd.value) {
+                    const d = new Date(now);
+                    d.setDate(d.getDate() + 7);
+                    d.setMinutes(0, 0, 0);
+                    saleEnd.value = toLocalDatetimeValue(d);
+                }
+            }
+
+            document.getElementById('addTicketTypeForm')?.addEventListener('submit', function () {
+                const startVal = saleStart?.value;
+                const endVal   = saleEnd?.value;
+                if (startVal) document.getElementById('saleStartUtc').value = new Date(startVal).toISOString();
+                if (endVal)   document.getElementById('saleEndUtc').value   = new Date(endVal).toISOString();
+            });
         });
     </script>
 }

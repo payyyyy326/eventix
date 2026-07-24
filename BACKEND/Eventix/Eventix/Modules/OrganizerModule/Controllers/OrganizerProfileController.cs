@@ -95,6 +95,23 @@ namespace Eventix.Modules.OrganizerModule.Controllers
             return SuccessResponse(SystemSuccess.TICKET_TYPES_RETRIEVED, response);
         }
 
+        [HttpPut("detail")]
+        public async Task<ActionResult<ApiResponseModel<OrganizerProfileResponse>>> UpdateOrganizerDetail([FromBody] UpdateOrganizerProfileRequest request)
+        {
+            var userIdValue =
+                User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!Guid.TryParse(userIdValue, out var userId))
+                return Unauthorized();
+
+            var profile =
+                await _organizerProfileService.UpdateMyProfileAsync(
+                    userId,
+                    request);
+
+            return SuccessResponse(SystemSuccess.ORGANIZER_UPDATED, profile);
+        }
+
         //PATCH : api/organizer/{id}/approve
         [Authorize(Roles = SystemConstants.RoleConstants.ADMIN)]
         [HttpPatch("{id}/approve")]

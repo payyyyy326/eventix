@@ -32,7 +32,7 @@
                 <span class="commerce-status">@booking.Status</span>
             </div>
             <div class="commerce-total">
-                <span>@booking.TotalAmount.ToString("N0") VND</span>
+                <span>@booking.TotalAmount.ToString("#,##0") VND</span>
                 @if (canPay)
                 {
                     <strong class="booking-countdown">Đang tính...</strong>

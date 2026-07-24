@@ -1,5 +1,10 @@
 ﻿@model Eventix.Share.Event.EventDetailResponse
 
+@{
+    ViewData["Title"] = Model.Title;
+    Layout = "_Layout";
+}
+
 <section class="event-banner">
     <img src="@MediaUrl.Img(Model.BannerUrl)"
          alt="@Model.Title" />
@@ -23,7 +28,7 @@
 
             <div class="meta-item">
                 <span class="meta-label">
-                    Start Time
+                    Thời gian bắt đầu
                 </span>
 
                 <span class="meta-value">
@@ -33,7 +38,7 @@
 
             <div class="meta-item">
                 <span class="meta-label">
-                    End Time
+                    Thời gian kết thúc
                 </span>
 
                 <span class="meta-value">
@@ -43,7 +48,7 @@
 
             <div class="meta-item">
                 <span class="meta-label">
-                    Venue
+                    Địa điểm
                 </span>
 
                 <span class="meta-value">
@@ -53,7 +58,7 @@
 
             <div class="meta-item">
                 <span class="meta-label">
-                    Organizer
+                    Đơn vị tổ chức
                 </span>
 
                 <span class="meta-value">
@@ -68,7 +73,7 @@
 </section>
 
 <section class="ticket-section">
-    <h2>Ticket Types</h2>
+    <h2>Các loại vé</h2>
 
     @if (Model.TicketTypes.Any())
     {
@@ -99,23 +104,23 @@
                 <div class="ticket-meta">
 
                     <span>
-                        Available:
+                        Còn lại:
                         @(ticket.Quantity -
                                             ticket.SoldQuantity -
                                             ticket.ReservedQuantity)
                 </span>
 
                         <span>
-                            Sale:
-                            @ticket.SaleStartTime.ToString("dd/MM")
+                            Thời gian bán:
+                            @ticket.SaleStartTime.ToString("dd/MM/yyyy HH:mm")
                             -
-                            @ticket.SaleEndTime.ToString("dd/MM")
+                            @ticket.SaleEndTime.ToString("dd/MM/yyyy HH:mm")
                         </span>
 
                 @if (ticket.IsSeatRequired)
                         {
                             <span>
-                                Reserved Seat
+                                Có chọn ghế
                             </span>
                         }
 
@@ -126,13 +131,13 @@
                 <div class="ticket-right">
 
                     <div class="ticket-price">
-                        @ticket.Price.ToString("N0") VND
+                        @ticket.Price.ToString("#,##0") VND
                     </div>
 
                     @{
                         var available = ticket.Quantity -
-                            ticket.SoldQuantity -
-                            ticket.ReservedQuantity;
+                        ticket.SoldQuantity -
+                        ticket.ReservedQuantity;
                     }
 
                     @if (available > 0)
@@ -147,7 +152,9 @@
                     }
                     else
                     {
-                        <span class="ticket-sold-out">Hết vé</span>
+                        <span class="ticket-sold-out">
+                            Hết vé
+                        </span>
                     }
 
                 </div>
@@ -158,18 +165,18 @@
     else
     {
         <p class="empty-text">
-            No ticket types available.
+            Hiện chưa có loại vé nào.
         </p>
     }
 </section>
 
 <section class="event-description">
 
-    <h2>About Event</h2>
+    <h2>Giới thiệu sự kiện</h2>
 
     <div class="description-content">
         @Html.Raw(Model.Description)
     </div>
 
 </section>
-
+```

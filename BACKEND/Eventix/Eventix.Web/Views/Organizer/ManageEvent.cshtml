@@ -1,97 +1,324 @@
-﻿@model Eventix.Share.Event.OrganizerEventDetailResponse
-
+@using Eventix.Share.SeatMap
+@model Eventix.Share.Event.OrganizerEventDetailResponse
 @{
-    ViewData["Title"] = "Manage Event";
+    ViewData["Title"] = "Quản lí sự kiện";
     Layout = "_OrganizerLayout";
+
+    var activeTab     = ViewBag.ManageTab as string ?? "general";
+    var checkInResult = ViewBag.CheckInResult as Eventix.Share.Commerce.CheckInResponse;
+    var checkInMode   = ViewBag.CheckInMode as string ?? string.Empty;
+    var seatLayouts   = ViewBag.SeatMapLayouts as List<VenueSectionLayoutResponse> ?? new();
+
+    var isEditable = Model.Status is "Draft";
+
+    var statusLabel = Model.Status switch
+    {
+        "Draft"     => "Bản nháp",
+        "Published" => "Đã xuất bản",
+        "OnSale"    => "Đang mở bán",
+        "Ongoing"   => "Đang diễn ra",
+        "SoldOut"   => "Hết vé",
+        "Completed" => "Đã kết thúc",
+        "Cancelled" => "Đã huỷ",
+        _           => Model.Status
+    };
+
+    var statusClass = Model.Status?.ToLower() switch
+    {
+        "onsale"    => "on-sale",
+        "published" => "published",
+        "ongoing"   => "ongoing",
+        "soldout"   => "sold-out",
+        "completed" => "completed",
+        "cancelled" => "cancelled",
+        _           => "draft"
+    };
 }
 
 <section class="manage-event-page">
 
+    @* ── Hero ── *@
     <div class="manage-event-hero">
-        <img src="@MediaUrl.Img(Model.BannerUrl ?? Model.ImageUrl)"
-             alt="@Model.Title" />
-
+        <img src="@MediaUrl.Img(Model.BannerUrl ?? Model.ImageUrl)" alt="@Model.Title" />
         <div class="manage-event-overlay">
-            <span class="status-badge @Model.Status.ToLower()">
-                @Model.Status
-            </span>
-
+            <span class="status-badge @statusClass">@statusLabel</span>
             <h1>@Model.Title</h1>
-
-            <p>@Model.CategoryName • @Model.VenueName</p>
+            <p>@Model.CategoryName &nbsp;·&nbsp; @Model.VenueName &nbsp;·&nbsp; @Model.VenueCity</p>
         </div>
     </div>
 
+    @* ── Tabs ── *@
     <div class="manage-tabs">
-        <a class="active" href="#">General</a>
-        <a asp-controller="Organizer" asp-action="TicketTypes" asp-route-eventId="@Model.Id">Ticket Types</a>
-        <a href="#">Seats</a>
-        <a href="#">Orders</a>
-        <a href="#">Statistics</a>
+        <a class="@(activeTab=="general"?"active":"")"
+           asp-controller="Organizer" asp-action="ManageEvent"
+           asp-route-id="@Model.Id" asp-route-tab="general">
+            📋 Thông tin chung
+        </a>
+        <a class="@(activeTab=="tickettypes"?"active":"")"
+           asp-controller="Organizer" asp-action="TicketTypes"
+           asp-route-eventId="@Model.Id">
+            🎫 Loại vé
+        </a>
+        <a class="@(activeTab=="map"?"active":"")"
+           asp-controller="Organizer" asp-action="ManageEvent"
+           asp-route-id="@Model.Id" asp-route-tab="map">
+            🗺 Sơ đồ
+        </a>
+        <a class="@(activeTab=="checkin"?"active":"")"
+           asp-controller="Organizer" asp-action="ManageEvent"
+           asp-route-id="@Model.Id" asp-route-tab="checkin">
+            ✅ Check-in
+        </a>
     </div>
 
-    <div class="dashboard-stats">
-        <div class="stat-card">
-            <span>Total Tickets</span>
-            <strong>@Model.TotalTickets</strong>
-        </div>
-
-        <div class="stat-card">
-            <span>Tickets Sold</span>
-            <strong>@Model.TicketsSold</strong>
-        </div>
-
-        <div class="stat-card">
-            <span>Ticket Types</span>
-            <strong>@Model.TicketTypeCount</strong>
-        </div>
-
-        <div class="stat-card">
-            <span>Revenue</span>
-            <strong>@Model.Revenue.ToString("N0")đ</strong>
-        </div>
-    </div>
-
-    <div class="dashboard-panel">
-        <div class="panel-header">
-            <h2>General Information</h2>
-
-            <a asp-controller="Organizer"
-               asp-action="EditEvent"
-               asp-route-id="@Model.Id">
-                Edit
-            </a>
-        </div>
-
-        <div class="manage-info-grid">
-            <div>
-                <span>Start Time</span>
-                <strong>@Model.StartTime.ToString("dd/MM/yyyy HH:mm")</strong>
+    @* ════════════════════════════════════════
+       TAB: THÔNG TIN CHUNG
+    ════════════════════════════════════════ *@
+    @if (activeTab == "general")
+    {
+        @* Stat cards *@
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <div class="stat-icon stat-icon--purple">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M0 4.5A1.5 1.5 0 0 1 1.5 3h13A1.5 1.5 0 0 1 16 4.5V6a.5.5 0 0 1-.5.5 1.5 1.5 0 0 0 0 3 .5.5 0 0 1 .5.5v1.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 11.5V10a.5.5 0 0 1 .5-.5 1.5 1.5 0 1 0 0-3A.5.5 0 0 1 0 6V4.5z"/>
+                    </svg>
+                </div>
+                <div><span>Tổng vé</span><strong>@Model.TotalTickets.ToString("#,##0")</strong></div>
             </div>
-
-            <div>
-                <span>End Time</span>
-                <strong>@Model.EndTime.ToString("dd/MM/yyyy HH:mm")</strong>
+            <div class="stat-card">
+                <div class="stat-icon stat-icon--green">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                    </svg>
+                </div>
+                <div><span>Đã bán</span><strong>@Model.TicketsSold.ToString("#,##0")</strong></div>
             </div>
-
-            <div>
-                <span>Category</span>
-                <strong>@Model.CategoryName</strong>
+            <div class="stat-card">
+                <div class="stat-icon stat-icon--blue">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2H2z"/>
+                    </svg>
+                </div>
+                <div><span>Loại vé</span><strong>@Model.TicketTypeCount</strong></div>
             </div>
-
-            <div>
-                <span>Venue</span>
-                <strong>@Model.VenueName</strong>
+            <div class="stat-card">
+                <div class="stat-icon stat-icon--yellow">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.149-.17-1.94-.8-2.131-1.718H4zm3.391-3.836c-1.043-.263-1.6-.825-1.6-1.616 0-.944.704-1.641 1.8-1.828v3.495l-.2-.051zm1.591 1.872c1.287.323 1.852.859 1.852 1.769 0 1.097-.826 1.828-2.2 1.939V8.73l.348.087z"/>
+                    </svg>
+                </div>
+                <div><span>Doanh thu</span><strong>@Model.Revenue.ToString("#,##0")đ</strong></div>
             </div>
         </div>
 
-        <div class="manage-description">
-            <h3>Summary</h3>
-            <p>@Model.Summary</p>
+        <div class="tab-panel">
+            <div class="tab-panel-header">
+                <div>
+                    <h2 class="tab-panel-title">Thông tin chung</h2>
+                    <p class="tab-panel-desc">Chi tiết sự kiện và thông tin địa điểm</p>
+                </div>
+                @if (isEditable)
+                {
+                    <a class="dashboard-create-btn" asp-controller="EventWizard" asp-action="Step1">
+                        ✏️ Chỉnh sửa
+                    </a>
+                }
+                else
+                {
+                    <span class="manage-readonly-badge">🔒 Đã xuất bản — chỉ xem</span>
+                }
+            </div>
 
-            <h3>Description</h3>
-            <div>@Html.Raw(Model.Description)</div>
+            @if (!isEditable)
+            {
+                <div class="tab-panel-notice tab-panel-notice--warn">
+                    Sự kiện đã được xuất bản. Thông tin không thể chỉnh sửa.
+                </div>
+            }
+
+            <div class="manage-info-grid">
+                <div><span>Thời gian bắt đầu</span><strong>@Model.StartTime.ToString("dd/MM/yyyy HH:mm")</strong></div>
+                <div><span>Thời gian kết thúc</span><strong>@Model.EndTime.ToString("dd/MM/yyyy HH:mm")</strong></div>
+                <div><span>Danh mục</span><strong>@Model.CategoryName</strong></div>
+                <div><span>Địa điểm</span><strong>@Model.VenueName · @Model.VenueCity</strong></div>
+                <div><span>Lượt xem</span><strong>@Model.ViewCount.ToString("#,##0")</strong></div>
+                <div><span>Còn lại</span><strong>@Model.TicketsRemaining.ToString("#,##0") vé</strong></div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Summary))
+            {
+                <div class="manage-description">
+                    <h3>Tóm tắt</h3>
+                    <p>@Model.Summary</p>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <div class="manage-description">
+                    <h3>Mô tả</h3>
+                    <div>@Html.Raw(Model.Description)</div>
+                </div>
+            }
         </div>
-    </div>
+    }
+
+    @* ════════════════════════════════════════
+       TAB: SƠ ĐỒ
+    ════════════════════════════════════════ *@
+    @if (activeTab == "map")
+    {
+        <div class="tab-panel">
+            <div class="tab-panel-header">
+                <div>
+                    <h2 class="tab-panel-title">Sơ đồ khu vực</h2>
+                    <p class="tab-panel-desc">Bố trí các khu vực vé trên mặt bằng sự kiện</p>
+                </div>
+                <span class="manage-readonly-badge">🔒 Chỉ xem</span>
+            </div>
+
+            @if (seatLayouts.Any())
+            {
+                <div class="tab-panel-notice tab-panel-notice--info">
+                    Sơ đồ được thiết lập khi tạo sự kiện và không thể chỉnh sửa sau khi xuất bản.
+                </div>
+
+                <div class="map-legend">
+                    @foreach (var z in seatLayouts)
+                    {
+                        <div class="map-legend-item">
+                            <span class="map-legend-dot" style="background:@z.Color"></span>
+                            <span>@z.Section</span>
+                            @if (z.IsSeatRequired)
+                            {
+                                <span class="map-legend-badge map-legend-badge--seat">💺 @z.TotalSeats ghế</span>
+                            }
+                            else
+                            {
+                                <span class="map-legend-badge map-legend-badge--stand">🧍 Vé đứng</span>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="seat-map-stage-label">STAGE / SÂN KHẤU</div>
+
+                <div class="seat-map-canvas seat-map-readonly">
+                    @foreach (var z in seatLayouts)
+                    {
+                        <div class="seat-map-zone"
+                             style="left:@(z.X)px;top:@(z.Y)px;width:@(z.Width)px;height:@(z.Height)px;background:@z.Color;cursor:default;">
+                            <div class="seat-map-zone-content">
+                                <strong>@z.Section</strong>
+                                <span>@(z.IsSeatRequired ? $"{z.TotalSeats} ghế" : "Vé đứng")</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="organizer-empty">
+                    <p>Sự kiện này chưa có sơ đồ khu vực.</p>
+                </div>
+            }
+        </div>
+    }
+
+    @* ════════════════════════════════════════
+       TAB: CHECK-IN
+    ════════════════════════════════════════ *@
+    @if (activeTab == "checkin")
+    {
+        <div class="tab-panel">
+            <div class="tab-panel-header">
+                <div>
+                    <h2 class="tab-panel-title">Check-in vé</h2>
+                    <p class="tab-panel-desc">Xác nhận vé của khách tham dự</p>
+                </div>
+            </div>
+
+            <div class="tab-panel-notice tab-panel-notice--info">
+                <strong>Lưu ý:</strong> Vé phải đang ở trạng thái Active. Mỗi vé chỉ được check-in một lần.
+            </div>
+
+            <h3 class="checkin-choice-title">Chọn phương thức check-in</h3>
+
+            <div class="checkin-mode-picker" role="group">
+                <button type="button" class="checkin-mode-button" data-checkin-mode="manual" aria-selected="false">
+                    <strong>Nhập mã QR</strong>
+                    <span>Dán QR token hiển thị trên vé</span>
+                </button>
+                <button type="button" class="checkin-mode-button" data-checkin-mode="image" aria-selected="false">
+                    <strong>Tải ảnh QR</strong>
+                    <span>Chọn ảnh vé đã lưu trong máy</span>
+                </button>
+            </div>
+
+            <section class="checkin-method" data-checkin-panel="manual" hidden>
+                <h3 class="checkin-method-title">Nhập QR token</h3>
+                <p class="checkin-method-desc">Nhập chuỗi QR token nằm dưới mã QR trên vé.</p>
+                <form asp-controller="Commerce" asp-action="CheckIn" method="post" class="checkin-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="EventId" value="@Model.Id" />
+                    <input type="hidden" name="returnEventId" value="@Model.Id" />
+                    <div class="org-form-group">
+                        <label>QR Token</label>
+                        <input class="org-input" name="QrToken" placeholder="Dán token từ vé vào đây..." />
+                    </div>
+                    <button class="dashboard-create-btn" type="submit">Xác nhận check-in</button>
+                </form>
+            </section>
+
+            <section class="checkin-method" data-checkin-panel="image" hidden>
+                <h3 class="checkin-method-title">Tải ảnh chứa mã QR</h3>
+                <p class="checkin-method-desc">Chọn ảnh vé rõ nét. Hỗ trợ PNG, JPG, WEBP, BMP — tối đa 5 MB.</p>
+                <form asp-controller="Commerce" asp-action="CheckInImage" method="post"
+                      enctype="multipart/form-data" class="checkin-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="eventId" value="@Model.Id" />
+                    <input type="hidden" name="returnEventId" value="@Model.Id" />
+                    <div class="org-form-group">
+                        <label>Ảnh chứa mã QR</label>
+                        <input class="org-input" name="qrImage" type="file"
+                               accept="image/png,image/jpeg,image/webp,image/bmp" required />
+                    </div>
+                    <button class="dashboard-create-btn" type="submit">Tải ảnh và check-in</button>
+                </form>
+            </section>
+
+            @if (checkInResult != null)
+            {
+                <div class="checkin-success" role="status">
+                    <h3>✓ Check-in thành công</h3>
+                    <p>@checkInResult.CustomerName &nbsp;·&nbsp; @checkInResult.TicketTypeName @checkInResult.SeatLabel</p>
+                    <strong>@checkInResult.TicketCode</strong>
+                </div>
+            }
+        </div>
+    }
 
 </section>
+
+@section Scripts {
+<script>
+    (() => {
+        const buttons = document.querySelectorAll('[data-checkin-mode]');
+        const panels  = document.querySelectorAll('[data-checkin-panel]');
+
+        function selectMode(mode) {
+            buttons.forEach(b => {
+                const active = b.dataset.checkinMode === mode;
+                b.classList.toggle('is-selected', active);
+                b.setAttribute('aria-selected', String(active));
+            });
+            panels.forEach(p => { p.hidden = p.dataset.checkinPanel !== mode; });
+        }
+
+        buttons.forEach(b => b.addEventListener('click', () => selectMode(b.dataset.checkinMode)));
+
+        const saved = '@checkInMode';
+        if (saved === 'manual' || saved === 'image') selectMode(saved);
+    })();
+</script>
+}
