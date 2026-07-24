@@ -22,9 +22,6 @@
 | **Payment** | ❌ Chưa làm | Folder rỗng |
 | **Ticket** | ❌ Chưa làm | Folder rỗng |
 | **CheckIn** | ❌ Chưa làm | Folder rỗng |
-| **Refund** | ❌ Chưa làm | Folder rỗng |
-| **Coupon** | ❌ Chưa làm | Folder rỗng |
-| **Notification** | ❌ Chưa làm | Folder rỗng |
 | **Reports** | ❌ Chưa làm | Folder rỗng |
 | **Admin** | ❌ Chưa làm | Folder rỗng |
 | QR Code | ❌ Chưa làm | Infrastructure/QR rỗng |

@@ -23,11 +23,11 @@ hỏng giao dịch chính nếu SMTP lỗi.
 
 1. Quản lý vòng đời người dùng và xác thực email bằng OTP.
 2. Quản lý hồ sơ Organizer và quy trình phê duyệt.
-3. Quản lý category, venue, zone, section layout và seat map.
+3. Quản lý category, venue, section layout và seat map.
 4. Tạo, chỉnh sửa, publish và tự động cập nhật trạng thái sự kiện.
-5. Hỗ trợ hai mô hình vé:
-   - Vé đứng: chọn khu và số lượng.
-   - Vé ngồi: chọn khu và từng số ghế cụ thể.
+5. Hỗ trợ hai mô hình vé dựa trên `TicketType.IsSeatRequired`:
+   - Vé ngồi (`true`): seat map generate từ tên TicketType, buyer chọn ghế cụ thể.
+   - Vé đứng (`false`): buyer chỉ nhập số lượng.
 6. Giữ vé trong 15 phút với kiểm soát tranh chấp.
 7. Tạo order, thanh toán, phát hành ticket và QR.
 8. Hủy hoặc tự động hết hạn để hoàn lại tồn kho/ghế.
@@ -51,25 +51,20 @@ hỏng giao dịch chính nếu SMTP lỗi.
 | Automation | Job cập nhật trạng thái event và job giải phóng booking hết hạn |
 | Email | OTP và thông báo toàn bộ vòng đời booking; QR nhúng trong mail thanh toán |
 
-### 4.2 Có mô hình dữ liệu nhưng chưa có luồng hoàn chỉnh
+### 4.2 Chưa triển khai
 
-- Coupon và CouponUsage.
-- RefundPolicy và RefundRequest.
-- Review.
-- Notification trong ứng dụng.
-- Cart và CartItem.
-- EventAitag và UserEventInteraction cho AI/gợi ý.
-- PaymentWebhookLog và payment gateway thật.
-
-Các entity trên không được coi là tính năng hoàn thiện cho tới khi có controller,
-service, validation, giao diện và kiểm thử tương ứng.
+- Payment gateway thật (VNPay, MoMo), webhook/callback và reconciliation.
+- AI tagging và recommendation.
 
 ## 5. Yêu cầu nghiệp vụ trọng yếu
 
 ### 5.1 Tồn kho và ghế
 
 - `AvailableQuantity = Quantity - SoldQuantity - ReservedQuantity`.
-- Vé ngồi yêu cầu số ghế được chọn bằng số lượng đặt.
+- Loại vé được xác định bởi `TicketType.IsSeatRequired`:
+  - `true`: vé ngồi — buyer chọn ghế cụ thể trên seat map; seat map generate từ tên TicketType.
+  - `false`: vé đứng — buyer chỉ nhập số lượng; không có seat map.
+- Ghế được generate tự động khi Publish event, section = tên TicketType.
 - Ghế phải thuộc đúng event và ticket type, trạng thái `Available`.
 - Khi giữ: tăng `ReservedQuantity`, ghế `Available → Reserved`.
 - Khi trả giữ: giảm `ReservedQuantity`, ghế `Reserved → Available`.

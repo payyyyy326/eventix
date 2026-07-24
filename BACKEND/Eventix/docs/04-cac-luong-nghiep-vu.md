@@ -110,51 +110,57 @@ sequenceDiagram
     end
 ```
 
-## 6. Tạo venue, zone và ghế
+## 6. Tạo venue và ghế
 
-### 6.1 Venue/zone
+### 6.1 Venue
 
 1. Organizer tạo Venue.
-2. Tạo các VenueZone.
-3. Zone đứng đặt `HasSeats = false`; zone ngồi đặt `HasSeats = true`.
-4. Section layout ánh xạ section trong seat map tới zone.
+2. Venue là địa điểm vật lý, không bắt buộc phải cấu hình VenueZone trước khi tạo event.
 
-### 6.2 Import/generate ghế
+### 6.2 Ghế được generate từ TicketType
 
 ```mermaid
 sequenceDiagram
     actor Organizer
     participant Web
-    participant SeatAPI
+    participant TicketTypeAPI
     participant DB
 
-    Organizer->>Web: Chọn venue và file/template
-    Web->>SeatAPI: Import Excel hoặc Generate
-    SeatAPI->>SeatAPI: Validate section, row, number, tọa độ
-    SeatAPI->>DB: Kiểm tra unique venue/section/row/number
-    SeatAPI->>DB: Tạo Seat + layout liên quan
-    SeatAPI-->>Web: Kết quả import/seat map
+    Organizer->>Web: Tạo Ticket Type (tên, giá, số lượng, IsSeatRequired)
+    Web->>TicketTypeAPI: POST /api/OrganizerProfile/events/{id}/ticket-types
+    TicketTypeAPI->>DB: Tạo TicketType (Section = tên ticket type)
+    TicketTypeAPI->>DB: Tạo VenueSectionLayout (ánh xạ section → venue)
+    Note over TicketTypeAPI,DB: Ghế chưa được tạo ở bước này
+    Organizer->>Web: Publish event
+    Web->>TicketTypeAPI: POST /api/events/{id}/publish
+    TicketTypeAPI->>DB: Generate Seat theo lưới (Row × Col) từ Quantity
+    TicketTypeAPI->>DB: Tạo EventSeatStatus = Available cho từng ghế
 ```
 
-Ghế vật lý chưa có trạng thái bán. Khi gắn với event/ticket type, hệ thống tạo
-`EventSeatStatus` để theo dõi Available/Reserved/Sold.
+- Tên section của ghế lấy từ **tên TicketType** (không phải VenueZone).
+- Ghế được đặt tên tự động: `{RowLabel}{Number}`, tọa độ tính theo lưới.
+- `IsSeatRequired = true`: ghế ngồi, buyer chọn ghế cụ thể trên seat map.
+- `IsSeatRequired = false`: vé đứng, buyer chỉ nhập số lượng.
+- Ghế đã tạo ở lần publish trước sẽ được **skip** để tránh trùng.
+- `VenueZoneId = null` trong luồng này; VenueZone là module tùy chọn riêng.
 
 ## 7. Tạo sự kiện bằng Event Wizard
 
 ```mermaid
 flowchart TD
     S1[Thông tin cơ bản] --> S2[Chọn/tạo venue]
-    S2 --> S3[Cấu hình zone và seat map]
-    S3 --> S4[Tạo ticket type]
-    S4 --> S5[Upload banner/images]
-    S5 --> S6[Review]
-    S6 --> S7[Lưu Draft hoặc Publish]
+    S2 --> S3[Tạo ticket type + cấu hình ghế]
+    S3 --> S4[Upload banner/images]
+    S4 --> S5[Review]
+    S5 --> S6[Lưu Draft hoặc Publish]
 ```
 
 ### Quy tắc
 
 - Event liên kết Category, Venue và OrganizerProfile.
-- Ticket type khai báo zone/section, quota, price, sale window và `IsSeatRequired`.
+- Ticket type khai báo **tên section, quota, price, sale window** và `IsSeatRequired`.
+- Section của seat map được tạo tự động từ **tên TicketType** — không cần cấu hình VenueZone riêng.
+- Ghế được generate khi Publish; mỗi lần publish chỉ tạo ghế chưa tồn tại.
 - Event chỉ nên publish khi thông tin bắt buộc, venue và ticket type hợp lệ.
 - Ảnh được lưu vào vùng upload và URL được lưu trong database.
 
@@ -468,16 +474,12 @@ ApiResponseModel<T>
 Trong transaction, exception dẫn tới rollback. Riêng lỗi email xảy ra sau commit và
 bị catch để không đổi kết quả nghiệp vụ.
 
-## 20. Các luồng mới chỉ là dự kiến
+## 20. Các luồng dự kiến chưa triển khai
 
-Những luồng sau có entity nhưng chưa có implementation hoàn chỉnh:
+Những luồng sau chưa có implementation:
 
-- Apply coupon và đối soát CouponUsage.
-- Refund request, review/approve và hoàn tiền gateway.
-- Notification center trong ứng dụng.
-- Review/rating sau sự kiện.
+- Payment gateway thật (VNPay, MoMo), callback/webhook và reconciliation.
 - AI tagging và recommendation.
-- Payment gateway thật, callback/webhook và reconciliation.
 
 ## 21. Checklist kiểm thử luồng
 
