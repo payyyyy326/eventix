@@ -54,21 +54,20 @@ public class CheckInController : BaseApiController
     [RequestSizeLimit(MaxQrImageSize)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxQrImageSize)]
     public async Task<ActionResult<ApiResponseModel<CheckInResponse>>> ScanImage(
-        [FromForm] Guid eventId,
-        [FromForm] IFormFile? qrImage,
+        [FromForm] ScanImageRequest request,
         CancellationToken cancellationToken)
     {
-        if (eventId == Guid.Empty)
+        if (request.EventId == Guid.Empty)
             throw new BadRequestException("Event ID không hợp lệ.");
-        if (qrImage == null || qrImage.Length == 0)
+        if (request.QrImage == null || request.QrImage.Length == 0)
             throw new BadRequestException("Vui lòng chọn ảnh QR.");
-        if (qrImage.Length > MaxQrImageSize)
+        if (request.QrImage.Length > MaxQrImageSize)
             throw new BadRequestException("Ảnh QR không được vượt quá 5 MB.");
-        if (!AllowedImageTypes.Contains(qrImage.ContentType.ToLowerInvariant()))
+        if (!AllowedImageTypes.Contains(request.QrImage.ContentType.ToLowerInvariant()))
             throw new BadRequestException(
                 "Chỉ hỗ trợ ảnh PNG, JPG, WEBP hoặc BMP.");
 
-        await using var imageStream = qrImage.OpenReadStream();
+        await using var imageStream = request.QrImage.OpenReadStream();
         var qrToken = await _qrCodeDecoder.DecodeAsync(
             imageStream,
             cancellationToken);
@@ -80,7 +79,7 @@ public class CheckInController : BaseApiController
         var result = await _service.CheckInAsync(
             new CheckInRequest
             {
-                EventId = eventId,
+                EventId = request.EventId,
                 QrToken = qrToken.Trim()
             },
             UserId,
