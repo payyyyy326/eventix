@@ -1,93 +1,239 @@
-﻿@{
-    ViewData["Title"] = "Organizer Dashboard";
+@model Eventix.Web.Models.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
     Layout = "_OrganizerLayout";
+
+    string FormatRevenue(decimal v) => v >= 1_000_000_000
+        ? (v / 1_000_000_000m).ToString("N1") + "B"
+        : v >= 1_000_000
+            ? (v / 1_000_000m).ToString("N1") + "M"
+            : v.ToString("#,##0");
 }
 
 <section class="organizer-dashboard">
 
     <div class="dashboard-header">
-        <div>
-            <span>Organizer</span>
+        <div class="page-heading">
             <h1>Dashboard</h1>
-            <p>Overview of your events, ticket sales and revenue.</p>
+            <p>Tổng quan sự kiện, doanh thu và vé đã bán.</p>
         </div>
-
-        <a class="dashboard-create-btn"
-           asp-controller="EventWizard"
-           asp-action="Step1">
-            + Create Event
+        <a class="dashboard-create-btn" asp-controller="EventWizard" asp-action="Step1">
+            + Tạo sự kiện
         </a>
     </div>
 
+    @* Stat cards *@
     <div class="dashboard-stats">
         <div class="stat-card">
-            <span>Total Events</span>
-            <strong>12</strong>
-        </div>
-
-        <div class="stat-card">
-            <span>Upcoming Events</span>
-            <strong>4</strong>
-        </div>
-
-        <div class="stat-card">
-            <span>Tickets Sold</span>
-            <strong>1,248</strong>
-        </div>
-
-        <div class="stat-card">
-            <span>Revenue</span>
-            <strong>248,000,000đ</strong>
-        </div>
-    </div>
-
-    <div class="dashboard-panel">
-        <div class="panel-header">
-            <h2>Recent Events</h2>
-
-            <a asp-controller="Organizer"
-               asp-action="Events">
-                View all
-            </a>
-        </div>
-
-        <div class="organizer-event-list">
-            <div class="organizer-event-row">
-                <div>
-                    <h3>Summer Music Festival</h3>
-                    <p>15/08/2026 • Published</p>
-                </div>
-
-                <div class="event-row-stats">
-                    <span>520 sold</span>
-                    <strong>156,000,000đ</strong>
-                </div>
+            <div class="stat-icon stat-icon--purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2H2z"/>
+                    <path d="M4.5 6.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zm0 3A.5.5 0 0 1 5 9h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5z"/>
+                </svg>
             </div>
-
-            <div class="organizer-event-row">
-                <div>
-                    <h3>AI Product Workshop</h3>
-                    <p>05/09/2026 • Published</p>
-                </div>
-
-                <div class="event-row-stats">
-                    <span>180 sold</span>
-                    <strong>63,000,000đ</strong>
-                </div>
+            <div>
+                <span>Tổng sự kiện</span>
+                <strong>@Model.TotalEvents</strong>
             </div>
+        </div>
 
-            <div class="organizer-event-row">
-                <div>
-                    <h3>Rock Việt Summer Fest 2026</h3>
-                    <p>15/08/2026 • Draft</p>
-                </div>
+        <div class="stat-card">
+            <div class="stat-icon stat-icon--blue">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+                    <path d="M8 6.5a.5.5 0 0 1 .5.5v1.5H10a.5.5 0 0 1 0 1H8.5V11a.5.5 0 0 1-1 0V9.5H6a.5.5 0 0 1 0-1h1.5V7a.5.5 0 0 1 .5-.5z"/>
+                </svg>
+            </div>
+            <div>
+                <span>Sắp diễn ra</span>
+                <strong>@Model.UpcomingEvents</strong>
+            </div>
+        </div>
 
-                <div class="event-row-stats">
-                    <span>0 sold</span>
-                    <strong>0đ</strong>
-                </div>
+        <div class="stat-card">
+            <div class="stat-icon stat-icon--green">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M0 4.5A1.5 1.5 0 0 1 1.5 3h13A1.5 1.5 0 0 1 16 4.5V6a.5.5 0 0 1-.5.5 1.5 1.5 0 0 0 0 3 .5.5 0 0 1 .5.5v1.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 11.5V10a.5.5 0 0 1 .5-.5 1.5 1.5 0 1 0 0-3A.5.5 0 0 1 0 6V4.5z"/>
+                </svg>
+            </div>
+            <div>
+                <span>Vé đã bán</span>
+                <strong>@Model.TotalTicketsSold.ToString("#,##0")</strong>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon stat-icon--yellow">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.149-.17-1.94-.8-2.131-1.718H4zm3.391-3.836c-1.043-.263-1.6-.825-1.6-1.616 0-.944.704-1.641 1.8-1.828v3.495l-.2-.051zm1.591 1.872c1.287.323 1.852.859 1.852 1.769 0 1.097-.826 1.828-2.2 1.939V8.73l.348.087z"/>
+                </svg>
+            </div>
+            <div>
+                <span>Doanh thu</span>
+                <strong>@FormatRevenue(Model.TotalRevenue)đ</strong>
             </div>
         </div>
     </div>
 
-</section>s
+    <div class="dashboard-charts-row">
+
+        <div class="dashboard-panel dashboard-chart-main">
+            <div class="panel-header">
+                <h2>Doanh thu & Vé bán (12 tháng)</h2>
+                <div class="chart-legend">
+                    <span class="legend-dot legend-dot--purple"></span> Doanh thu
+                    <span class="legend-dot legend-dot--blue" style="margin-left:14px"></span> Vé bán
+                </div>
+            </div>
+            <canvas id="revenueChart" height="110"></canvas>
+        </div>
+
+        <div class="dashboard-panel dashboard-chart-side">
+            <div class="panel-header">
+                <h2>Trạng thái sự kiện</h2>
+            </div>
+            @if (Model.EventsByStatus.Any())
+            {
+                <div class="donut-wrap">
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <div class="donut-legend">
+                    @foreach (var kv in Model.EventsByStatus)
+                    {
+                        <div class="donut-legend-item">
+                            <span class="status-badge @(kv.Key.ToLower() switch {
+                                "onsale" => "on-sale",
+                                "published" => "published",
+                                "ongoing" => "ongoing",
+                                "soldout" => "sold-out",
+                                "completed" => "completed",
+                                "cancelled" => "cancelled",
+                                _ => "draft"
+                            })">@kv.Key</span>
+                            <strong>@kv.Value</strong>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="organizer-empty"><p>Chưa có dữ liệu.</p></div>
+            }
+        </div>
+
+    </div>
+
+</section>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const labels  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthLabels));
+    const revenue = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RevenueByMonth));
+    const tickets = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TicketsByMonth));
+
+    // ── Line / Bar combo chart ──────────────────────────────────────────────
+    new Chart(document.getElementById('revenueChart'), {
+        data: {
+            labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Doanh thu (đ)',
+                    data: revenue,
+                    backgroundColor: 'rgba(138,37,255,0.25)',
+                    borderColor: '#8a25ff',
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    yAxisID: 'yRevenue',
+                },
+                {
+                    type: 'line',
+                    label: 'Vé bán',
+                    data: tickets,
+                    borderColor: '#2563ff',
+                    backgroundColor: 'rgba(37,99,255,0.12)',
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#2563ff',
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'yTickets',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ctx.datasetIndex === 0
+                            ? ' ' + Number(ctx.raw).toLocaleString('en-US') + 'đ'
+                            : ' ' + ctx.raw + ' vé'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#9ca3af', font: { size: 12 } },
+                    grid:  { color: 'rgba(255,255,255,0.05)' }
+                },
+                yRevenue: {
+                    position: 'left',
+                    ticks: {
+                        color: '#a78bfa',
+                        callback: v => v >= 1e9 ? (v/1e9).toFixed(1)+'B'
+                                     : v >= 1e6 ? (v/1e6).toFixed(1)+'M'
+                                     : v.toLocaleString('en-US')
+                    },
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                },
+                yTickets: {
+                    position: 'right',
+                    ticks: { color: '#60a5fa' },
+                    grid:  { drawOnChartArea: false }
+                }
+            }
+        }
+    });
+
+    // ── Doughnut chart ──────────────────────────────────────────────────────
+    const statusData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.EventsByStatus));
+    const statusColors = {
+        'Draft':     '#6b7280',
+        'Published': '#60a5fa',
+        'OnSale':    '#4ade80',
+        'Ongoing':   '#facc15',
+        'SoldOut':   '#fb7185',
+        'Completed': '#c4b5fd',
+        'Cancelled': '#ef4444',
+    };
+
+    new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(statusData),
+            datasets: [{
+                data: Object.values(statusData),
+                backgroundColor: Object.keys(statusData).map(k => statusColors[k] ?? '#6b7280'),
+                borderWidth: 0,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            cutout: '70%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.label}: ${ctx.raw} sự kiện`
+                    }
+                }
+            }
+        }
+    });
+</script>
+}

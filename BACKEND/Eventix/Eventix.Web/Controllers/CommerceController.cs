@@ -3,6 +3,7 @@ using Eventix.Share.Commerce;
 using Eventix.Share.Booking;
 using Eventix.Share.Common.Constants;
 using Eventix.Share.Common.Models;
+using Eventix.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Eventix.Web.Controllers;
@@ -12,66 +13,104 @@ public class CommerceController : Controller
     private readonly IHttpClientFactory _factory;
     public CommerceController(IHttpClientFactory factory) => _factory = factory;
 
+    // ─── Trang gộp Vé đang giữ + Vé đã mua ─────────────────────────────────
     [HttpGet]
-    public async Task<IActionResult> Bookings()
+    public async Task<IActionResult> MyTickets(string tab = "bookings")
     {
         var client = AuthorizedClient();
         if (client == null) return RedirectToAction("Login", "Auth");
-        var result = await client.GetFromJsonAsync<
+
+        ViewBag.ActiveTab = tab;
+
+        var bookingsTask = client.GetFromJsonAsync<
             ApiResponseModel<PaginationResponse<BookingResponse>>>(
             "api/bookings/my?CurrentPage=1&PageSize=100");
-        return View(result?.Data?.DataList ?? []);
+
+        var ticketsTask = client.GetFromJsonAsync<
+            ApiResponseModel<List<TicketResponse>>>("api/tickets/my");
+
+        await Task.WhenAll(bookingsTask, ticketsTask);
+
+        var model = new MyTicketsViewModel
+        {
+            Bookings = bookingsTask.Result?.Data?.DataList ?? [],
+            Tickets = ticketsTask.Result?.Data ?? []
+        };
+
+        return View(model);
     }
 
+    // ─── Backward-compat redirects cho link cũ ──────────────────────────────
+    [HttpGet]
+    public IActionResult Bookings() =>
+        RedirectToAction("MyTickets", new { tab = "bookings" });
+
+    [HttpGet]
+    public IActionResult Tickets() =>
+        RedirectToAction("MyTickets", new { tab = "tickets" });
+
+    // ─── Huỷ giữ vé ─────────────────────────────────────────────────────────
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelBooking(Guid id)
     {
         var client = AuthorizedClient();
         if (client == null) return RedirectToAction("Login", "Auth");
+
         var response = await client.DeleteAsync($"api/bookings/{id}");
         var result = await response.Content.ReadFromJsonAsync<ApiResponseModel<object>>();
+
         TempData[response.IsSuccessStatusCode ? "Success" : "Error"] =
             result?.Message ?? (response.IsSuccessStatusCode
-                ? "Đã hủy giữ vé."
-                : "Không thể hủy giữ vé.");
-        return RedirectToAction("Bookings");
+                ? "Đã huỷ giữ vé."
+                : "Không thể huỷ giữ vé.");
+
+        return RedirectToAction("MyTickets", new { tab = "bookings" });
     }
 
+    // ─── Checkout ────────────────────────────────────────────────────────────
     [HttpGet]
     public async Task<IActionResult> Checkout(List<Guid> reservationIds)
     {
         var client = AuthorizedClient();
         if (client == null) return RedirectToAction("Login", "Auth");
+
         var response = await client.PostAsJsonAsync("api/orders",
             new CreateOrderRequest { ReservationIds = reservationIds });
         var result = await response.Content.ReadFromJsonAsync<ApiResponseModel<OrderResponse>>();
+
         if (!response.IsSuccessStatusCode || result?.Data == null)
         {
             TempData["Error"] = result?.Message ?? "Không thể tạo đơn hàng.";
             return RedirectToAction("Orders");
         }
+
         return View(result.Data);
     }
 
+    // ─── Thanh toán Demo ─────────────────────────────────────────────────────
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Pay(Guid orderId)
     {
         var client = AuthorizedClient();
         if (client == null) return RedirectToAction("Login", "Auth");
+
         var response = await client.PostAsJsonAsync("api/payments/demo/complete",
             new DemoPaymentRequest { OrderId = orderId });
         var result = await response.Content.ReadFromJsonAsync<ApiResponseModel<PaymentResponse>>();
+
         if (!response.IsSuccessStatusCode || result?.Data == null)
         {
             TempData["Error"] = result?.Message ?? "Thanh toán không thành công.";
             return RedirectToAction("Orders");
         }
+
         TempData["Success"] = "Thanh toán thành công. Vé điện tử đã được phát hành.";
-        return RedirectToAction("Tickets");
+        return RedirectToAction("MyTickets", new { tab = "tickets" });
     }
 
+    // ─── Đơn hàng ────────────────────────────────────────────────────────────
     [HttpGet]
     public async Task<IActionResult> Orders()
     {
@@ -81,15 +120,7 @@ public class CommerceController : Controller
         return View(result?.Data ?? []);
     }
 
-    [HttpGet]
-    public async Task<IActionResult> Tickets()
-    {
-        var client = AuthorizedClient();
-        if (client == null) return RedirectToAction("Login", "Auth");
-        var result = await client.GetFromJsonAsync<ApiResponseModel<List<TicketResponse>>>("api/tickets/my");
-        return View(result?.Data ?? []);
-    }
-
+    // ─── Xem vé điện tử đơn lẻ ──────────────────────────────────────────────
     [HttpGet]
     public async Task<IActionResult> Ticket(Guid id)
     {
@@ -99,6 +130,7 @@ public class CommerceController : Controller
         return result?.Data == null ? NotFound() : View(result.Data);
     }
 
+    // ─── Check-in (standalone page — vẫn giữ để backward compat) ────────────
     [HttpGet]
     public IActionResult CheckIn(Guid? eventId) =>
         View(new CheckInRequest { EventId = eventId ?? Guid.Empty });
@@ -110,28 +142,44 @@ public class CommerceController : Controller
         ViewBag.CheckInMode = "manual";
         var client = AuthorizedClient();
         if (client == null) return RedirectToAction("Login", "Auth");
+
         var response = await client.PostAsJsonAsync("api/checkin/scan", request);
         var result = await response.Content.ReadFromJsonAsync<ApiResponseModel<CheckInResponse>>();
+
+        // Nếu có returnEventId, redirect về ManageEvent tab check-in
+        if (Request.Form.TryGetValue("returnEventId", out var returnId)
+            && Guid.TryParse(returnId, out var eventId))
+        {
+            if (!response.IsSuccessStatusCode || result?.Data == null)
+            {
+                TempData["Error"] = result?.Message ?? "Không thể check-in vé.";
+            }
+            else
+            {
+                TempData["Success"] = $"Check-in thành công: {result.Data.CustomerName} — {result.Data.TicketCode}";
+            }
+            return RedirectToAction("ManageEvent", "Organizer",
+                new { id = eventId, tab = "checkin" });
+        }
+
         if (!response.IsSuccessStatusCode || result?.Data == null)
         {
             ModelState.AddModelError("", result?.Message ?? "Không thể check-in vé.");
             return View(request);
         }
+
         ViewBag.Result = result.Data;
         return View(request);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CheckInImage(
-        Guid eventId,
-        IFormFile? qrImage)
+    public async Task<IActionResult> CheckInImage(Guid eventId, IFormFile? qrImage)
     {
         ViewBag.CheckInMode = "image";
         var request = new CheckInRequest { EventId = eventId };
         var client = AuthorizedClient();
-        if (client == null)
-            return RedirectToAction("Login", "Auth");
+        if (client == null) return RedirectToAction("Login", "Auth");
 
         if (eventId == Guid.Empty)
         {
@@ -162,17 +210,34 @@ public class CommerceController : Controller
         var response = await client.PostAsync("api/checkin/scan-image", form);
         var result = await response.Content
             .ReadFromJsonAsync<ApiResponseModel<CheckInResponse>>();
+
+        // Nếu có returnEventId, redirect về ManageEvent tab check-in
+        if (Request.Form.TryGetValue("returnEventId", out var returnId)
+            && Guid.TryParse(returnId, out var retEventId))
+        {
+            if (!response.IsSuccessStatusCode || result?.Data == null)
+            {
+                TempData["Error"] = result?.Message ?? "Không thể đọc hoặc check-in QR từ ảnh.";
+            }
+            else
+            {
+                TempData["Success"] = $"Check-in thành công: {result.Data.CustomerName} — {result.Data.TicketCode}";
+            }
+            return RedirectToAction("ManageEvent", "Organizer",
+                new { id = retEventId, tab = "checkin" });
+        }
+
         if (!response.IsSuccessStatusCode || result?.Data == null)
         {
-            ModelState.AddModelError(
-                "",
-                result?.Message ?? "Không thể đọc hoặc check-in QR từ ảnh.");
+            ModelState.AddModelError("", result?.Message ?? "Không thể đọc hoặc check-in QR từ ảnh.");
             return View("CheckIn", request);
         }
 
         ViewBag.Result = result.Data;
         return View("CheckIn", request);
     }
+
+    // ─── Helper ──────────────────────────────────────────────────────────────
     private HttpClient? AuthorizedClient()
     {
         var token = Request.Cookies[SystemConstants.CookieNames.Token];

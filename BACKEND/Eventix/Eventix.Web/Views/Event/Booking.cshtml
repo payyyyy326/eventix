@@ -116,7 +116,7 @@
                                data-seat-required="@ticket.IsSeatRequired.ToString().ToLowerInvariant()"
                                data-price="@ticket.Price" />
                         <span class="booking-ticket-name">@ticket.Name</span>
-                        <span>@ticket.Price.ToString("N0") VND</span>
+                        <span>@ticket.Price.ToString("#,##0") VND</span>
                         <small>Còn @available vé · @(ticket.IsSeatRequired ? "Chọn ghế" : "Tự do")</small>
                     </label>
                 }

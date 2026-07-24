@@ -6,7 +6,7 @@
     <section class="commerce-card">
         <div class="commerce-row"><strong>@order.OrderCode</strong><span class="commerce-status">@order.Status</span></div>
         @foreach (var item in order.Items) { <p>@item.EventTitle · @item.TicketTypeName · @item.Quantity vé</p> }
-        <div class="commerce-total"><span>@order.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span><strong>@order.TotalAmount.ToString("N0") VND</strong></div>
+        <div class="commerce-total"><span>@order.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span><strong>@order.TotalAmount.ToString("#,##0") VND</strong></div>
     </section>
 }
 </main>

@@ -230,9 +230,10 @@ namespace Eventix.Modules.OrganizerModule.Services
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.UserId == userId);
 
-            if (organizerProfile == null) throw new NotFoundException(SystemError.ORGANIZER_NOT_FOUND);
+            if (organizerProfile == null)
+                throw new NotFoundException(SystemError.ORGANIZER_NOT_FOUND);
 
-            var response = new OrganizerProfileResponse
+            return new OrganizerProfileResponse
             {
                 Id = organizerProfile.Id,
                 UserId = organizerProfile.UserId,
@@ -241,11 +242,53 @@ namespace Eventix.Modules.OrganizerModule.Services
                 ContactEmail = organizerProfile.ContactEmail,
                 ContactPhone = organizerProfile.ContactPhone,
                 Status = organizerProfile.Status,
+                ApprovedBy = organizerProfile.ApprovedBy,
+                ApprovedAt = organizerProfile.ApprovedAt,
                 CreatedAt = organizerProfile.CreatedAt
             };
-            return response;
         }
+        public async Task<OrganizerProfileResponse> UpdateMyProfileAsync(Guid userId, UpdateOrganizerProfileRequest request)
+        {
+            var profile = await _context.OrganizerProfiles
+                .FirstOrDefaultAsync(x => x.UserId == userId);
 
+            if (profile == null)
+                throw new NotFoundException(SystemError.ORGANIZER_NOT_FOUND);
+
+            var organizationName = request.OrganizationName.Trim();
+
+            var duplicateName = await _context.OrganizerProfiles
+                .AnyAsync(x =>
+                    x.Id != profile.Id &&
+                    x.OrganizationName.ToLower() == organizationName.ToLower());
+
+            if (duplicateName)
+            {
+                throw new BadRequestException(
+                    "Organization name already exists.");
+            }
+
+            profile.OrganizationName = organizationName;
+            profile.Description = request.Description?.Trim();
+            profile.ContactEmail = request.ContactEmail?.Trim();
+            profile.ContactPhone = request.ContactPhone?.Trim();
+
+            await _context.SaveChangesAsync();
+
+            return new OrganizerProfileResponse
+            {
+                Id = profile.Id,
+                UserId = profile.UserId,
+                OrganizationName = profile.OrganizationName,
+                Description = profile.Description,
+                ContactEmail = profile.ContactEmail,
+                ContactPhone = profile.ContactPhone,
+                Status = profile.Status,
+                ApprovedBy = profile.ApprovedBy,
+                ApprovedAt = profile.ApprovedAt,
+                CreatedAt = profile.CreatedAt
+            };
+        }
         public async Task<OrganizerProfileResponse> RejectAsync(Guid organizerProfileId, Guid adminId)
         {
             var organizer = await _context.OrganizerProfiles

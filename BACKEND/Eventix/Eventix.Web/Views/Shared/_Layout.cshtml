@@ -1,4 +1,4 @@
-﻿@{
+@{
     var roles = (Context.Request.Cookies["roles"] ?? "")
         .Split(',', StringSplitOptions.RemoveEmptyEntries);
 
@@ -47,10 +47,6 @@
                 <a asp-controller="Event" asp-action="Index">
                     Sự kiện
                 </a>
-
-                <a asp-controller="Category" asp-action="Index">
-                    Danh mục
-                </a>
             </nav>
 
             <div class="auth-actions">
@@ -60,7 +56,7 @@
                     {
                         <a asp-controller="Organizer"
                            asp-action="Dashboard">
-                            Sự kiện của tôi
+                            Quản lí sự kiện
                         </a>
                     }
 
@@ -74,15 +70,8 @@
                         </span>
                     </a>
 
-                    <a asp-controller="User" asp-action="EditProfile">Hồ sơ</a>
-                    <a asp-controller="Commerce" asp-action="Bookings">Vé đang giữ</a>
-                    <a asp-controller="Commerce" asp-action="Tickets">Vé của tôi</a>
+                    <a asp-controller="Commerce" asp-action="MyTickets">Vé của tôi</a>
                     <a asp-controller="Commerce" asp-action="Orders">Đơn hàng</a>
-
-                    @if (isOrganizer)
-                    {
-                        <a asp-controller="Commerce" asp-action="CheckIn">Check-in</a>
-                    }
 
                     <form asp-controller="Auth" asp-action="Logout" method="post">
                         <button type="submit">Đăng xuất</button>

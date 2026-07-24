@@ -1,5 +1,6 @@
-﻿using Eventix.Share.Common.Models;
+using Eventix.Share.Common.Models;
 using Eventix.Share.User;
+using Eventix.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Headers;
 
@@ -45,44 +46,49 @@ namespace Eventix.Web.Controllers
             if (!response.IsSuccessStatusCode || result?.Data == null)
                 return RedirectToAction("Login", "Auth");
 
-            return View(result.Data);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> EditProfile()
-        {
-            var client = CreateAuthorizedClient();
-
-            if (client == null)
-                return RedirectToAction("Login", "Auth");
-
-            var response = await client.GetAsync("api/user/profile");
-
-            var result = await response.Content
-                .ReadFromJsonAsync<ApiResponseModel<UserResponse>>();
-
-            if (!response.IsSuccessStatusCode || result?.Data == null)
-                return RedirectToAction("Profile");
-
-            var model = new UpdateProfileRequest
+            var model = new ProfileViewModel
             {
-                FullName = result.Data.FullName,
-                PhoneNumber = result.Data.PhoneNumber
+                Profile = result.Data,
+                EditRequest = new UpdateProfileRequest
+                {
+                    FullName = result.Data.FullName,
+                    PhoneNumber = result.Data.PhoneNumber
+                }
             };
 
             return View(model);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> EditProfile(UpdateProfileRequest model)
+        // GET: EditProfile - redirect về Profile với edit mở sẵn
+        [HttpGet]
+        public IActionResult EditProfile()
         {
-            if (!ModelState.IsValid)
-                return View(model);
+            return RedirectToAction("Profile");
+        }
 
+        [HttpPost]
+        public async Task<IActionResult> EditProfile([Bind(Prefix = "EditRequest")] UpdateProfileRequest model)
+        {
             var client = CreateAuthorizedClient();
 
             if (client == null)
                 return RedirectToAction("Login", "Auth");
+
+            if (!ModelState.IsValid)
+            {
+                // Tải lại profile data để render trang Profile với lỗi
+                var profileResp = await client.GetAsync("api/user/profile");
+                var profileResult = await profileResp.Content
+                    .ReadFromJsonAsync<ApiResponseModel<UserResponse>>();
+
+                var profileModel = new ProfileViewModel
+                {
+                    Profile = profileResult?.Data ?? new UserResponse(),
+                    EditRequest = model
+                };
+                ViewBag.ShowEdit = true;
+                return View("Profile", profileModel);
+            }
 
             var response = await client.PutAsJsonAsync("api/user/profile", model);
 
@@ -91,8 +97,19 @@ namespace Eventix.Web.Controllers
 
             if (!response.IsSuccessStatusCode || result == null || !result.IsSuccess)
             {
-                ModelState.AddModelError("", result?.Message ?? "Update profile failed");
-                return View(model);
+                // Tải lại profile data để render trang Profile với lỗi
+                var profileResp = await client.GetAsync("api/user/profile");
+                var profileResult = await profileResp.Content
+                    .ReadFromJsonAsync<ApiResponseModel<UserResponse>>();
+
+                var profileModel = new ProfileViewModel
+                {
+                    Profile = profileResult?.Data ?? new UserResponse(),
+                    EditRequest = model
+                };
+                ModelState.AddModelError("", result?.Message ?? "Cập nhật hồ sơ thất bại.");
+                ViewBag.ShowEdit = true;
+                return View("Profile", profileModel);
             }
 
             if (result.Data != null)
@@ -101,7 +118,7 @@ namespace Eventix.Web.Controllers
                 Response.Cookies.Append("avatarUrl", result.Data.AvatarUrl ?? "/images/default-avatar.png");
             }
 
-            TempData["Success"] = result.Message;
+            TempData["Success"] = result.Message ?? "Cập nhật hồ sơ thành công.";
 
             return RedirectToAction("Profile");
         }

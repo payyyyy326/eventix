@@ -1,59 +1,121 @@
-﻿@using Eventix.Share.Common.Models
+@using Eventix.Share.Common.Models
 @using Eventix.Share.TicketType
 @model PaginationResponse<TicketTypeResponse>
 
 @{
-    var eventId = (Guid)ViewBag.EventId;
+    var eventId     = (Guid)ViewBag.EventId;
     var eventStatus = ViewBag.EventStatus as string ?? "Draft";
-    var eventTitle = ViewBag.EventTitle as string ?? "";
+    var eventTitle  = ViewBag.EventTitle  as string ?? "";
+    var eventImage  = ViewBag.EventImage  as string ?? "";
+    var canEdit     = eventStatus == "Draft";
 
-    // Chỉ cho phép edit/deactivate khi event còn ở Draft
-    var canEdit = eventStatus == "Draft";
+    var statusLabel = eventStatus switch
+    {
+        "Draft"     => "Bản nháp",
+        "Published" => "Đã xuất bản",
+        "OnSale"    => "Đang mở bán",
+        "Ongoing"   => "Đang diễn ra",
+        "SoldOut"   => "Hết vé",
+        "Completed" => "Đã kết thúc",
+        "Cancelled" => "Đã huỷ",
+        _           => eventStatus
+    };
 
-    ViewData["Title"] = "Ticket Types";
+    var statusClass = eventStatus.ToLower() switch
+    {
+        "onsale"    => "on-sale",
+        "published" => "published",
+        "ongoing"   => "ongoing",
+        "soldout"   => "sold-out",
+        "completed" => "completed",
+        "cancelled" => "cancelled",
+        _           => "draft"
+    };
+
+    ViewData["Title"] = "Loại vé";
     Layout = "_OrganizerLayout";
 }
 
-<section class="organizer-page">
+<section class="manage-event-page">
 
-    <div class="dashboard-header">
-        <div class="page-heading">
-            <a class="back-link"
-               asp-controller="Organizer"
-               asp-action="ManageEvent"
-               asp-route-id="@eventId">
-                ← Back to Event
-            </a>
-
-            <span>Event Management</span>
-
-            <h1>Ticket Types</h1>
-
-            @if (!string.IsNullOrEmpty(eventTitle))
-            {
-                <p>@eventTitle</p>
-            }
-            else
-            {
-                <p>Manage ticket prices, quantity and sales.</p>
-            }
+    @* ── Hero banner (giống ManageEvent) ── *@
+    <div class="manage-event-hero">
+        @if (!string.IsNullOrEmpty(eventImage))
+        {
+            <img src="@MediaUrl.Img(eventImage)" alt="@eventTitle" />
+        }
+        else
+        {
+            <div style="background: linear-gradient(135deg, #1e1b4b, #0f172a); width:100%; height:100%;"></div>
+        }
+        <div class="manage-event-overlay">
+            <span class="status-badge @statusClass">@statusLabel</span>
+            <h1>@eventTitle</h1>
+            <p>Quản lí loại vé &amp; giá bán</p>
         </div>
+    </div>
 
-        <a class="dashboard-create-btn"
-           asp-controller="TicketType"
-           asp-action="Create"
+    @* ── Tabs (giữ context điều hướng) ── *@
+    <div class="manage-tabs">
+        <a asp-controller="Organizer" asp-action="ManageEvent"
+           asp-route-id="@eventId" asp-route-tab="general">
+            📋 Thông tin chung
+        </a>
+        <a class="active"
+           asp-controller="Organizer" asp-action="TicketTypes"
            asp-route-eventId="@eventId">
-            + Add Ticket Type
+            🎫 Loại vé
+        </a>
+        <a asp-controller="Organizer" asp-action="ManageEvent"
+           asp-route-id="@eventId" asp-route-tab="map">
+            🗺 Sơ đồ
+        </a>
+        <a asp-controller="Organizer" asp-action="ManageEvent"
+           asp-route-id="@eventId" asp-route-tab="checkin">
+            ✅ Check-in
         </a>
     </div>
 
-    <div class="dashboard-panel">
+    @* ── Nội dung loại vé ── *@
+    <div class="tab-panel">
+        <div class="tab-panel-header">
+            <div>
+                <h2 class="tab-panel-title">Danh sách loại vé</h2>
+                <p class="tab-panel-desc">Quản lý giá vé, số lượng và khu vực</p>
+            </div>
+            @if (canEdit)
+            {
+                <a class="dashboard-create-btn"
+                   asp-controller="TicketType" asp-action="Create"
+                   asp-route-eventId="@eventId">
+                    + Thêm loại vé
+                </a>
+            }
+            else
+            {
+                <span class="manage-readonly-badge">🔒 Đã xuất bản — chỉ xem</span>
+            }
+        </div>
+
+        @if (!canEdit)
+        {
+            <div class="tab-panel-notice tab-panel-notice--warn">
+                Sự kiện đã được xuất bản. Loại vé không thể chỉnh sửa hoặc xoá.
+            </div>
+        }
 
         @if (Model == null || Model.DataList == null || !Model.DataList.Any())
         {
             <div class="organizer-empty">
-                <h2>No ticket types yet</h2>
-                <p>Create ticket types to start selling tickets.</p>
+                <p>Chưa có loại vé nào.</p>
+                @if (canEdit)
+                {
+                    <a class="dashboard-create-btn"
+                       asp-controller="TicketType" asp-action="Create"
+                       asp-route-eventId="@eventId">
+                        + Thêm loại vé đầu tiên
+                    </a>
+                }
             </div>
         }
         else
@@ -61,64 +123,77 @@
             <div class="ticket-admin-list">
                 @foreach (var ticket in Model.DataList.OrderBy(t => t.Price))
                 {
-                    var remaining = ticket.Quantity - ticket.SoldQuantity - ticket.ReservedQuantity;
-                    var revenue = ticket.Price * ticket.SoldQuantity;
-                    var soldPercent = ticket.Quantity == 0
-                        ? 0
+                    var remaining    = ticket.Quantity - ticket.SoldQuantity - ticket.ReservedQuantity;
+                    var revenue      = ticket.Price * ticket.SoldQuantity;
+                    var soldPercent  = ticket.Quantity == 0 ? 0
                         : (int)Math.Round((double)ticket.SoldQuantity / ticket.Quantity * 100);
-
-                    var ticketStatusClass = ticket.Status?.ToLower() == "active" ? "active" : "inactive";
+                    var statusCss    = ticket.Status?.ToLower() == "active" ? "active" : "inactive";
 
                     <div class="ticket-admin-card">
                         <div class="ticket-main">
+
                             <div class="ticket-title-row">
                                 <h3>@ticket.Name</h3>
-                                <span class="ticket-status @ticketStatusClass">
-                                    @ticket.Status
+                                <span class="ticket-status @statusCss">
+                                    @(ticket.Status?.ToLower() == "active" ? "Đang bán" : "Tạm dừng")
                                 </span>
+                                @if (ticket.IsSeatRequired)
+                                {
+                                    <span class="ticket-status" style="background:rgba(96,165,250,.12);color:#60a5fa;">
+                                        💺 Có ghế
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="ticket-status" style="background:rgba(167,139,250,.12);color:#a78bfa;">
+                                        🧍 Vé đứng
+                                    </span>
+                                }
                             </div>
 
-                            <p>@ticket.Description</p>
+                            @if (!string.IsNullOrEmpty(ticket.Description))
+                            {
+                                <p>@ticket.Description</p>
+                            }
 
                             <div class="ticket-admin-meta">
-                                <span>Section: @(ticket.Section ?? "N/A")</span>
-                                <span>@(ticket.IsSeatRequired ? "Assigned Seating" : "General Admission")</span>
-                                <span>Total: @ticket.Quantity</span>
-                                <span>Sold: @ticket.SoldQuantity</span>
-                                <span>Reserved: @ticket.ReservedQuantity</span>
-                                <span>Remaining: @remaining</span>
+                                @if (!string.IsNullOrEmpty(ticket.Section))
+                                {
+                                    <span>Khu vực: @ticket.Section</span>
+                                }
+                                <span>Tổng: @ticket.Quantity.ToString("#,##0")</span>
+                                <span>Đã bán: @ticket.SoldQuantity.ToString("#,##0")</span>
+                                <span>Đặt trước: @ticket.ReservedQuantity.ToString("#,##0")</span>
+                                <span>Còn lại: @remaining.ToString("#,##0")</span>
                             </div>
 
                             <div class="ticket-progress">
                                 <div style="width:@soldPercent%"></div>
                             </div>
+                            <p style="font-size:12px;color:#6b7280;margin:4px 0 0;">@soldPercent% đã bán</p>
                         </div>
 
                         <div class="ticket-admin-side">
-                            <strong>@ticket.Price.ToString("N0") đ</strong>
-                            <span>Revenue: @revenue.ToString("N0") đ</span>
+                            <strong>@ticket.Price.ToString("#,##0")đ</strong>
+                            <span>Doanh thu: @revenue.ToString("#,##0")đ</span>
 
                             @if (canEdit)
                             {
                                 <div class="ticket-actions">
                                     <a class="ticket-action edit"
-                                       asp-controller="TicketType"
-                                       asp-action="Edit"
+                                       asp-controller="TicketType" asp-action="Edit"
                                        asp-route-id="@ticket.Id">
-                                        Edit
+                                        Sửa
                                     </a>
-
                                     @if (ticket.Status?.ToLower() == "active")
                                     {
-                                        <form asp-controller="TicketType"
-                                              asp-action="Deactivate"
+                                        <form asp-controller="TicketType" asp-action="Deactivate"
                                               asp-route-id="@ticket.Id"
                                               asp-route-eventId="@ticket.EventId"
                                               method="post"
-                                              onsubmit="return confirm('Deactivate this ticket type?');">
-                                            <button type="submit" class="ticket-action danger">
-                                                Deactivate
-                                            </button>
+                                              onsubmit="return confirm('Tạm dừng loại vé này?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="ticket-action danger">Dừng bán</button>
                                         </form>
                                     }
                                 </div>
@@ -128,7 +203,6 @@
                 }
             </div>
         }
-
     </div>
 
 </section>

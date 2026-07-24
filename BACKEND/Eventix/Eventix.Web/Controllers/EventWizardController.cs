@@ -126,36 +126,6 @@ namespace Eventix.Web.Controllers
             return View(model);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Step3Continue()
-        {
-            var token = Request.Cookies[CookieNames.Token];
-
-            if (string.IsNullOrWhiteSpace(token))
-                return RedirectToAction("Login", "Auth");
-
-            var venueIdString = HttpContext.Session.GetString("EventWizard_VenueId");
-
-            if (string.IsNullOrWhiteSpace(venueIdString))
-                return RedirectToAction("Step2");
-
-            var venueId = Guid.Parse(venueIdString);
-
-            var client = _httpClientFactory.CreateClient("Eventix");
-
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
-
-            var zones = await LoadVenueZonesAsync(client, venueId);
-
-            if (!zones.Any())
-            {
-                TempData["Error"] = "Please create at least one venue zone before continuing.";
-                return RedirectToAction("Step3");
-            }
-
-            return RedirectToAction("Step4");
-        }
 
         [HttpPost]
         public async Task<IActionResult> Step2(EventVenueViewModel model)
@@ -190,7 +160,7 @@ namespace Eventix.Web.Controllers
                 InvalidateSeatMapSave();
 
                 // Skip Step 3 (Venue Zones) - go directly to Ticket Types
-                return RedirectToAction("Step4");
+                return RedirectToAction("Step3");
             }
 
             if (model.Mode == "create")
@@ -231,7 +201,7 @@ namespace Eventix.Web.Controllers
                 InvalidateSeatMapSave();
 
                 // Skip Step 3 (Venue Zones) - go directly to Ticket Types
-                return RedirectToAction("Step4");
+                return RedirectToAction("Step3");
             }
 
             ModelState.AddModelError("", "Invalid venue mode.");
@@ -243,249 +213,6 @@ namespace Eventix.Web.Controllers
         public async Task<IActionResult> Step3()
         {
             ViewBag.CurrentStep = 3;
-
-            var token = Request.Cookies[CookieNames.Token];
-
-            if (string.IsNullOrWhiteSpace(token))
-                return RedirectToAction("Login", "Auth");
-
-            var venueIdString =
-                HttpContext.Session.GetString("EventWizard_VenueId");
-
-            if (!Guid.TryParse(venueIdString, out var venueId))
-                return RedirectToAction("Step2");
-
-            var client =
-                _httpClientFactory.CreateClient("Eventix");
-
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
-
-            var model = await BuildStep3ModelAsync(
-                client,
-                venueId);
-
-            return View(model);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateZone(
-    EventZonesViewModel model)
-        {
-            ViewBag.CurrentStep = 3;
-
-            var token = Request.Cookies[CookieNames.Token];
-
-            if (string.IsNullOrWhiteSpace(token))
-                return RedirectToAction("Login", "Auth");
-
-            var venueIdString =
-                HttpContext.Session.GetString("EventWizard_VenueId");
-
-            if (!Guid.TryParse(venueIdString, out var venueId))
-                return RedirectToAction("Step2");
-
-            var client =
-                _httpClientFactory.CreateClient("Eventix");
-
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
-
-            model.NewZone ??= new CreateVenueZoneRequest();
-
-            model.NewZone.Name =
-                model.NewZone.Name?.Trim();
-
-            if (string.IsNullOrWhiteSpace(model.NewZone.Name))
-            {
-                ModelState.AddModelError(
-                    "NewZone.Name",
-                    "Zone name is required.");
-            }
-
-            if (model.NewZone.HasSeats)
-            {
-                model.NewZone.Capacity = 0;
-
-                // ModelState giữ giá trị cũ của form,
-                // cần cập nhật lại thành 0.
-                ModelState.Remove("NewZone.Capacity");
-            }
-            else if (model.NewZone.Capacity <= 0)
-            {
-                ModelState.AddModelError(
-                    "NewZone.Capacity",
-                    "Capacity must be greater than 0 for zones without assigned seats.");
-            }
-
-            if (model.NewZone.SortOrder < 0)
-            {
-                ModelState.AddModelError(
-                    "NewZone.SortOrder",
-                    "Sort order cannot be negative.");
-            }
-
-            if (string.IsNullOrWhiteSpace(model.NewZone.Color))
-            {
-                model.NewZone.Color = "#60A5FA";
-                ModelState.Remove("NewZone.Color");
-            }
-
-            if (!ModelState.IsValid)
-            {
-                model = await BuildStep3ModelAsync(
-                    client,
-                    venueId,
-                    model);
-
-                return View("Step3", model);
-            }
-
-            try
-            {
-                var response = await client.PostAsJsonAsync(
-                    $"api/VenueZone/venue/{venueId}",
-                    model.NewZone);
-
-                var result = await response.Content
-                    .ReadFromJsonAsync<
-                        ApiResponseModel<VenueZoneResponse>>();
-
-                if (!response.IsSuccessStatusCode ||
-                    result == null ||
-                    !result.IsSuccess)
-                {
-                    ModelState.AddModelError(
-                        string.Empty,
-                        result?.Message ?? "Cannot create zone.");
-
-                    model = await BuildStep3ModelAsync(
-                        client,
-                        venueId,
-                        model);
-
-                    return View("Step3", model);
-                }
-
-                TempData["Success"] =
-                    "Zone created successfully.";
-
-                return RedirectToAction("Step3");
-            }
-            catch (HttpRequestException)
-            {
-                ModelState.AddModelError(
-                    string.Empty,
-                    "Cannot connect to the Eventix API. Please try again.");
-            }
-            catch (NotSupportedException)
-            {
-                ModelState.AddModelError(
-                    string.Empty,
-                    "The API returned an unsupported response.");
-            }
-            catch (JsonException)
-            {
-                ModelState.AddModelError(
-                    string.Empty,
-                    "The API returned an invalid response.");
-            }
-
-            model = await BuildStep3ModelAsync(
-                client,
-                venueId,
-                model);
-
-            return View("Step3", model);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> DownloadSeatTemplate()
-        {
-            var token = Request.Cookies[CookieNames.Token];
-
-            if (string.IsNullOrWhiteSpace(token))
-                return RedirectToAction("Login", "Auth");
-
-            var client = _httpClientFactory.CreateClient("Eventix");
-
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
-
-            var response = await client.GetAsync("api/Seat/template");
-
-            if (!response.IsSuccessStatusCode)
-            {
-                TempData["Error"] = "Cannot download seat template.";
-                return RedirectToAction("Step3");
-            }
-
-            var fileBytes = await response.Content.ReadAsByteArrayAsync();
-
-            return File(
-                fileBytes,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "seat_import_template.xlsx");
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> ImportSeats(EventSeatsViewModel model)
-        {
-            var token = Request.Cookies[CookieNames.Token];
-
-            if (string.IsNullOrWhiteSpace(token))
-                return RedirectToAction("Login", "Auth");
-
-            var venueIdString = HttpContext.Session.GetString("EventWizard_VenueId");
-
-            if (string.IsNullOrWhiteSpace(venueIdString))
-                return RedirectToAction("Step2");
-
-            var venueId = Guid.Parse(venueIdString);
-
-            if (model.ExcelFile == null || model.ExcelFile.Length == 0)
-            {
-                TempData["Error"] = "Please choose an Excel file.";
-                return RedirectToAction("Step5");
-            }
-
-            var client = _httpClientFactory.CreateClient("Eventix");
-
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
-
-            using var form = new MultipartFormDataContent();
-
-            using var stream = model.ExcelFile.OpenReadStream();
-
-            var fileContent = new StreamContent(stream);
-            fileContent.Headers.ContentType =
-                new MediaTypeHeaderValue(model.ExcelFile.ContentType);
-
-            form.Add(fileContent, "File", model.ExcelFile.FileName);
-
-            var response = await client.PostAsync(
-                $"api/Seat/{venueId}/import-excel",
-                form);
-
-            var result = await response.Content.ReadFromJsonAsync<ApiResponseModel<ImportSeatResult>>();
-
-            if (!response.IsSuccessStatusCode || result == null || !result.IsSuccess)
-            {
-                TempData["Error"] = result?.Message ?? "Cannot import seats.";
-                return RedirectToAction("Step5");
-            }
-
-            TempData["Success"] = "Seats imported successfully.";
-
-            return RedirectToAction("Step5");
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> Step4()
-        {
-            ViewBag.CurrentStep = 3; // Renumbered: step 3 (Zones) removed, Ticket Types is now step 3
 
             var token = Request.Cookies[CookieNames.Token];
 
@@ -509,6 +236,15 @@ namespace Eventix.Web.Controllers
                 VenueId = venueId,
                 Venue = await LoadVenueAsync(client, venueId)
             };
+
+            // Lấy EventStartTime từ session để giới hạn SaleEndTime
+            var eventInfoJson = HttpContext.Session.GetString("EventWizard_Info");
+            if (!string.IsNullOrWhiteSpace(eventInfoJson))
+            {
+                var eventInfo = JsonSerializer.Deserialize<EventInfoViewModel>(eventInfoJson);
+                if (eventInfo?.StartTime != default)
+                    model.EventStartTime = eventInfo.StartTime;
+            }
 
             var ticketTypesJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
 
@@ -594,7 +330,7 @@ namespace Eventix.Web.Controllers
                 model.VenueId = venueId;
                 model.Venue = await LoadVenueAsync(client, venueId);
                 model.TicketTypes = ticketTypes;
-                return View("Step4", model);
+                return View("Step3", model);
             }
 
             // ── Thành công: lưu vào session ───────────────────────────────────
@@ -605,20 +341,20 @@ namespace Eventix.Web.Controllers
             InvalidateSeatMapSave();
 
             TempData["Success"] = "Ticket type added successfully.";
-            return RedirectToAction("Step4");
+            return RedirectToAction("Step3");
         }
         [HttpPost]
-        public IActionResult Step4Continue()
+        public IActionResult Step3Continue()
         {
             var ticketTypesJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
 
             if (string.IsNullOrWhiteSpace(ticketTypesJson))
             {
                 TempData["Error"] = "Please add at least one ticket type before continuing.";
-                return RedirectToAction("Step4");
+                return RedirectToAction("Step3");
             }
 
-            return RedirectToAction("Step5");
+            return RedirectToAction("Step4");
         }
 
         [HttpPost]
@@ -659,11 +395,11 @@ namespace Eventix.Web.Controllers
 
 
         [HttpGet]
-        public async Task<IActionResult> Step5()
+        public async Task<IActionResult> Step4()
         {
             // Step 5 is now "Seat Preview" - shows which ticket types will have seats auto-generated
             // Actual seat generation happens during Publish (TicketTypeService auto-generates seats)
-            ViewBag.CurrentStep = 4; // Renumbered: step 3 removed, so seat preview is visual step 4
+            ViewBag.CurrentStep = 4;
 
             var token = Request.Cookies[CookieNames.Token];
 
@@ -699,17 +435,17 @@ namespace Eventix.Web.Controllers
         }
 
         [HttpPost]
-        public IActionResult Step5Continue()
+        public IActionResult Step4Continue()
         {
             var ticketTypesJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
 
             if (string.IsNullOrWhiteSpace(ticketTypesJson))
             {
                 TempData["Error"] = "Please add at least one ticket type before continuing.";
-                return RedirectToAction("Step4");
+                return RedirectToAction("Step3");
             }
 
-            return RedirectToAction("Step6");
+            return RedirectToAction("Step5");
         }
 
         [HttpPost]
@@ -748,9 +484,9 @@ namespace Eventix.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Step6()
+        public async Task<IActionResult> Step5()
         {
-            ViewBag.CurrentStep = 5; // Renumbered: step 3 removed
+            ViewBag.CurrentStep = 5;
             ViewBag.IsSeatMapSaved = IsSeatMapSaved();
 
             var token = Request.Cookies[CookieNames.Token];
@@ -800,21 +536,21 @@ namespace Eventix.Web.Controllers
         }
 
         [HttpPost]
-        public IActionResult Step6Continue()
+        public IActionResult Step5Continue()
         {
             if (!IsSeatMapSaved())
             {
                 TempData["Error"] = "Please save the venue map before continuing to review.";
-                return RedirectToAction("Step6");
+                return RedirectToAction("Step5");
             }
 
-            return RedirectToAction("Step7");
+            return RedirectToAction("Step6");
         }
 
         [HttpGet]
-        public async Task<IActionResult> Step7()
+        public async Task<IActionResult> Step6()
         {
-            ViewBag.CurrentStep = 6; // Renumbered: step 3 removed
+            ViewBag.CurrentStep = 6;
 
             var token = Request.Cookies[CookieNames.Token];
 
@@ -851,7 +587,7 @@ namespace Eventix.Web.Controllers
                 TempData["Error"] =
                     "Please add at least one ticket type.";
 
-                return RedirectToAction("Step4");
+                return RedirectToAction("Step3");
             }
 
             EventInfoViewModel? eventInfo;
@@ -888,7 +624,7 @@ namespace Eventix.Web.Controllers
                 TempData["Error"] =
                     "Please add at least one ticket type.";
 
-                return RedirectToAction("Step4");
+                return RedirectToAction("Step3");
             }
 
             var client =
@@ -959,7 +695,7 @@ namespace Eventix.Web.Controllers
                 TempData["Error"] =
                     "Ticket type information was not found.";
 
-                return RedirectToAction("Step4");
+                return RedirectToAction("Step3");
             }
 
             EventInfoViewModel? eventInfo;
@@ -996,7 +732,7 @@ namespace Eventix.Web.Controllers
                 TempData["Error"] =
                     "At least one ticket type is required.";
 
-                return RedirectToAction("Step4");
+                return RedirectToAction("Step3");
             }
 
             if (!IsSeatMapSaved())
@@ -1004,7 +740,7 @@ namespace Eventix.Web.Controllers
                 TempData["Error"] =
                     "Please save the venue map before publishing the event.";
 
-                return RedirectToAction("Step6");
+                return RedirectToAction("Step5");
             }
 
             var client =
@@ -1026,7 +762,7 @@ namespace Eventix.Web.Controllers
             if (!validationResult.IsValid)
             {
                 TempData["Error"] = validationResult.Message;
-                return RedirectToAction("Step7");
+                return RedirectToAction("Step6");
             }
 
             Guid? createdEventId = null;
@@ -1058,7 +794,7 @@ namespace Eventix.Web.Controllers
                         createEventResult?.Message ??
                         "Cannot create event.";
 
-                    return RedirectToAction("Step7");
+                    return RedirectToAction("Step6");
                 }
 
                 createdEventId = createEventResult.Data.Id;
@@ -1088,7 +824,7 @@ namespace Eventix.Web.Controllers
                     {
                         TempData["Error"] = ticketResult?.Message ?? $"Cannot create ticket type '{ticketType.Name}'.";
 
-                        return RedirectToAction("Step7");
+                        return RedirectToAction("Step6");
                     }
                 }
 
@@ -1125,7 +861,7 @@ namespace Eventix.Web.Controllers
                         publishResult?.Message ??
                         "Event was created, but it could not be published.";
 
-                    return RedirectToAction("Step7");
+                    return RedirectToAction("Step6");
                 }
 
                 ClearEventWizardSession();
@@ -1140,13 +876,13 @@ namespace Eventix.Web.Controllers
                         ? "The event was created as a draft, but the remaining publishing steps failed."
                         : "Cannot connect to the Eventix API.";
 
-                return RedirectToAction("Step7");
+                return RedirectToAction("Step6");
             }
             catch (JsonException)
             {
                 TempData["Error"] = "The API returned an invalid response.";
 
-                return RedirectToAction("Step7");
+                return RedirectToAction("Step6");
             }
         }
 
@@ -1345,25 +1081,6 @@ namespace Eventix.Web.Controllers
                 Status = "Draft",
                 IsFeatured = false,
                 PublishedAt = null
-            };
-        }
-
-        private async Task<EventZonesViewModel> BuildStep3ModelAsync(HttpClient client, Guid venueId, EventZonesViewModel? postedModel = null)
-        {
-            return new EventZonesViewModel
-            {
-                VenueId = venueId,
-                Venue = await LoadVenueAsync(client, venueId),
-                Zones = await LoadVenueZonesAsync(client, venueId),
-
-                // Giữ lại dữ liệu người dùng vừa nhập
-                NewZone = postedModel?.NewZone ?? new CreateVenueZoneRequest
-                {
-                    HasSeats = true,
-                    Capacity = 0,
-                    Color = "#60A5FA",
-                    SortOrder = 1
-                }
             };
         }
 

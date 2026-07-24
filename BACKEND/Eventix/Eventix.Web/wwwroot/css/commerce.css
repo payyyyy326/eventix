@@ -1,6 +1,106 @@
-.commerce-page{max-width:1000px;margin:40px auto;padding:0 20px;color:#172033}.commerce-card{display:block;background:#fff;border:1px solid #e5e9f0;border-radius:16px;padding:24px;margin:18px 0;box-shadow:0 8px 30px rgba(24,39,75,.06);color:inherit;text-decoration:none}.commerce-row,.commerce-total{display:flex;justify-content:space-between;gap:20px;padding:12px 0;border-bottom:1px solid #edf0f5}.commerce-total{font-size:1.15rem;border:0}.commerce-button{display:inline-block;background:#6c4cff;color:#fff;border:0;border-radius:10px;padding:12px 20px;margin:12px 0;text-decoration:none;cursor:pointer}.commerce-status{display:inline-block;background:#eee9ff;color:#5436d8;border-radius:999px;padding:5px 11px;font-size:.85rem}.ticket-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.ticket-card{margin:0}.ticket-detail{text-align:center;max-width:560px;margin:auto}.ticket-qr{display:flex;justify-content:center;margin:24px}.qr-token{font-size:.75rem;word-break:break-all;color:#667}.commerce-card input{display:block;width:100%;box-sizing:border-box;margin:7px 0 16px;padding:12px;border:1px solid #ccd3df;border-radius:8px}.checkin-success{margin-top:20px;padding:18px;background:#e8fff2;border-radius:12px;color:#126b3c}
+.commerce-page{max-width:1000px;margin:40px auto;padding:0 20px;color:#e8eaf6}.commerce-card{display:block;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:24px;margin:18px 0;box-shadow:0 8px 30px rgba(0,0,0,.3);color:inherit;text-decoration:none}.commerce-row,.commerce-total{display:flex;justify-content:space-between;gap:20px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)}.commerce-total{font-size:1.15rem;border:0}.commerce-button{display:inline-block;background:#6c4cff;color:#fff;border:0;border-radius:10px;padding:12px 20px;margin:12px 0;text-decoration:none;cursor:pointer}.commerce-status{display:inline-block;background:rgba(108,76,255,.18);color:#c4b5fd;border-radius:999px;padding:5px 11px;font-size:.85rem}.ticket-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.ticket-card{margin:0}.ticket-detail{text-align:center;max-width:560px;margin:auto}.ticket-qr{display:flex;justify-content:center;margin:24px}.qr-token{font-size:.75rem;word-break:break-all;color:#9ca3af}.commerce-card input{display:block;width:100%;box-sizing:border-box;margin:7px 0 16px;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:#11162a;color:#ffffff}.checkin-success{margin-top:20px;padding:18px;background:rgba(34,197,94,.12);border-radius:12px;color:#22c55e;border:1px solid rgba(34,197,94,.25)}
 .booking-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.booking-actions form{margin:0}.commerce-button-danger{background:#dc3545}.booking-countdown{color:#dc3545;font-variant-numeric:tabular-nums}
 
-.checkin-notice{margin:20px 0;padding:16px 18px;border-left:4px solid #f0a500;border-radius:10px;background:#fff8e6;color:#684b00}.checkin-notice ul{margin:10px 0 0;padding-left:20px}.checkin-notice li+li{margin-top:6px}.checkin-choice-title{margin:24px 0 12px}.checkin-mode-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.checkin-mode-button{display:flex;flex-direction:column;gap:6px;text-align:left;padding:18px;border:2px solid #dfe4ee;border-radius:12px;background:#fafbff;color:#172033;cursor:pointer}.checkin-mode-button span{color:#667}.checkin-mode-button:hover,.checkin-mode-button.is-selected{border-color:#6c4cff;background:#f1edff}.checkin-mode-button.is-selected{box-shadow:0 0 0 3px rgba(108,76,255,.12)}.checkin-method{margin-top:18px;padding:20px;border:1px solid #e5e9f0;border-radius:12px;background:#fafbff}.checkin-method[hidden]{display:none}.checkin-method h2{margin-top:0}.checkin-method-notice{margin-bottom:16px;padding:12px 14px;border-radius:8px;background:#eaf3ff;color:#214c7a}
+.checkin-notice{margin:20px 0;padding:16px 18px;border-left:4px solid #f0a500;border-radius:10px;background:rgba(240,165,0,.1);color:#fcd34d}.checkin-notice ul{margin:10px 0 0;padding-left:20px}.checkin-notice li+li{margin-top:6px}.checkin-choice-title{margin:24px 0 12px;color:#ffffff}.checkin-mode-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.checkin-mode-button{display:flex;flex-direction:column;gap:6px;text-align:left;padding:18px;border:2px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.05);color:#e8eaf6;cursor:pointer}.checkin-mode-button span{color:#9ca3af}.checkin-mode-button:hover,.checkin-mode-button.is-selected{border-color:#6c4cff;background:rgba(108,76,255,.12)}.checkin-mode-button.is-selected{box-shadow:0 0 0 3px rgba(108,76,255,.2)}.checkin-method{margin-top:18px;padding:20px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.04)}.checkin-method[hidden]{display:none}.checkin-method h2{margin-top:0;color:#ffffff}.checkin-method-notice{margin-bottom:16px;padding:12px 14px;border-radius:8px;background:rgba(96,165,250,.1);color:#93c5fd}
 
 .ticket-save-actions{text-align:center;margin-top:16px}.commerce-button:disabled{opacity:.65;cursor:not-allowed}
+
+.validation-summary-errors {
+    margin: 16px 0;
+    padding: 14px 18px;
+    border-radius: 12px;
+    color: #fca5a5;
+    background: rgba(239, 68, 68, .12);
+    border: 1px solid rgba(239, 68, 68, .2);
+}
+
+.validation-summary-errors ul {
+    margin: 8px 0 0;
+    padding-left: 20px;
+}
+
+.validation-summary-errors li {
+    margin-bottom: 4px;
+}
+
+
+
+/* ===== My Tickets Page ===== */
+.my-tickets-header {
+    margin-bottom: 6px;
+}
+
+.my-tickets-header h1 {
+    margin: 0 0 6px;
+    font-size: 36px;
+}
+
+.my-tickets-header p {
+    margin: 0;
+    color: #9ca3af;
+}
+
+.my-tickets-tabs {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    padding-bottom: 0;
+}
+
+.my-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: 10px 10px 0 0;
+    color: #9ca3af;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 15px;
+    border: 1px solid transparent;
+    border-bottom: none;
+    transition: color .2s;
+    margin-bottom: -1px;
+}
+
+.my-tab-btn:hover {
+    color: #ffffff;
+}
+
+.my-tab-btn.active {
+    color: #ffffff;
+    background: rgba(138, 37, 255, .12);
+    border-color: rgba(255, 255, 255, .1);
+    border-bottom-color: #030716;
+}
+
+.tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #8a25ff, #2563ff);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.commerce-empty {
+    text-align: center;
+    padding: 40px 24px;
+}
+
+.commerce-empty p {
+    margin-bottom: 18px;
+    color: #9ca3af;
+    font-size: 16px;
+}
+
+.expired-label {
+    color: #9ca3af;
+    font-style: italic;
+}

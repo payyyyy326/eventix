@@ -12,5 +12,10 @@ namespace Eventix.Web.Models.EventWizard
         public List<CreateTicketTypeRequest> TicketTypes { get; set; } = new();
 
         public CreateTicketTypeRequest NewTicketType { get; set; } = new();
+
+        /// <summary>
+        /// Thời gian bắt đầu sự kiện — dùng để giới hạn SaleEndTime tối đa.
+        /// </summary>
+        public DateTime? EventStartTime { get; set; }
     }
 }

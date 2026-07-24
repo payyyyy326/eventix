@@ -1,5 +1,11 @@
-﻿@{
+@{
     Layout = "_Layout";
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+
+    bool IsActive(string ctrl, string act = "")
+        => string.Equals(controller, ctrl, StringComparison.OrdinalIgnoreCase)
+        && (string.IsNullOrEmpty(act) || string.Equals(action, act, StringComparison.OrdinalIgnoreCase));
 }
 
 <div class="organizer-layout">
@@ -10,23 +16,24 @@
 
         <nav>
 
-            <a asp-controller="Organizer"
-               asp-action="Dashboard">
+            <a asp-controller="Organizer" asp-action="Dashboard"
+               class="@(IsActive("Organizer", "Dashboard") ? "active" : "")">
                 Dashboard
             </a>
 
-            <a asp-controller="Organizer"
-               asp-action="Events">
-                My Events
+            <a asp-controller="Organizer" asp-action="Events"
+               class="@(IsActive("Organizer", "Events") || IsActive("Organizer", "ManageEvent") ? "active" : "")">
+                Quản lí sự kiện
             </a>
 
-            <a asp-controller="EventWizard" asp-action="Step1">
-                Create Event
+            <a asp-controller="EventWizard" asp-action="Step1"
+               class="@(IsActive("EventWizard") ? "active" : "")">
+                Tạo sự kiện
             </a>
 
-            <a asp-controller="Organizer"
-               asp-action="Profile">
-                Organizer Profile
+            <a asp-controller="Organizer" asp-action="Profile"
+               class="@(IsActive("Organizer", "Profile") ? "active" : "")">
+                Hồ sơ tổ chức
             </a>
 
         </nav>

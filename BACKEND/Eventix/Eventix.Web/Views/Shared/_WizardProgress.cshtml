@@ -1,16 +1,14 @@
 @{
     var currentStep = (int)(ViewBag.CurrentStep ?? 1);
 
-    // Step 3 (Venue Zones) is removed - wizard now has 6 steps:
-    // 1: Event Info, 2: Venue, 3: Ticket Types, 4: Seats (preview), 5: Map, 6: Review
     var steps = new[]
     {
-        "Event Info",
-        "Venue",
-        "Ticket Types",
-        "Seats",
-        "Map",
-        "Review"
+        "Thông tin",
+        "Địa điểm",
+        "Vé",
+        "Xem trước",
+        "Sơ đồ",
+        "Xem lại"
     };
 }
 
@@ -18,25 +16,24 @@
     @for (var i = 0; i < steps.Length; i++)
     {
         var stepNumber = i + 1;
-        var cssClass = "";
-
-        if (stepNumber < currentStep)
-        {
-            cssClass = "done";
-        }
-        else if (stepNumber == currentStep)
-        {
-            cssClass = "active";
-        }
+        var cssClass = stepNumber < currentStep ? "done"
+                     : stepNumber == currentStep ? "active"
+                     : "";
 
         <div class="wizard-progress-item @cssClass">
             <div class="wizard-circle">
-                @(stepNumber < currentStep ? "✓" : stepNumber.ToString())
+                @if (stepNumber < currentStep)
+                {
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                }
+                else
+                {
+                    @stepNumber.ToString()
+                }
             </div>
-
-            <div class="wizard-label">
-                @steps[i]
-            </div>
+            <div class="wizard-label">@steps[i]</div>
         </div>
     }
 </div>

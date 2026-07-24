@@ -1,13 +1,25 @@
+﻿@using System.Text.Json
 @using Eventix.Web.Models.EventWizard
-@model EventSeatAssignmentViewModel
+@model EventSeatMapViewModel
 
 @{
-    ViewData["Title"] = "Create Event - Step 4";
+    ViewData["Title"] = "Tạo sự kiện - Bước 5";
     Layout = "_OrganizerLayout";
 
-    var seatedTypes  = Model.TicketTypes.Where(t => t.IsSeatRequired).ToList();
-    var standingTypes = Model.TicketTypes.Where(t => !t.IsSeatRequired).ToList();
-    var totalSeats   = seatedTypes.Sum(t => t.Quantity);
+    var sectionColors = new[] {
+        "#7c3aed", "#2563eb", "#16a34a", "#ea580c", "#db2777", "#0891b2",
+        "#d97706", "#be123c", "#0e7490", "#4d7c0f"
+    };
+
+    var sectionsForMap = Model.TicketTypes.Select((t, i) => new {
+        Name = t.Name,
+        SeatCount = t.IsSeatRequired ? t.Quantity : 0,
+        Color = t.SectionColor ?? sectionColors[i % sectionColors.Length],
+        IsSeatRequired = t.IsSeatRequired
+    }).ToList();
+
+    var sectionsJson = JsonSerializer.Serialize(sectionsForMap);
+    var layoutsJson  = JsonSerializer.Serialize(Model.Layouts);
 }
 
 <section class="organizer-page">
@@ -17,15 +29,15 @@
             <a class="wizard-back-link"
                asp-controller="EventWizard"
                asp-action="Step4">
-                ← Back to Ticket Types
+                ← Quay lại Xem trước ghế
             </a>
 
             <div class="wizard-title">
-                <span>Create Event</span>
-                <h1>Step 4: Seat Preview</h1>
+                <span>Tạo sự kiện</span>
+                <h1>Bước 5: Sơ đồ địa điểm</h1>
                 <p>
-                    Review how seats will be auto-generated for each ticket type.
-                    Seated tickets generate one seat per ticket quantity when published.
+                    Sắp xếp các khu vực loại vé trên sơ đồ địa điểm.
+                    Kéo và thay đổi kích thước từng khối để khớp với bố cục thực tế.
                 </p>
             </div>
 
@@ -34,159 +46,76 @@
 
         <div class="wizard-panel">
 
-            <div class="wizard-grid-3 mb-4">
-                <div class="wizard-stat">
-                    <span>Total Ticket Types</span>
-                    <strong>@Model.TicketTypes.Count</strong>
-                </div>
-
-                <div class="wizard-stat">
-                    <span>Seated Sections</span>
-                    <strong>@seatedTypes.Count</strong>
-                </div>
-
-                <div class="wizard-stat">
-                    <span>Seats to Generate</span>
-                    <strong>@totalSeats</strong>
-                </div>
-            </div>
-
             <div class="wizard-card mb-4">
-                <h3>@(Model.Venue?.Name ?? "Selected Venue")</h3>
-                <p>@(Model.Venue?.Address ?? "No address")</p>
+                <h3>@(Model.Venue?.Name ?? "Địa điểm đã chọn")</h3>
+                <p>@(Model.Venue?.Address ?? "Chưa có địa chỉ")</p>
 
                 <div class="wizard-meta">
                     <span class="wizard-pill">
-                        City: @(Model.Venue?.City ?? "N/A")
+                        Sức chứa: @(Model.Venue?.Capacity.ToString("#,##0") ?? "0")
                     </span>
                     <span class="wizard-pill">
-                        Venue Capacity: @(Model.Venue?.Capacity ?? 0)
+                        Khu vực: @Model.TicketTypes.Count
                     </span>
                 </div>
             </div>
 
-            @if (seatedTypes.Any())
+            @if (Model.TicketTypes.Any())
             {
-                <div class="mb-4">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <h3 class="text-white mb-0">💺 Seated Ticket Types</h3>
-                        <span class="wizard-pill">Seats auto-generated on publish</span>
-                    </div>
-
-                    <div class="ticket-admin-list">
-                        @foreach (var ticket in seatedTypes)
+                <div class="wizard-card mb-4">
+                    <h4 class="mb-3">Chú thích khu vực</h4>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var (ticket, index) in Model.TicketTypes.Select((t, i) => (t, i)))
                         {
-                            var priceLabel = ticket.Price <= 0 ? "Free" : $"{ticket.Price:N0} VND";
-
-                            <div class="ticket-admin-card">
-                                <div class="ticket-main">
-                                    <div class="ticket-title-row">
-                                        <h3>@ticket.Name</h3>
-                                        <span class="ticket-status active">Auto-Generate</span>
-                                    </div>
-
-                                    <p class="text-muted">
-                                        @ticket.Quantity seats will be generated in a grid layout
-                                        (Section: <strong>@ticket.Name</strong>).
-                                    </p>
-
-                                    <div class="ticket-admin-meta">
-                                        <span>Type: Assigned Seating</span>
-                                        <span>Price: @priceLabel</span>
-                                        <span>Quantity: @ticket.Quantity</span>
-                                    </div>
-                                </div>
-
-                                <div class="ticket-admin-side">
-                                    <strong>@ticket.Quantity</strong>
-                                    <span>seats</span>
-                                    <span class="wizard-pill mt-2" style="text-align:center;">
-                                        On Publish
-                                    </span>
-                                </div>
+                            var color = ticket.SectionColor ?? sectionColors[index % sectionColors.Length];
+                            <div class="d-flex align-items-center gap-2">
+                                <div style="width:14px;height:14px;border-radius:3px;background:@color;flex-shrink:0;"></div>
+                                <span class="text-muted" style="font-size:0.85rem;">
+                                    @ticket.Name
+                                    @if (ticket.IsSeatRequired)
+                                    {
+                                        <span class="wizard-pill" style="font-size:0.7rem;padding:2px 6px;margin-left:4px;">@ticket.Quantity ghế</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="wizard-pill info" style="font-size:0.7rem;padding:2px 6px;margin-left:4px;">Tự do</span>
+                                    }
+                                </span>
                             </div>
                         }
                     </div>
                 </div>
             }
 
-            @if (standingTypes.Any())
-            {
-                <div class="mb-4">
-                    <h3 class="text-white mb-3">🧍 General Admission Ticket Types</h3>
-
-                    <div class="ticket-admin-list">
-                        @foreach (var ticket in standingTypes)
-                        {
-                            var priceLabel = ticket.Price <= 0 ? "Free" : $"{ticket.Price:N0} VND";
-
-                            <div class="ticket-admin-card">
-                                <div class="ticket-main">
-                                    <div class="ticket-title-row">
-                                        <h3>@ticket.Name</h3>
-                                        <span class="ticket-status" style="background:rgba(59,130,246,0.15);color:#60A5FA;">
-                                            No Seats
-                                        </span>
-                                    </div>
-
-                                    <p class="text-muted">
-                                        General admission — no individual seat assignment required.
-                                    </p>
-
-                                    <div class="ticket-admin-meta">
-                                        <span>Type: General Admission</span>
-                                        <span>Price: @priceLabel</span>
-                                        <span>Quantity: @ticket.Quantity</span>
-                                    </div>
-                                </div>
-
-                                <div class="ticket-admin-side">
-                                    <strong>Skipped</strong>
-                                    <span>no seats needed</span>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-
-            @if (!Model.TicketTypes.Any())
-            {
-                <div class="organizer-empty mb-4">
-                    <h2>No ticket types found</h2>
-                    <p>Please go back and add at least one ticket type.</p>
-                </div>
-            }
-
-            <div class="wizard-card mb-4" style="border-left: 3px solid #10B981;">
-                <div class="d-flex align-items-start gap-3">
-                    <span style="font-size:1.5rem;">ℹ️</span>
+            <div class="wizard-card mb-4">
+                <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h4 style="color:#10B981;">Automatic Seat Generation</h4>
-                        <p class="text-muted mb-0">
-                            When you publish the event, the system will automatically generate
-                            <strong>@totalSeats seat(s)</strong> across <strong>@seatedTypes.Count section(s)</strong>.
-                            Each section name will match the ticket type name, making it easy to identify on the venue map.
-                        </p>
+                        <h3>Trình chỉnh sửa sơ đồ</h3>
+                        <p>Kéo và thay đổi kích thước từng khu vực để khớp với địa điểm thực tế.</p>
                     </div>
+                    <button type="button" id="saveSeatMapBtn" class="wizard-btn-primary">
+                        Lưu sơ đồ
+                    </button>
                 </div>
+                <div id="saveMapStatus" class="mt-2 text-muted"></div>
             </div>
 
-            <div class="wizard-actions">
+            <div class="seat-map-stage-label">SÂN KHẤU</div>
+
+            <div id="seatMapCanvas" class="seat-map-canvas"></div>
+
+            <div class="wizard-actions mt-4">
                 <a asp-controller="EventWizard"
                    asp-action="Step4"
                    class="wizard-btn-secondary">
-                    ← Back
+                    ← Quay lại
                 </a>
-
-                <form asp-controller="EventWizard"
+                <form id="seatMapContinueForm"
+                      asp-controller="EventWizard"
                       asp-action="Step5Continue"
                       method="post">
-
-                    <button type="submit"
-                            class="wizard-btn-primary"
-                            @(!Model.CanContinue ? "disabled" : "")>
-                        Continue to Map →
+                    <button type="submit" class="wizard-btn-primary">
+                        Tiếp theo: Xem lại →
                     </button>
                 </form>
             </div>
@@ -194,3 +123,14 @@
         </div>
     </div>
 </section>
+
+<script>
+    window.eventixSeatMap = {
+        sections: @Html.Raw(sectionsJson),
+        layouts:  @Html.Raw(layoutsJson),
+        isSaved: @(((bool)(ViewBag.IsSeatMapSaved ?? false)).ToString().ToLowerInvariant())
+    };
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+<script src="~/js/event-seat-map.js" asp-append-version="true"></script>

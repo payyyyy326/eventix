@@ -1,0 +1,151 @@
+@model Eventix.Web.Models.MyTicketsViewModel
+@{
+    ViewData["Title"] = "Vé của tôi";
+    var activeTab = ViewBag.ActiveTab as string ?? "bookings";
+    var now = DateTime.UtcNow;
+}
+
+<main class="commerce-page">
+
+    <div class="my-tickets-header">
+        <h1>Vé của tôi</h1>
+        <p>Quản lí vé đang giữ và vé điện tử đã mua.</p>
+    </div>
+
+    <div class="my-tickets-tabs">
+        <a class="my-tab-btn @(activeTab == "bookings" ? "active" : "")"
+           asp-action="MyTickets"
+           asp-route-tab="bookings">
+            Vé đang giữ
+            @if (Model.Bookings.Count > 0)
+            {
+                <span class="tab-badge">@Model.Bookings.Count</span>
+            }
+        </a>
+        <a class="my-tab-btn @(activeTab == "tickets" ? "active" : "")"
+           asp-action="MyTickets"
+           asp-route-tab="tickets">
+            Vé đã mua
+            @if (Model.Tickets.Count > 0)
+            {
+                <span class="tab-badge">@Model.Tickets.Count</span>
+            }
+        </a>
+    </div>
+
+    @* ===== TAB: VÉ ĐANG GIỮ ===== *@
+    @if (activeTab == "bookings")
+    {
+        if (Model.Bookings.Count == 0)
+        {
+            <section class="commerce-card commerce-empty">
+                <p>Bạn chưa có lượt giữ vé nào.</p>
+                <a class="commerce-button" asp-controller="Event" asp-action="Index">Tìm sự kiện</a>
+            </section>
+        }
+
+        @foreach (var booking in Model.Bookings)
+        {
+            var canPay = booking.Status == "Active" && booking.ExpiresAt > now;
+            <section class="commerce-card booking-hold"
+                     data-expires="@DateTime.SpecifyKind(booking.ExpiresAt, DateTimeKind.Utc).ToString("O")">
+                <div class="commerce-row">
+                    <div>
+                        <h2>@booking.EventTitle</h2>
+                        <p>@booking.TicketTypeName · @booking.Quantity vé</p>
+                        @if (!string.IsNullOrWhiteSpace(booking.SeatLabel))
+                        {
+                            <p>Ghế: <strong>@booking.SeatLabel</strong></p>
+                        }
+                    </div>
+                    <span class="commerce-status">@booking.Status</span>
+                </div>
+                <div class="commerce-total">
+                    <span>@booking.TotalAmount.ToString("#,##0") VND</span>
+                    @if (canPay)
+                    {
+                        <strong class="booking-countdown">Đang tính...</strong>
+                    }
+                    else
+                    {
+                        <strong class="expired-label">Đã hết hạn</strong>
+                    }
+                </div>
+                @if (canPay)
+                {
+                    <div class="booking-actions">
+                        <a class="commerce-button"
+                           asp-action="Checkout"
+                           asp-route-reservationIds="@booking.Id">
+                            Thanh toán ngay
+                        </a>
+                        <form asp-action="CancelBooking" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@booking.Id" />
+                            <button class="commerce-button commerce-button-danger"
+                                    type="submit"
+                                    onclick="return confirm('Bạn muốn huỷ lượt giữ vé này?')">
+                                Huỷ giữ vé
+                            </button>
+                        </form>
+                    </div>
+                }
+            </section>
+        }
+    }
+
+    @* ===== TAB: VÉ ĐÃ MUA ===== *@
+    @if (activeTab == "tickets")
+    {
+        if (Model.Tickets.Count == 0)
+        {
+            <section class="commerce-card commerce-empty">
+                <p>Bạn chưa có vé điện tử nào.</p>
+                <a class="commerce-button" asp-controller="Event" asp-action="Index">Tìm sự kiện</a>
+            </section>
+        }
+        else
+        {
+            <div class="ticket-grid">
+                @foreach (var ticket in Model.Tickets)
+                {
+                    <a class="commerce-card ticket-card"
+                       asp-action="Ticket"
+                       asp-route-id="@ticket.Id">
+                        <div class="commerce-row">
+                            <h2>@ticket.EventTitle</h2>
+                            <span class="commerce-status">@ticket.Status</span>
+                        </div>
+                        <p>@ticket.EventStartTime.ToString("HH:mm dd/MM/yyyy") · @ticket.VenueName</p>
+                        <p>@ticket.TicketTypeName @ticket.SeatLabel</p>
+                        <strong>@ticket.TicketCode</strong>
+                    </a>
+                }
+            </div>
+        }
+    }
+
+</main>
+
+<script>
+    function updateBookingCountdowns() {
+        document.querySelectorAll(".booking-hold").forEach(card => {
+            const output = card.querySelector(".booking-countdown");
+            if (!output) return;
+            const expires = new Date(card.dataset.expires).getTime();
+            const remaining = expires - Date.now();
+            if (remaining <= 0) {
+                output.textContent = "Đã hết hạn";
+                output.classList.add("expired-label");
+                output.classList.remove("booking-countdown");
+                card.querySelectorAll(".booking-actions").forEach(x => x.remove());
+                return;
+            }
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            output.textContent = `Còn ${minutes}:${seconds.toString().padStart(2, "0")}`;
+        });
+    }
+    updateBookingCountdowns();
+    setInterval(updateBookingCountdowns, 1000);
+</script>

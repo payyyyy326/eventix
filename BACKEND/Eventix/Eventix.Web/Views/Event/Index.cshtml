@@ -1,7 +1,7 @@
 ﻿@model Eventix.Web.Models.EventViewModel
 
 @{
-    ViewData["Title"] = "Events";
+    ViewData["Title"] = "Sự kiện";
     Layout = "_Layout";
 }
 
@@ -9,33 +9,55 @@
     <div class="events-layout">
 
         <aside class="filter-panel">
-            <h2>Filter Events</h2>
+            <h2>Lọc sự kiện</h2>
 
-            <form asp-controller="Event" asp-action="Index" method="get">
+            <form asp-controller="Event"
+                  asp-action="Index"
+                  method="get">
 
                 <div class="filter-group">
-                    <label>Search</label>
+                    <label>Tìm kiếm</label>
+
                     <input name="Search"
                            value="@Model.Filter.Search"
-                           placeholder="Search event..." />
+                           placeholder="Tìm kiếm sự kiện..." />
                 </div>
 
                 <div class="filter-group">
-                    <label>From date</label>
+                    <label>Danh mục</label>
+
+                    <select name="CategoryId">
+                        <option value="">Tất cả danh mục</option>
+
+                        @foreach (var category in Model.Categories)
+                        {
+                            <option value="@category.Id"
+                                    selected="@(Model.Filter.CategoryId == category.Id)">
+                                @category.Name
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Từ ngày</label>
+
                     <input name="FromDate"
                            type="date"
                            value="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" />
                 </div>
 
                 <div class="filter-group">
-                    <label>To date</label>
+                    <label>Đến ngày</label>
+
                     <input name="ToDate"
                            type="date"
                            value="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" />
                 </div>
 
                 <div class="filter-group">
-                    <label>Min price</label>
+                    <label>Giá tối thiểu</label>
+
                     <input name="MinPrice"
                            type="number"
                            value="@Model.Filter.MinPrice"
@@ -43,7 +65,8 @@
                 </div>
 
                 <div class="filter-group">
-                    <label>Max price</label>
+                    <label>Giá tối đa</label>
+
                     <input name="MaxPrice"
                            type="number"
                            value="@Model.Filter.MaxPrice"
@@ -51,44 +74,70 @@
                 </div>
 
                 <div class="filter-group">
-                    <label>Sort by</label>
+                    <label>Sắp xếp theo</label>
+
                     <select name="SortBy">
-                        <option value="">Latest</option>
-                        <option value="view" selected="@(Model.Filter.SortBy == "view")">Most viewed</option>
-                        <option value="upcoming" selected="@(Model.Filter.SortBy == "upcoming")">Upcoming</option>
+                        <option value="">
+                            Mới nhất
+                        </option>
+
+                        <option value="view"
+                                selected="@(Model.Filter.SortBy == "view")">
+                            Xem nhiều nhất
+                        </option>
+
+                        <option value="upcoming"
+                                selected="@(Model.Filter.SortBy == "upcoming")">
+                            Sắp diễn ra
+                        </option>
                     </select>
                 </div>
 
-                <input type="hidden" name="CurrentPage" value="1" />
-                <input type="hidden" name="PageSize" value="@Model.Filter.PageSize" />
+                <input type="hidden"
+                       name="CurrentPage"
+                       value="1" />
 
-                <button type="submit" class="filter-btn">
-                    Apply Filter
+                <input type="hidden"
+                       name="PageSize"
+                       value="@Model.Filter.PageSize" />
+
+                <button type="submit"
+                        class="filter-btn">
+                    Áp dụng bộ lọc
                 </button>
 
                 <a asp-controller="Event"
                    asp-action="Index"
                    class="clear-filter-btn">
-                    Clear
+                    Xóa bộ lọc
                 </a>
+
             </form>
         </aside>
 
         <div class="events-content">
+
             <div class="events-title-row">
                 <div>
-                    <h1>Events</h1>
-                    <p>@Model.Events.TotalRows events found</p>
+                    <h1>Sự kiện</h1>
+
+                    <p>
+                        Tìm thấy @Model.Events.TotalRows sự kiện
+                    </p>
                 </div>
             </div>
 
-            @if (Model.Events.DataList == null || !Model.Events.DataList.Any())
+            @if (Model.Events.DataList == null ||
+                        !Model.Events.DataList.Any())
             {
-                <p class="empty-text">No events found.</p>
+                <p class="empty-text">
+                    Không tìm thấy sự kiện nào.
+                </p>
             }
             else
             {
                 <div class="event-grid">
+
                     @foreach (var item in Model.Events.DataList)
                     {
                         <a class="event-card"
@@ -100,26 +149,45 @@
                                  alt="@item.Title" />
 
                             <div class="event-card-body">
-                                <span>@item.CategoryName</span>
 
-                                <h3>@item.Title</h3>
+                                <span>
+                                    @item.CategoryName
+                                </span>
 
-                                <p>@item.VenueName • @item.VenueCity</p>
+                                <h3>
+                                    @item.Title
+                                </h3>
 
-                                <p>@item.StartTime.ToString("dd/MM/yyyy HH:mm")</p>
+                                <p>
+                                    @item.VenueName • @item.VenueCity
+                                </p>
+
+                                <p>
+                                    @item.StartTime.ToString("dd/MM/yyyy HH:mm")
+                                </p>
 
                                 @if (item.MinPrice.HasValue)
                                 {
                                     <p class="event-price">
-                                        From @item.MinPrice.Value.ToString("N0") VND
+                                        Từ @item.MinPrice.Value.ToString("#,##0") VND
                                     </p>
                                 }
+                                else
+                                {
+                                    <p class="event-price">
+                                        Liên hệ ban tổ chức
+                                    </p>
+                                }
+
                             </div>
                         </a>
                     }
+
                 </div>
             }
+
         </div>
 
     </div>
 </section>
+```

@@ -19,17 +19,17 @@
             <a class="wizard-back-link"
                asp-controller="EventWizard"
                asp-action="Step1">
-                ? Back to Event Info
+                ← Quay lại Thông tin sự kiện
             </a>
 
             <div class="wizard-title">
-                <span>Create Event</span>
+                <span>Tạo sự kiện</span>
 
-                <h1>Step 2: Venue</h1>
+                <h1>Bước 2: Địa điểm</h1>
 
                 <p>
-                    Choose an existing venue or create a new venue
-                    for your event.
+                    Chọn địa điểm có sẵn hoặc tạo địa điểm mới
+                    cho sự kiện của bạn.
                 </p>
             </div>
 
@@ -50,11 +50,11 @@
                 </div>
 
                 <div class="wizard-card mb-4">
-                    <h3>Venue Option</h3>
+                    <h3>Tuỳ chọn địa điểm</h3>
 
                     <div class="venue-mode-tabs mt-3"
                          role="tablist"
-                         aria-label="Venue option">
+                         aria-label="Tuỳ chọn địa điểm">
 
                         <label class="venue-mode-tab"
                                data-mode="select">
@@ -65,11 +65,11 @@
                                    id="modeSelect" />
 
                             <span class="venue-mode-tab-title">
-                                Existing Venue
+                                Địa điểm có sẵn
                             </span>
 
                             <small>
-                                Choose from your available venue list.
+                                Chọn từ danh sách địa điểm của bạn.
                             </small>
                         </label>
 
@@ -82,11 +82,11 @@
                                    id="modeCreate" />
 
                             <span class="venue-mode-tab-title">
-                                Create New Venue
+                                Tạo địa điểm mới
                             </span>
 
                             <small>
-                                Add a new location for this event.
+                                Thêm địa điểm mới cho sự kiện này.
                             </small>
                         </label>
                     </div>
@@ -96,18 +96,18 @@
                     <div class="wizard-card mb-4">
                         <div class="venue-section-header">
                             <div>
-                                <h3>Select Venue</h3>
+                                <h3>Chọn địa điểm</h3>
                             </div>
                             <span class="wizard-pill info">
-                                @Model.VenuePage.TotalRows venues
+                                @Model.VenuePage.TotalRows địa điểm
                             </span>
                         </div>
 
                         @if (!Model.Venues.Any())
                         {
                             <div class="organizer-empty mt-3">
-                                <h2>No venues available</h2>
-                                <p>Switch to "Create New Venue" to add your first venue.</p>
+                                <h2>Chưa có địa điểm nào</h2>
+                                <p>Chuyển sang "Tạo địa điểm mới" để thêm địa điểm đầu tiên.</p>
                             </div>
                         }
                         else
@@ -128,14 +128,14 @@
                                                     <p>@venue.Address</p>
                                                 </div>
                                                 <span class="wizard-pill">
-                                                    @(string.IsNullOrWhiteSpace(venue.City) ? "Unknown city" : venue.City)
+                                                    @(string.IsNullOrWhiteSpace(venue.City) ? "Chưa rõ thành phố" : venue.City)
                                                 </span>
                                             </div>
                                             <div class="venue-selection-meta">
-                                                <span>Capacity <strong>@venue.Capacity.ToString("N0")</strong></span>
+                                                <span>Sức chứa <strong>@venue.Capacity.ToString("#,##0")</strong></span>
                                             </div>
                                         </div>
-                                        <span class="venue-selection-check">?</span>
+                                        <span class="venue-selection-check">✓</span>
                                     </label>
                                 }
                             </div>
@@ -148,7 +148,7 @@
                                         <a class="pagination-btn"
                                            asp-controller="EventWizard"
                                            asp-action="Step2"
-                                           asp-route-venuePage="@(Model.VenuePage.CurrentPage - 1)">? Prev</a>
+                                           asp-route-venuePage="@(Model.VenuePage.CurrentPage - 1)">← Trước</a>
                                     }
                                     @for (int p = 1; p <= Model.VenuePage.TotalPages; p++)
                                     {
@@ -162,10 +162,10 @@
                                         <a class="pagination-btn"
                                            asp-controller="EventWizard"
                                            asp-action="Step2"
-                                           asp-route-venuePage="@(Model.VenuePage.CurrentPage + 1)">Next ?</a>
+                                           asp-route-venuePage="@(Model.VenuePage.CurrentPage + 1)">Sau →</a>
                                     }
                                     <span class="pagination-info">
-                                        Page @Model.VenuePage.CurrentPage / @Model.VenuePage.TotalPages
+                                        Trang @Model.VenuePage.CurrentPage / @Model.VenuePage.TotalPages
                                     </span>
                                 </div>
                             }
@@ -177,73 +177,48 @@
 
                 <div id="createVenueBox">
                     <div class="wizard-card mb-4">
-                        <h3>Create New Venue</h3>
+                        <h3>Tạo địa điểm mới</h3>
 
-                        <p>
-                        </p>
+                        <p></p>
 
                         <div class="wizard-grid-2 mt-3">
                             <div class="form-group">
-                                <label asp-for="NewVenue.Name">
-                                    Venue Name
-                                </label>
-
+                                <label asp-for="NewVenue.Name">Tên địa điểm</label>
                                 <input asp-for="NewVenue.Name"
                                        class="form-control"
-                                       placeholder="Example: National Convention Center"
+                                       placeholder="Ví dụ: Trung tâm Hội nghị Quốc gia"
                                        autocomplete="off" />
-
-                                <span asp-validation-for="NewVenue.Name"
-                                      class="text-danger">
-                                </span>
+                                <span asp-validation-for="NewVenue.Name" class="text-danger"></span>
                             </div>
 
                             <div class="form-group">
-                                <label asp-for="NewVenue.City">
-                                    City
-                                </label>
-
+                                <label asp-for="NewVenue.City">Thành phố</label>
                                 <input asp-for="NewVenue.City"
                                        class="form-control"
-                                       placeholder="Example: Hanoi"
+                                       placeholder="Ví dụ: Hà Nội"
                                        autocomplete="address-level2" />
-
-                                <span asp-validation-for="NewVenue.City"
-                                      class="text-danger">
-                                </span>
+                                <span asp-validation-for="NewVenue.City" class="text-danger"></span>
                             </div>
                         </div>
 
                         <div class="form-group mt-3">
-                            <label asp-for="NewVenue.Address">
-                                Address
-                            </label>
-
+                            <label asp-for="NewVenue.Address">Địa chỉ</label>
                             <input asp-for="NewVenue.Address"
                                    class="form-control"
-                                   placeholder="Street, district, city"
+                                   placeholder="Số nhà, đường, quận, thành phố"
                                    autocomplete="street-address" />
-
-                            <span asp-validation-for="NewVenue.Address"
-                                  class="text-danger">
-                            </span>
+                            <span asp-validation-for="NewVenue.Address" class="text-danger"></span>
                         </div>
 
                         <div class="wizard-grid-2 mt-3">
                             <div class="form-group">
-                                <label asp-for="NewVenue.Capacity">
-                                    Maximum Capacity
-                                </label>
-
+                                <label asp-for="NewVenue.Capacity">Sức chứa tối đa</label>
                                 <input asp-for="NewVenue.Capacity"
                                        type="number"
                                        min="1"
                                        class="form-control"
-                                       placeholder="Example: 3000" />
-
-                                <span asp-validation-for="NewVenue.Capacity"
-                                      class="text-danger">
-                                </span>
+                                       placeholder="Ví dụ: 3000" />
+                                <span asp-validation-for="NewVenue.Capacity" class="text-danger"></span>
                             </div>
                         </div>
                     </div>
@@ -253,13 +228,13 @@
                     <a asp-controller="EventWizard"
                        asp-action="Step1"
                        class="wizard-btn-secondary">
-                        ? Back
+                        ← Quay lại
                     </a>
 
                     <button type="submit"
                             class="wizard-btn-primary"
                             id="continueVenueButton">
-                        Continue to Ticket Types ?
+                        Tiếp theo: Loại vé →
                     </button>
                 </div>
             </form>

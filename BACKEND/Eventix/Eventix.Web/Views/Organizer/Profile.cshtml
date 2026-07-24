@@ -1,0 +1,177 @@
+@using Eventix.Web.Models.Organizer
+@model OrganizerProfileViewModel
+
+@{
+    ViewData["Title"] = "Hồ sơ tổ chức";
+    Layout = "_OrganizerLayout";
+
+    var statusClass = Model.Status?.ToLowerInvariant() switch
+    {
+        "approved" => "approved",
+        "rejected" => "rejected",
+        _ => "pending"
+    };
+
+    var statusLabel = Model.Status?.ToLowerInvariant() switch
+    {
+        "approved" => "✓ Đã duyệt",
+        "rejected" => "✗ Bị từ chối",
+        _ => "⏳ Chờ duyệt"
+    };
+
+    var initial = string.IsNullOrWhiteSpace(Model.OrganizationName)
+        ? "O"
+        : Model.OrganizationName[..1].ToUpperInvariant();
+}
+
+<section class="organizer-page">
+    <div class="organizer-profile-shell">
+
+        <div class="organizer-profile-header">
+            <div>
+                <h1>Hồ sơ tổ chức</h1>
+                <p>Quản lý thông tin tổ chức và liên hệ hiển thị trên trang sự kiện.</p>
+            </div>
+            <span class="organizer-profile-status @statusClass">@statusLabel</span>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="org-toast org-toast--success">✓ @TempData["Success"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="org-toast org-toast--error">✗ @TempData["Error"]</div>
+        }
+
+        <div class="organizer-profile-grid">
+
+            @* Sidebar thông tin *@
+            <aside class="organizer-profile-summary">
+
+                <div class="organizer-profile-avatar">@initial</div>
+
+                <h2>@Model.OrganizationName</h2>
+
+                <p>@(string.IsNullOrWhiteSpace(Model.Description) ? "Chưa có mô tả tổ chức." : Model.Description)</p>
+
+                <div class="organizer-profile-facts">
+                    <div>
+                        <span>Ngày tạo hồ sơ</span>
+                        <strong>@Model.CreatedAt.ToString("dd/MM/yyyy")</strong>
+                    </div>
+                    <div>
+                        <span>Ngày duyệt</span>
+                        <strong>@(Model.ApprovedAt?.ToString("dd/MM/yyyy") ?? "Chưa được duyệt")</strong>
+                    </div>
+                    <div>
+                        <span>Email liên hệ</span>
+                        <strong>@(string.IsNullOrEmpty(Model.ContactEmail) ? "Chưa cập nhật" : Model.ContactEmail)</strong>
+                    </div>
+                    <div>
+                        <span>Số điện thoại</span>
+                        <strong>@(string.IsNullOrEmpty(Model.ContactPhone) ? "Chưa cập nhật" : Model.ContactPhone)</strong>
+                    </div>
+                </div>
+
+                @if (Model.Status?.ToLower() == "pending")
+                {
+                    <div class="org-notice">
+                        Hồ sơ đang chờ admin xét duyệt. Bạn vẫn có thể cập nhật thông tin trong thời gian này.
+                    </div>
+                }
+                @if (Model.Status?.ToLower() == "rejected")
+                {
+                    <div class="org-notice org-notice--error">
+                        Hồ sơ bị từ chối. Vui lòng cập nhật lại thông tin và liên hệ admin.
+                    </div>
+                }
+
+            </aside>
+
+            @* Form chỉnh sửa *@
+            <div class="organizer-profile-form-card">
+
+                <div class="organizer-profile-form-header">
+                    <h2>Chỉnh sửa thông tin</h2>
+                    <p>Thông tin này có thể hiển thị với người mua vé trên trang sự kiện.</p>
+                </div>
+
+                <form asp-controller="Organizer" asp-action="Profile" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly" class="org-form-errors"></div>
+
+                    <input asp-for="Id"         type="hidden" />
+                    <input asp-for="Status"     type="hidden" />
+                    <input asp-for="CreatedAt"  type="hidden" />
+                    <input asp-for="ApprovedAt" type="hidden" />
+                    <input asp-for="ApprovedBy" type="hidden" />
+
+                    <div class="org-form-group">
+                        <label asp-for="OrganizationName">Tên tổ chức <span class="required">*</span></label>
+                        <input asp-for="OrganizationName"
+                               class="org-input"
+                               placeholder="Nhập tên tổ chức..." />
+                        <span asp-validation-for="OrganizationName" class="field-error"></span>
+                    </div>
+
+                    <div class="org-form-group">
+                        <label asp-for="Description">Mô tả</label>
+                        <textarea asp-for="Description"
+                                  class="org-input org-textarea"
+                                  rows="5"
+                                  maxlength="1000"
+                                  placeholder="Giới thiệu về tổ chức của bạn..."></textarea>
+                        <span asp-validation-for="Description" class="field-error"></span>
+                    </div>
+
+                    <div class="organizer-profile-form-grid">
+                        <div class="org-form-group">
+                            <label asp-for="ContactEmail">Email liên hệ</label>
+                            <input asp-for="ContactEmail"
+                                   type="email"
+                                   class="org-input"
+                                   placeholder="contact@example.com" />
+                            <span asp-validation-for="ContactEmail" class="field-error"></span>
+                        </div>
+
+                        <div class="org-form-group">
+                            <label asp-for="ContactPhone">Số điện thoại</label>
+                            <input asp-for="ContactPhone"
+                                   type="tel"
+                                   class="org-input"
+                                   placeholder="Nhập số điện thoại..." />
+                            <span asp-validation-for="ContactPhone" class="field-error"></span>
+                        </div>
+                    </div>
+
+                    <div class="organizer-profile-actions">
+                        <a asp-controller="Organizer" asp-action="Dashboard" class="org-btn-secondary">
+                            ← Dashboard
+                        </a>
+                        <button type="submit" class="org-btn-primary">
+                            Lưu thay đổi
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        const toast = document.querySelector('.org-toast');
+        if (toast) {
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(12px)';
+                setTimeout(() => toast.remove(), 400);
+            }, 3500);
+        }
+    </script>
+}

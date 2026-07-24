@@ -24,5 +24,11 @@ namespace Eventix.Web.Models.EventWizard
 
         [Required]
         public DateTime EndTime { get; set; }
+
+        /// <summary>
+        /// Thời điểm sự kiện được hiển thị công khai.
+        /// Null = xuất bản ngay lập tức.
+        /// </summary>
+        public DateTime? PublishedAt { get; set; }
     }
 }
