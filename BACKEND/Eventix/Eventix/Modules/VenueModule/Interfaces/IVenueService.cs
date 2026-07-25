@@ -8,7 +8,7 @@ namespace Eventix.Modules.VenueModule.Interfaces
     {
         Task<VenueResponse> CreateVenueAsync(CreateVenueRequest request, Guid userId);
         Task<VenueResponse> GetVenueByIdAsync(Guid id);
-        Task<PaginationResponse<VenueResponse>> GetAllVenuesAsync(PaginationRequest<VenueResponse> request);
+        Task<PaginationResponse<VenueResponse>> GetAllVenuesAsync(PaginationRequest<VenueResponse> request, string? search = null);
         Task<VenueResponse> UpdateVenueAsync(Guid id, UpdateVenueRequest request, Guid userId);
         Task DeleteVenueAsync(Guid id);
         Task<List<VenueSectionLayoutResponse>> GetSeatMapAsync(Guid venueId);

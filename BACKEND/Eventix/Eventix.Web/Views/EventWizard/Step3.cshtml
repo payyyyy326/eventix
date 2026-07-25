@@ -287,21 +287,23 @@
 
                                 <div class="ticket-card-actions mt-3" style="display:flex;gap:8px;border-top:1px solid rgba(255,255,255,0.07);padding-top:12px;">
                                     <button type="button"
-                                            class="wizard-btn-secondary"
+                                            class="wizard-btn-secondary btn-edit-ticket"
                                             style="padding:6px 16px;font-size:0.83rem;"
-                                            onclick="openEditModal(@i,
-                                                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ticket.Name)),
-                                                @ticket.Price,
-                                                @ticket.Quantity,
-                                                @(ticket.IsSeatRequired ? "true" : "false"),
-                                                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ticket.SaleStartTime.ToString("yyyy-MM-ddTHH:mm:ss") + "Z")),
-                                                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ticket.SaleEndTime.ToString("yyyy-MM-ddTHH:mm:ss") + "Z")),
-                                                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ticket.Description ?? "")))">
+                                            data-index="@i"
+                                            data-name="@System.Text.Encodings.Web.HtmlEncoder.Default.Encode(ticket.Name)"
+                                            data-price="@ticket.Price"
+                                            data-qty="@ticket.Quantity"
+                                            data-seated="@(ticket.IsSeatRequired ? "true" : "false")"
+                                            data-sale-start="@ticket.SaleStartTime.ToString("yyyy-MM-ddTHH:mm:ss")Z"
+                                            data-sale-end="@ticket.SaleEndTime.ToString("yyyy-MM-ddTHH:mm:ss")Z"
+                                            data-desc="@System.Text.Encodings.Web.HtmlEncoder.Default.Encode(ticket.Description ?? "")">
                                         ✏️ Sửa
                                     </button>
                                     <button type="button"
+                                            class="btn-delete-ticket"
                                             style="padding:6px 16px;font-size:0.83rem;background:rgba(239,68,68,0.14);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:8px;cursor:pointer;font-weight:600;"
-                                            onclick="deleteTicket(@i, '@ticket.Name')">
+                                            data-index="@i"
+                                            data-name="@System.Text.Encodings.Web.HtmlEncoder.Default.Encode(ticket.Name)">
                                         🗑 Xóa
                                     </button>
                                 </div>
@@ -474,11 +476,41 @@
                 if (startVal) document.getElementById('saleStartUtc').value = new Date(startVal).toISOString();
                 if (endVal)   document.getElementById('saleEndUtc').value   = new Date(endVal).toISOString();
             });
+
+            // ── Event delegation cho nút Sửa / Xóa ──────────────────────
+            document.addEventListener('click', function (e) {
+                const editBtn = e.target.closest('.btn-edit-ticket');
+                if (editBtn) {
+                    const d = editBtn.dataset;
+                    openEditModal(
+                        parseInt(d.index),
+                        d.name,
+                        parseFloat(d.price) || 0,
+                        parseInt(d.qty) || 0,
+                        d.seated === 'true',
+                        d.saleStart,
+                        d.saleEnd,
+                        d.desc || ''
+                    );
+                    return;
+                }
+
+                const delBtn = e.target.closest('.btn-delete-ticket');
+                if (delBtn) {
+                    deleteTicket(parseInt(delBtn.dataset.index), delBtn.dataset.name || '');
+                }
+            });
         });
 
         // ── Delete ticket ───────────────────────────────────────────────────
+        function decodeHtml(str) {
+            const txt = document.createElement('textarea');
+            txt.innerHTML = str;
+            return txt.value;
+        }
+
         async function deleteTicket(index, name) {
-            if (!confirm(`Xóa loại vé "${name}"?`)) return;
+            if (!confirm(`Xóa loại vé "${decodeHtml(name)}"?`)) return;
 
             const resp = await fetch('@Url.Action("RemoveTicketType", "EventWizard")', {
                 method: 'POST',
@@ -501,10 +533,10 @@
         // ── Edit modal ──────────────────────────────────────────────────────
         function openEditModal(index, name, price, qty, isSeated, saleStartIso, saleEndIso, desc) {
             document.getElementById('editIndex').value         = index;
-            document.getElementById('et-name').value          = name;
+            document.getElementById('et-name').value          = decodeHtml(name);
             document.getElementById('et-price').value         = price;
             document.getElementById('et-qty').value           = qty;
-            document.getElementById('et-desc').value          = desc || '';
+            document.getElementById('et-desc').value          = decodeHtml(desc || '');
             document.getElementById('et-sale-start').value    = toLocalInput(saleStartIso);
             document.getElementById('et-sale-end').value      = toLocalInput(saleEndIso);
             document.getElementById(isSeated ? 'et-seated' : 'et-standing').checked = true;

@@ -78,9 +78,20 @@ namespace Eventix.Modules.VenueModule.Services
             throw new NotImplementedException();
         }
 
-        public async Task<PaginationResponse<VenueResponse>> GetAllVenuesAsync(PaginationRequest<VenueResponse> request)
+        public async Task<PaginationResponse<VenueResponse>> GetAllVenuesAsync(PaginationRequest<VenueResponse> request, string? search = null)
         {
-            var venues = _context.Venues.AsNoTracking().Select(v => new VenueResponse
+            var query = _context.Venues.AsNoTracking().AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(v =>
+                    v.Name.ToLower().Contains(s) ||
+                    v.Address.ToLower().Contains(s) ||
+                    (v.City != null && v.City.ToLower().Contains(s)));
+            }
+
+            var venues = query.Select(v => new VenueResponse
             {
                 Id = v.Id,
                 Name = v.Name,
@@ -100,9 +111,7 @@ namespace Eventix.Modules.VenueModule.Services
                 }
             });
 
-            var response = await venues.GetPaged(request.CurrentPage, request.PageSize);
-
-            return response;
+            return await venues.GetPaged(request.CurrentPage, request.PageSize);
         }
 
         public async Task<VenueResponse> GetVenueByIdAsync(Guid id)

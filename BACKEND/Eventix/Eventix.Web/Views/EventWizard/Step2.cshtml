@@ -103,6 +103,28 @@
                             </span>
                         </div>
 
+                        @* ── Search bar ─────────────────────────────────────── *@
+                        <div class="venue-search-bar mt-3">
+                            <input type="text"
+                                   asp-for="VenueSearch"
+                                   id="venueSearchInput"
+                                   class="form-control"
+                                   placeholder="🔍 Tìm theo tên, địa chỉ, thành phố..."
+                                   autocomplete="off" />
+                            <button type="button"
+                                    id="venueSearchBtn"
+                                    class="wizard-btn-secondary venue-search-btn">
+                                Tìm
+                            </button>
+                            @if (!string.IsNullOrWhiteSpace(Model.VenueSearch))
+                            {
+                                <a asp-controller="EventWizard"
+                                   asp-action="Step2"
+                                   class="wizard-btn-ghost venue-search-clear"
+                                   title="Xóa tìm kiếm">✕ Xóa</a>
+                            }
+                        </div>
+
                         @if (!Model.Venues.Any())
                         {
                             <div class="organizer-empty mt-3">
@@ -148,21 +170,24 @@
                                         <a class="pagination-btn"
                                            asp-controller="EventWizard"
                                            asp-action="Step2"
-                                           asp-route-venuePage="@(Model.VenuePage.CurrentPage - 1)">← Trước</a>
+                                           asp-route-venuePage="@(Model.VenuePage.CurrentPage - 1)"
+                                           asp-route-venueSearch="@Model.VenueSearch">← Trước</a>
                                     }
                                     @for (int p = 1; p <= Model.VenuePage.TotalPages; p++)
                                     {
                                         <a class="pagination-btn @(p == Model.VenuePage.CurrentPage ? "active" : "")"
                                            asp-controller="EventWizard"
                                            asp-action="Step2"
-                                           asp-route-venuePage="@p">@p</a>
+                                           asp-route-venuePage="@p"
+                                           asp-route-venueSearch="@Model.VenueSearch">@p</a>
                                     }
                                     @if (Model.VenuePage.CurrentPage < Model.VenuePage.TotalPages)
                                     {
                                         <a class="pagination-btn"
                                            asp-controller="EventWizard"
                                            asp-action="Step2"
-                                           asp-route-venuePage="@(Model.VenuePage.CurrentPage + 1)">Sau →</a>
+                                           asp-route-venuePage="@(Model.VenuePage.CurrentPage + 1)"
+                                           asp-route-venueSearch="@Model.VenueSearch">Sau →</a>
                                     }
                                     <span class="pagination-info">
                                         Trang @Model.VenuePage.CurrentPage / @Model.VenuePage.TotalPages
@@ -247,6 +272,28 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+
+            // ── Venue search ──────────────────────────────────────────────
+            const searchInput = document.getElementById("venueSearchInput");
+            const searchBtn   = document.getElementById("venueSearchBtn");
+
+            function doVenueSearch() {
+                const q = searchInput?.value?.trim() ?? "";
+                const url = new URL(window.location.href);
+                url.searchParams.set("venueSearch", q);
+                url.searchParams.set("venuePage", "1");
+                window.location.href = url.toString();
+            }
+
+            searchBtn?.addEventListener("click", doVenueSearch);
+            searchInput?.addEventListener("keydown", function (e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    doVenueSearch();
+                }
+            });
+
+            // ── Mode tabs ─────────────────────────────────────────────────
             const selectBox =
                 document.getElementById("selectVenueBox");
 

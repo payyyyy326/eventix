@@ -31,7 +31,7 @@
         <div>
             <h1>Duyệt đơn Organizer</h1>
             <p>
-                @(Model.TotalCount.ToString("N0")) đơn đăng ký
+                @(Model.TotalRows.ToString("N0")) đơn đăng ký
                 @if (pending > 0 && string.IsNullOrEmpty(status))
                 {
                     <span class="badge badge-yellow">@pending chờ duyệt</span>

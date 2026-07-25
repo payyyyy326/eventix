@@ -99,7 +99,7 @@ namespace Eventix.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Step2(int venuePage = 1)
+        public async Task<IActionResult> Step2(int venuePage = 1, string? venueSearch = null)
         {
             ViewBag.CurrentStep = 2;
 
@@ -120,7 +120,8 @@ namespace Eventix.Web.Controllers
 
             var model = new EventVenueViewModel
             {
-                VenuePage = await LoadVenuesAsync(client, venuePage)
+                VenueSearch = venueSearch,
+                VenuePage = await LoadVenuesAsync(client, venuePage, search: venueSearch)
             };
 
             return View(model);
@@ -150,7 +151,7 @@ namespace Eventix.Web.Controllers
                 if (model.SelectedVenueId == null || model.SelectedVenueId == Guid.Empty)
                 {
                     TempData["Error"] = "Please select a venue.";
-                    model.VenuePage = await LoadVenuesAsync(client, model.VenuePage.CurrentPage);
+                    model.VenuePage = await LoadVenuesAsync(client, model.VenuePage.CurrentPage, search: model.VenueSearch);
                     return View(model);
                 }
 
@@ -177,7 +178,7 @@ namespace Eventix.Web.Controllers
                 if (!ModelState.IsValid)
                 {
                     model.Mode = "create";
-                    model.VenuePage = await LoadVenuesAsync(client, model.VenuePage.CurrentPage);
+                    model.VenuePage = await LoadVenuesAsync(client, model.VenuePage.CurrentPage, search: model.VenueSearch);
                     return View(model);
                 }
 
@@ -191,7 +192,7 @@ namespace Eventix.Web.Controllers
                 {
                     ModelState.AddModelError("", result?.Message ?? "Cannot create venue.");
                     model.Mode = "create";
-                    model.VenuePage = await LoadVenuesAsync(client, model.VenuePage.CurrentPage);
+                    model.VenuePage = await LoadVenuesAsync(client, model.VenuePage.CurrentPage, search: model.VenueSearch);
                     return View(model);
                 }
 
@@ -205,7 +206,7 @@ namespace Eventix.Web.Controllers
             }
 
             ModelState.AddModelError("", "Invalid venue mode.");
-            model.VenuePage = await LoadVenuesAsync(client, model.VenuePage.CurrentPage);
+            model.VenuePage = await LoadVenuesAsync(client, model.VenuePage.CurrentPage, search: model.VenueSearch);
             return View(model);
         }
 
@@ -1232,11 +1233,14 @@ namespace Eventix.Web.Controllers
             };
         }
 
-        private async Task<PaginationResponse<VenueResponse>> LoadVenuesAsync(HttpClient client, int page = 1, int pageSize = 6)
+        private async Task<PaginationResponse<VenueResponse>> LoadVenuesAsync(HttpClient client, int page = 1, int pageSize = 6, string? search = null)
         {
+            var url = $"api/Venue/venues?CurrentPage={page}&PageSize={pageSize}";
+            if (!string.IsNullOrWhiteSpace(search))
+                url += $"&search={Uri.EscapeDataString(search)}";
+
             var response = await client.GetFromJsonAsync<
-                ApiResponseModel<PaginationResponse<VenueResponse>>>(
-                $"api/Venue/venues?CurrentPage={page}&PageSize={pageSize}");
+                ApiResponseModel<PaginationResponse<VenueResponse>>>(url);
 
             return response?.Data ?? new PaginationResponse<VenueResponse>();
         }
