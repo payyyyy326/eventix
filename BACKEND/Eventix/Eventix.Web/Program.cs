@@ -9,6 +9,11 @@ namespace Eventix.Web
             // Add services to the container.
             builder.Services.AddControllersWithViews();
 
+            builder.Services.AddAntiforgery(options =>
+            {
+                options.HeaderName = "RequestVerificationToken";
+            });
+
             builder.Services.AddHttpClient("Eventix", client =>
             {
                 client.BaseAddress = new Uri("https://localhost:7162/");

@@ -111,16 +111,19 @@ namespace Eventix.Web.Controllers
 
         // ── Ban / Unban (AJAX) ─────────────────────────────────────────────────
 
+        public class BanUserBody { public Guid UserId { get; set; } public string Reason { get; set; } = ""; }
+        public class UnbanUserBody { public Guid UserId { get; set; } }
+
         [HttpPost]
-        public async Task<IActionResult> BanUser(Guid userId, string reason = "")
+        public async Task<IActionResult> BanUser([FromBody] BanUserBody body)
         {
             var client = CreateAuthorizedClient();
             if (client == null) return Json(new { success = false, message = "Unauthorized" });
             if (!IsAdmin()) return Json(new { success = false, message = "Forbidden" });
 
             var resp = await client.PatchAsJsonAsync(
-                $"api/Admin/users/{userId}/ban",
-                new AdminBanUserRequest { Reason = reason });
+                $"api/Admin/users/{body.UserId}/ban",
+                new AdminBanUserRequest { Reason = body.Reason });
 
             if (resp.IsSuccessStatusCode)
                 return Json(new { success = true });
@@ -130,13 +133,13 @@ namespace Eventix.Web.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> UnbanUser(Guid userId)
+        public async Task<IActionResult> UnbanUser([FromBody] UnbanUserBody body)
         {
             var client = CreateAuthorizedClient();
             if (client == null) return Json(new { success = false, message = "Unauthorized" });
             if (!IsAdmin()) return Json(new { success = false, message = "Forbidden" });
 
-            var resp = await client.PatchAsync($"api/Admin/users/{userId}/unban", null);
+            var resp = await client.PatchAsync($"api/Admin/users/{body.UserId}/unban", null);
 
             if (resp.IsSuccessStatusCode)
                 return Json(new { success = true });
@@ -183,7 +186,7 @@ namespace Eventix.Web.Controllers
                 {
                     var body = await countResp.Content
                         .ReadFromJsonAsync<ApiResponseModel<PaginationResponse<AdminOrganizerDetailResponse>>>(_jsonOpts);
-                    ViewBag.PendingCount = body?.Data?.TotalCount ?? 0;
+                    ViewBag.PendingCount = body?.Data?.TotalRows ?? 0;
                 }
             }
             catch { ViewBag.PendingCount = 0; }
@@ -193,14 +196,16 @@ namespace Eventix.Web.Controllers
 
         // ── Approve / Reject (AJAX) ────────────────────────────────────────────
 
+        public class OrganizerIdBody { public Guid Id { get; set; } }
+
         [HttpPost]
-        public async Task<IActionResult> ApproveOrganizer(Guid id)
+        public async Task<IActionResult> ApproveOrganizer([FromBody] OrganizerIdBody body)
         {
             var client = CreateAuthorizedClient();
             if (client == null) return Json(new { success = false, message = "Unauthorized" });
             if (!IsAdmin()) return Json(new { success = false, message = "Forbidden" });
 
-            var resp = await client.PatchAsync($"api/Admin/organizer-requests/{id}/approve", null);
+            var resp = await client.PatchAsync($"api/Admin/organizer-requests/{body.Id}/approve", null);
 
             if (resp.IsSuccessStatusCode)
                 return Json(new { success = true });
@@ -210,13 +215,13 @@ namespace Eventix.Web.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> RejectOrganizer(Guid id)
+        public async Task<IActionResult> RejectOrganizer([FromBody] OrganizerIdBody body)
         {
             var client = CreateAuthorizedClient();
             if (client == null) return Json(new { success = false, message = "Unauthorized" });
             if (!IsAdmin()) return Json(new { success = false, message = "Forbidden" });
 
-            var resp = await client.PatchAsync($"api/Admin/organizer-requests/{id}/reject", null);
+            var resp = await client.PatchAsync($"api/Admin/organizer-requests/{body.Id}/reject", null);
 
             if (resp.IsSuccessStatusCode)
                 return Json(new { success = true });

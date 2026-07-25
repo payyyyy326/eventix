@@ -25,9 +25,11 @@ namespace Eventix.Modules.VenueModule.Controllers
         [AllowAnonymous]
         //GET: api/venues
         [HttpGet("venues")]
-        public async Task<ActionResult<ApiResponseModel<PaginationResponse<VenueResponse>>>> GetAllVenues([FromQuery] PaginationRequest<VenueResponse> request)
+        public async Task<ActionResult<ApiResponseModel<PaginationResponse<VenueResponse>>>> GetAllVenues(
+            [FromQuery] PaginationRequest<VenueResponse> request,
+            [FromQuery] string? search = null)
         {
-            var venues = await _venueService.GetAllVenuesAsync(request);
+            var venues = await _venueService.GetAllVenuesAsync(request, search);
             return SuccessResponse(SystemSuccess.VENUES_RETRIEVED, venues);
         }
 

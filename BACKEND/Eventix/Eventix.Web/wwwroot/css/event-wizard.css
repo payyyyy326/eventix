@@ -1082,6 +1082,32 @@
     gap: 16px;
 }
 
+/* ── Venue Search Bar ─────────────────────────────────────────── */
+.venue-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.venue-search-bar .form-control {
+    flex: 1;
+    min-width: 200px;
+}
+
+.venue-search-btn {
+    white-space: nowrap;
+    padding: 10px 20px;
+}
+
+.venue-search-clear {
+    white-space: nowrap;
+    padding: 10px 14px;
+    font-size: 13px;
+    opacity: 0.75;
+    text-decoration: none;
+}
+
 .venue-selection-list {
     display: grid;
     gap: 14px;

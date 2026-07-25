@@ -16,5 +16,8 @@ namespace Eventix.Web.Models.EventWizard
         public CreateVenueRequest NewVenue { get; set; } = new();
 
         public string Mode { get; set; } = "select";
+
+        // Tìm kiếm địa điểm
+        public string? VenueSearch { get; set; }
     }
 }

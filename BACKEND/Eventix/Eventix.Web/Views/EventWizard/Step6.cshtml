@@ -50,7 +50,7 @@
                         <p>Nhấn <strong>Sửa</strong> để thay đổi thông tin sự kiện.</p>
                     </div>
                     <button type="button" class="wizard-btn-secondary" onclick="toggleEventInfoEdit()">
-                        ✏️ Sửa
+                         Sửa
                     </button>
                 </div>
 
@@ -151,7 +151,7 @@
                     </div>
                     <a asp-controller="EventWizard" asp-action="Step5" class="wizard-btn-secondary"
                        title="Chỉnh sửa sơ đồ chỗ ngồi" style="text-decoration:none;">
-                        🗺️ Sửa map
+                         Sửa map
                     </a>
                 </div>
                 @if (venue == null)
@@ -181,26 +181,30 @@
                 }
             </section>
 
-            <!-- Loại vé (thêm / xoá inline) -->
+            <!-- Loại vé (chỉ xem, mọi thay đổi về Bước 3) -->
             <section class="wizard-review-section" id="ticketTypesSection">
                 <div class="wizard-review-header">
                     <div>
                         <h3>Loại vé</h3>
-                        <p>Thêm/xoá tại đây, hoặc <a asp-controller="EventWizard" asp-action="Step3">quay Bước 3</a> để chỉnh sửa đầy đủ.</p>
+                        <p>Muốn thêm, sửa hoặc xóa loại vé, hãy <a asp-controller="EventWizard" asp-action="Step3">quay lại Bước 3</a>.</p>
                     </div>
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                        <a asp-controller="EventWizard" asp-action="Step3" class="wizard-btn-secondary"
-                           title="Quay lại Bước 3 để sửa loại vé" style="text-decoration:none;font-size:0.83rem;">
-                            🎫 Sửa loại vé
-                        </a>
-                        <button type="button" class="wizard-btn-secondary" onclick="toggleAddTicket()">
-                            ➕ Thêm vé
-                        </button>
-                    </div>
+                    <a asp-controller="EventWizard" asp-action="Step3"
+                       class="wizard-btn-secondary"
+                       style="text-decoration:none;font-size:0.83rem;">
+                         Quản lý loại vé
+                    </a>
                 </div>
 
-                <div id="ticketListContainer">
-                    <div class="table-responsive">
+                @if (!ticketTypes.Any())
+                {
+                    <div class="organizer-empty">
+                        <h2>Chưa có loại vé nào</h2>
+                        <p><a asp-controller="EventWizard" asp-action="Step3">Quay lại Bước 3</a> để thêm loại vé.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive mt-3">
                         <table id="ticketTable">
                             <thead>
                                 <tr>
@@ -210,154 +214,25 @@
                                     <th>SL</th>
                                     <th>Bắt đầu bán</th>
                                     <th>Kết thúc bán</th>
-                                    <th></th>
                                 </tr>
                             </thead>
-                            <tbody id="ticketTableBody">
-                                @for (int i = 0; i < ticketTypes.Count; i++)
+                            <tbody>
+                                @foreach (var t in ticketTypes)
                                 {
-                                    var t = ticketTypes[i];
                                     var priceLabel = t.Price <= 0 ? "Miễn phí" : $"{t.Price:#,##0} VND";
-                                    <tr id="ticket-row-@i" data-index="@i">
+                                    <tr>
                                         <td><strong>@t.Name</strong></td>
                                         <td>@(t.IsSeatRequired ? "Có ghế" : "Tự do")</td>
                                         <td>@priceLabel</td>
                                         <td>@t.Quantity.ToString("#,##0")</td>
                                         <td>@t.SaleStartTime.ToString("dd/MM HH:mm")</td>
                                         <td>@t.SaleEndTime.ToString("dd/MM HH:mm")</td>
-                                        <td style="display:flex;gap:6px;">
-                                            <button type="button"
-                                                    style="background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;"
-                                                    onclick="editTicket(@i)">✏️ Sửa</button>
-                                            <button type="button"
-                                                    class="ticket-action"
-                                                    style="background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;"
-                                                    onclick="removeTicket(@i)">🗑 Xoá</button>
-                                        </td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
-                    <div id="noTicketsMsg" style="display:@(ticketTypes.Any() ? "none" : "block");"
-                         class="organizer-empty">
-                        <h2>Chưa có loại vé nào</h2>
-                        <p>Thêm ít nhất một loại vé trước khi công bố.</p>
-                    </div>
-                </div>
-
-                <!-- Form thêm vé mới -->
-                <div id="addTicketForm" class="wizard-card mt-4" style="display:none;">
-                    <h4 class="mb-3">Loại vé mới</h4>
-                    <div id="addTicketError" class="text-danger mb-3" style="display:none;"></div>
-                    <div class="wizard-grid-2 mb-3">
-                        <div class="form-group">
-                            <label>Tên <span class="text-danger">*</span></label>
-                            <input id="nt-name" class="form-control" placeholder="VIP, Đứng, Early Bird..." />
-                        </div>
-                        <div class="form-group">
-                            <label>Loại vé</label>
-                            <div class="d-flex gap-3 mt-2">
-                                <label style="cursor:pointer;display:flex;align-items:center;gap:6px;">
-                                    <input type="radio" name="nt-type" id="nt-standing" value="false" checked />
-                                    Vào tự do
-                                </label>
-                                <label style="cursor:pointer;display:flex;align-items:center;gap:6px;">
-                                    <input type="radio" name="nt-type" id="nt-seated" value="true" />
-                                    Có ghế ngồi
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="wizard-grid-2 mb-3">
-                        <div class="form-group">
-                            <label>Giá vé (VND)</label>
-                            <input id="nt-price" type="number" min="0" step="1000" class="form-control" placeholder="0 = Miễn phí" value="0" />
-                        </div>
-                        <div class="form-group">
-                            <label>Số lượng <span class="text-danger">*</span></label>
-                            <input id="nt-qty" type="number" min="1" class="form-control" placeholder="100" />
-                        </div>
-                    </div>
-                    <div class="wizard-grid-2 mb-3">
-                        <div class="form-group">
-                            <label>Bắt đầu bán <span class="text-danger">*</span></label>
-                            <input id="nt-sale-start" type="datetime-local" class="form-control" />
-                        </div>
-                        <div class="form-group">
-                            <label>Kết thúc bán <span class="text-danger">*</span></label>
-                            <input id="nt-sale-end" type="datetime-local" class="form-control" />
-                        </div>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label>Mô tả</label>
-                        <textarea id="nt-desc" rows="2" class="form-control" placeholder="Tuỳ chọn..."></textarea>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="wizard-btn-primary" onclick="submitAddTicket()">➕ Thêm</button>
-                        <button type="button" class="wizard-btn-secondary" onclick="toggleAddTicket()">Huỷ</button>
-                    </div>
-                </div>
-
-                <!-- Form sửa vé -->
-                <div id="editTicketForm" class="wizard-card mt-4" style="display:none;">
-                    <h4 class="mb-1">Sửa loại vé</h4>
-                    <p class="text-muted mb-3" id="editTicketSubtitle"></p>
-                    <input type="hidden" id="et-index" value="-1" />
-                    <div id="editTicketError" class="text-danger mb-3" style="display:none;"></div>
-                    <div class="wizard-grid-2 mb-3">
-                        <div class="form-group">
-                            <label>Tên <span class="text-danger">*</span></label>
-                            <input id="et-name" class="form-control" />
-                            <span id="err-et-name" class="text-danger" style="display:none;"></span>
-                        </div>
-                        <div class="form-group">
-                            <label>Loại vé</label>
-                            <div class="d-flex gap-3 mt-2">
-                                <label style="cursor:pointer;display:flex;align-items:center;gap:6px;">
-                                    <input type="radio" name="et-type" id="et-standing" value="false" checked />
-                                    Vào tự do
-                                </label>
-                                <label style="cursor:pointer;display:flex;align-items:center;gap:6px;">
-                                    <input type="radio" name="et-type" id="et-seated" value="true" />
-                                    Có ghế ngồi
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="wizard-grid-2 mb-3">
-                        <div class="form-group">
-                            <label>Giá vé (VND)</label>
-                            <input id="et-price" type="number" min="0" step="1000" class="form-control" value="0" />
-                            <span id="err-et-price" class="text-danger" style="display:none;"></span>
-                        </div>
-                        <div class="form-group">
-                            <label>Số lượng <span class="text-danger">*</span></label>
-                            <input id="et-qty" type="number" min="1" class="form-control" />
-                            <span id="err-et-qty" class="text-danger" style="display:none;"></span>
-                        </div>
-                    </div>
-                    <div class="wizard-grid-2 mb-3">
-                        <div class="form-group">
-                            <label>Bắt đầu bán <span class="text-danger">*</span></label>
-                            <input id="et-sale-start" type="datetime-local" class="form-control" />
-                            <span id="err-et-sale-start" class="text-danger" style="display:none;"></span>
-                        </div>
-                        <div class="form-group">
-                            <label>Kết thúc bán <span class="text-danger">*</span></label>
-                            <input id="et-sale-end" type="datetime-local" class="form-control" />
-                            <span id="err-et-sale-end" class="text-danger" style="display:none;"></span>
-                        </div>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label>Mô tả</label>
-                        <textarea id="et-desc" rows="2" class="form-control"></textarea>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="wizard-btn-primary" onclick="submitEditTicket()">💾 Lưu thay đổi</button>
-                        <button type="button" class="wizard-btn-secondary" onclick="closeEditTicket()">Huỷ</button>
-                    </div>
-                </div>
+                }
             </section>
             <!-- Địa điểm -->
             <section class="wizard-review-section">
@@ -414,7 +289,7 @@
 
                     <div class="publish-schedule-box">
                         <div class="publish-schedule-header">
-                            <strong>📅 Ngày công bố</strong>
+                            <strong> Ngày công bố</strong>
                             <p>Chọn thời điểm sự kiện hiển thị công khai với khách hàng.</p>
                         </div>
                         <div class="publish-schedule-row">
@@ -445,7 +320,7 @@
                             class="wizard-btn-primary"
                             id="publishEventButton"
                             @(!Model.CanPublish ? "disabled" : "")>
-                        🚀 Công bố sự kiện
+                         Công bố sự kiện
                     </button>
                 </form>
             </div>
@@ -502,14 +377,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-function postJson(url, data) {
-    return fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
-        body: JSON.stringify(data)
-    }).then(r => r.json());
-}
-
 function postForm(url, formData) {
     formData.append('__RequestVerificationToken', token);
     return fetch(url, { method: 'POST', body: formData }).then(r => r.json());
@@ -521,8 +388,6 @@ function showError(id, msg) {
     el.textContent = msg;
     el.style.display = msg ? 'block' : 'none';
 }
-
-let tickets = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TicketTypes));
 
 function toggleEventInfoEdit() {
     const read = document.getElementById('eventInfoReadView');
@@ -579,95 +444,6 @@ async function saveEventInfo() {
     cancelEventInfoEdit();
 }
 
-function renderTicketTable() {
-    const tbody = document.getElementById('ticketTableBody');
-    const noMsg = document.getElementById('noTicketsMsg');
-    if (!tickets.length) { tbody.innerHTML = ''; noMsg.style.display = 'block'; setPublishable(false); return; }
-    noMsg.style.display = 'none';
-    tbody.innerHTML = tickets.map((t, i) => {
-        const priceLabel = t.Price <= 0 ? 'Miễn phí' : `${Number(t.Price).toLocaleString('en-US')} VND`;
-        const typeLabel  = t.IsSeatRequired ? 'Có ghế' : 'Tự do';
-        const fmtDate = s => {
-            const d = new Date(s);
-            return d.toLocaleDateString('vi-VN', {day:'2-digit',month:'2-digit'})
-                 + ' ' + d.toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'});
-        };
-        return `<tr id="ticket-row-${i}" data-index="${i}">
-            <td><strong>${t.Name}</strong></td>
-            <td>${typeLabel}</td><td>${priceLabel}</td>
-            <td>${Number(t.Quantity).toLocaleString('en-US')}</td>
-            <td>${fmtDate(t.SaleStartTime)}</td><td>${fmtDate(t.SaleEndTime)}</td>
-            <td style="display:flex;gap:6px;">
-                <button type="button" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;" onclick="editTicket(${i})">✏️ Sửa</button>
-                <button type="button" style="background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;" onclick="removeTicket(${i})">🗑 Xoá</button>
-            </td></tr>`;
-    }).join('');
-    document.getElementById('statTicketCount').textContent = tickets.length;
-    const total = tickets.reduce((s, t) => s + Number(t.Quantity), 0);
-    document.getElementById('statTotalQty').textContent = total.toLocaleString('en-US');
-    setPublishable(tickets.length > 0);
-}
-
-function _etErr(id, msg) { const el = document.getElementById(id); if (!el) return; el.textContent = msg; el.style.display = msg ? 'inline' : 'none'; }
-function _clearEtErrors() { ['err-et-name','err-et-price','err-et-qty','err-et-sale-start','err-et-sale-end','editTicketError'].forEach(id => _etErr(id, '')); }
-
-function editTicket(index) {
-    closeEditTicket();
-    const t = tickets[index]; if (!t) return;
-    document.getElementById('et-index').value = index;
-    document.getElementById('et-name').value  = t.Name;
-    document.getElementById('et-price').value = t.Price;
-    document.getElementById('et-qty').value   = t.Quantity;
-    document.getElementById('et-desc').value  = t.Description || '';
-    document.getElementById('editTicketSubtitle').textContent = `Đang sửa: ${t.Name}`;
-    const isSeated = t.IsSeatRequired === true;
-    document.getElementById('et-seated').checked   = isSeated;
-    document.getElementById('et-standing').checked = !isSeated;
-    const toLocal = s => { const d = new Date(s); const pad = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-    document.getElementById('et-sale-start').value = toLocal(t.SaleStartTime);
-    document.getElementById('et-sale-end').value   = toLocal(t.SaleEndTime);
-    document.getElementById('et-sale-start').setAttribute('min', _nowStr);
-    document.getElementById('et-sale-end').setAttribute('min', _nowStr);
-    document.getElementById('addTicketForm').style.display = 'none';
-    document.getElementById('editTicketForm').style.display = 'block';
-    document.getElementById('editTicketForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function closeEditTicket() { document.getElementById('editTicketForm').style.display = 'none'; _clearEtErrors(); }
-
-async function submitEditTicket() {
-    _clearEtErrors();
-    const index = parseInt(document.getElementById('et-index').value);
-    const name  = document.getElementById('et-name').value.trim();
-    const price = parseFloat(document.getElementById('et-price').value) || 0;
-    const qty   = parseInt(document.getElementById('et-qty').value);
-    const saleStart = document.getElementById('et-sale-start').value;
-    const saleEnd   = document.getElementById('et-sale-end').value;
-    const desc      = document.getElementById('et-desc').value.trim();
-    const isSeated  = document.querySelector('input[name="et-type"]:checked')?.value === 'true';
-
-    let hasErr = false;
-    if (!name)                 { _etErr('err-et-name', 'Tên vé là bắt buộc.'); hasErr = true; }
-    if (!qty || qty < 1)       { _etErr('err-et-qty', 'Số lượng ít nhất là 1.'); hasErr = true; }
-    if (price < 0)             { _etErr('err-et-price', 'Giá không được âm.'); hasErr = true; }
-    if (!saleStart)            { _etErr('err-et-sale-start', 'Bắt buộc chọn ngày bắt đầu bán.'); hasErr = true; }
-    else if (new Date(saleStart) <= new Date()) { _etErr('err-et-sale-start', 'Phải ở tương lai.'); hasErr = true; }
-    if (!saleEnd)              { _etErr('err-et-sale-end', 'Bắt buộc chọn ngày kết thúc bán.'); hasErr = true; }
-    else if (saleStart && new Date(saleEnd) <= new Date(saleStart)) { _etErr('err-et-sale-end', 'Phải sau ngày bắt đầu bán.'); hasErr = true; }
-    if (hasErr) return;
-
-    const payload = { Index: index, Ticket: { Name: name, IsSeatRequired: isSeated, Price: price, Quantity: qty, SaleStartTime: new Date(saleStart).toISOString(), SaleEndTime: new Date(saleEnd).toISOString(), Description: desc } };
-    const result = await postJson('/EventWizard/UpdateTicketTypeFromReview', payload);
-    if (!result.success) {
-        const fieldMap = { 'Name':'err-et-name','Quantity':'err-et-qty','Price':'err-et-price','SaleStartTime':'err-et-sale-start','SaleEndTime':'err-et-sale-end' };
-        if (result.field && fieldMap[result.field]) _etErr(fieldMap[result.field], result.message);
-        else _etErr('editTicketError', result.message);
-        return;
-    }
-    tickets[index] = payload.Ticket;
-    renderTicketTable(); closeEditTicket();
-}
-
 function setPublishable(ok) {
     const btn = document.getElementById('publishEventButton');
     const warn = document.getElementById('warnNoTickets');
@@ -675,47 +451,6 @@ function setPublishable(ok) {
     if (warn) warn.style.display = ok ? 'none' : 'list-item';
     const box = document.getElementById('publishWarning');
     if (box) box.style.display = ok ? 'none' : 'block';
-}
-
-function toggleAddTicket() {
-    const form = document.getElementById('addTicketForm');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
-    showError('addTicketError', '');
-}
-
-async function removeTicket(index) {
-    if (tickets.length <= 1) { alert('Cần ít nhất một loại vé.'); return; }
-    if (!confirm(`Xoá "${tickets[index].Name}"?`)) return;
-    const result = await postJson('/EventWizard/RemoveTicketTypeFromReview', index);
-    if (!result.success) { alert(result.message); return; }
-    tickets.splice(index, 1); renderTicketTable();
-}
-
-async function submitAddTicket() {
-    showError('addTicketError', '');
-    const name      = document.getElementById('nt-name').value.trim();
-    const isSeated  = document.querySelector('input[name="nt-type"]:checked')?.value === 'true';
-    const price     = parseFloat(document.getElementById('nt-price').value) || 0;
-    const qty       = parseInt(document.getElementById('nt-qty').value);
-    const saleStart = document.getElementById('nt-sale-start').value;
-    const saleEnd   = document.getElementById('nt-sale-end').value;
-    const desc      = document.getElementById('nt-desc').value.trim();
-
-    if (!name)           { showError('addTicketError', 'Tên vé là bắt buộc.'); return; }
-    if (!qty || qty < 1) { showError('addTicketError', 'Số lượng ít nhất là 1.'); return; }
-    if (!saleStart)      { showError('addTicketError', 'Bắt buộc chọn ngày bắt đầu bán.'); return; }
-    if (!saleEnd)        { showError('addTicketError', 'Bắt buộc chọn ngày kết thúc bán.'); return; }
-    if (new Date(saleStart) <= new Date()) { showError('addTicketError', 'Ngày bắt đầu bán phải ở tương lai.'); return; }
-    if (new Date(saleEnd) <= new Date(saleStart)) { showError('addTicketError', 'Ngày kết thúc bán phải sau ngày bắt đầu.'); return; }
-
-    const payload = { Name: name, IsSeatRequired: isSeated, Price: price, Quantity: qty, SaleStartTime: new Date(saleStart).toISOString(), SaleEndTime: new Date(saleEnd).toISOString(), Description: desc };
-    const result = await postJson('/EventWizard/AddTicketTypeFromReview', payload);
-    if (!result.success) { showError('addTicketError', result.message); return; }
-    tickets.push(payload); renderTicketTable();
-    ['nt-name','nt-qty','nt-sale-start','nt-sale-end','nt-desc'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('nt-price').value = '0';
-    document.getElementById('nt-standing').checked = true;
-    toggleAddTicket();
 }
 
 document.getElementById('publishEventForm')?.addEventListener('submit', function (e) {
