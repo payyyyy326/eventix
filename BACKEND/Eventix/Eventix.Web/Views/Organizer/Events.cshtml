@@ -1,164 +1,154 @@
-﻿@model Eventix.Share.Common.Models.PaginationResponse<Eventix.Share.Event.OrganizerEventResponse>
+@model Eventix.Share.Common.Models.PaginationResponse<Eventix.Share.Event.OrganizerEventResponse>
 
 @{
-    ViewData["Title"] = "My Events";
+    ViewData["Title"] = "Sự kiện của tôi";
     Layout = "_OrganizerLayout";
+    var search = ViewBag.Search as string;
+    var selectedStatus = ViewBag.Status as string;
+    var fromDate = ViewBag.FromDate as DateTime?;
+    var toDate = ViewBag.ToDate as DateTime?;
+    var totalEventCount = ViewBag.TotalEventCount is int total ? total : Model?.TotalRows ?? 0;
+    var statusOptions = ViewBag.StatusOptions as List<string> ?? [];
+    var hasFilters = !string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(selectedStatus)
+        || fromDate.HasValue || toDate.HasValue;
 }
 
 <section class="organizer-page">
-
     <div class="dashboard-header">
         <div>
             <span>Organizer</span>
             <h1>Sự kiện của tôi</h1>
-            <p>Manage your events, ticket sales and revenue.</p>
+            <p>Quản lý sự kiện, doanh số vé và doanh thu của bạn.</p>
         </div>
-
-        <a class="dashboard-create-btn" asp-controller="EventWizard" asp-action="Step1">
-            + Tạo sự kiện
-        </a>
+        <a class="dashboard-create-btn" asp-controller="EventWizard" asp-action="Step1">+ Tạo sự kiện</a>
     </div>
 
     <div class="dashboard-panel">
+        <form class="organizer-event-filters" asp-action="Events" method="get">
+            <div class="organizer-filter-search">
+                <label for="eventSearch">Tìm kiếm</label>
+                <input id="eventSearch" name="search" value="@search"
+                       placeholder="Tên sự kiện, danh mục hoặc địa điểm..." />
+            </div>
+            <div>
+                <label for="eventStatus">Trạng thái</label>
+                <select id="eventStatus" name="status">
+                    <option value="">Tất cả trạng thái</option>
+                    @foreach (var statusOption in statusOptions)
+                    {
+                        <option value="@statusOption"
+                                selected="@(string.Equals(selectedStatus, statusOption, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                            @statusOption
+                        </option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label for="eventFromDate">Từ ngày</label>
+                <input id="eventFromDate" type="date" name="fromDate" value="@fromDate?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div>
+                <label for="eventToDate">Đến ngày</label>
+                <input id="eventToDate" type="date" name="toDate" value="@toDate?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div>
+                <label for="eventPageSize">Số dòng</label>
+                <select id="eventPageSize" name="pageSize">
+                    @foreach (var size in new[] { 5, 10, 20, 50 })
+                    {
+                        <option value="@size" selected="@(Model?.PageSize == size ? "selected" : null)">@size</option>
+                    }
+                </select>
+            </div>
+            <div class="organizer-filter-actions">
+                <button type="submit" class="organizer-filter-submit">Lọc sự kiện</button>
+                <a class="organizer-filter-reset" asp-action="Events">Xóa lọc</a>
+            </div>
+        </form>
 
-        @if (Model == null || !Model.DataList.Any())
+        <div class="organizer-filter-summary">
+            <span>Hiển thị <strong>@(Model?.DataList.Count ?? 0)</strong> / <strong>@(Model?.TotalRows ?? 0)</strong> sự kiện phù hợp</span>
+            @if (hasFilters)
+            {
+                <span>Tổng số sự kiện: @totalEventCount</span>
+            }
+        </div>
+
+        @if (totalEventCount == 0)
         {
             <div class="organizer-empty">
                 <h2>Chưa có sự kiện nào</h2>
                 <p>Tạo sự kiện đầu tiên của bạn và bắt đầu bán vé.</p>
-
-                <a class="dashboard-create-btn"
-                   asp-controller="Organizer"
-                   asp-action="CreateEvent">
-                    Create Event
-                </a>
+                <a class="dashboard-create-btn" asp-controller="EventWizard" asp-action="Step1">Tạo sự kiện</a>
+            </div>
+        }
+        else if (Model == null || !Model.DataList.Any())
+        {
+            <div class="organizer-empty">
+                <h2>Không tìm thấy sự kiện phù hợp</h2>
+                <p>Hãy thay đổi từ khóa, trạng thái hoặc khoảng ngày.</p>
+                <a class="organizer-filter-reset organizer-empty-reset" asp-action="Events">Xóa bộ lọc</a>
             </div>
         }
         else
         {
-            <div class="organizer-table">
-
+            <div class="organizer-table organizer-events-table">
                 <div class="organizer-table-head">
-                    <span>Event</span>
-                    <span>Status</span>
-                    <span>Start Time</span>
-                    <span>Sold</span>
-                    <span>Revenue</span>
-                    <span>Actions</span>
+                    <span>Sự kiện</span><span>Trạng thái</span><span>Bắt đầu</span>
+                    <span>Đã bán</span><span>Doanh thu</span><span>Thao tác</span>
                 </div>
 
                 @foreach (var item in Model.DataList)
                 {
-                    var statusClass = item.Status?.ToLower() switch
+                    var statusClass = item.Status?.ToLowerInvariant() switch
                     {
-                        "onsale" => "on-sale",
-                        "published" => "published",
-                        "ongoing" => "ongoing",
-                        "soldout" => "sold-out",
-                        "completed" => "completed",
-                        "draft" => "draft",
-                        "cancelled" => "cancelled",
-                        _ => "draft"
+                        "onsale" => "on-sale", "published" => "published", "ongoing" => "ongoing",
+                        "soldout" => "sold-out", "completed" => "completed", "draft" => "draft",
+                        "cancelled" => "cancelled", _ => "draft"
                     };
-
                     <div class="organizer-table-row">
-
                         <div class="event-cell">
-                            <img src="@MediaUrl.Img(item.ImageUrl)"
-                                 alt="@item.Title" />
-
-                            <div>
-                                <strong>@item.Title</strong>
-                                <p>@item.CategoryName • @item.VenueName</p>
-                            </div>
+                            <img src="@MediaUrl.Img(item.ImageUrl)" alt="@item.Title" />
+                            <div><strong>@item.Title</strong><p>@item.CategoryName • @item.VenueName</p></div>
                         </div>
-
-                        <span class="status-badge @statusClass">
-                            @item.Status
-                        </span>
-
-                        <span>
-                            @item.StartTime.ToString("dd/MM/yyyy HH:mm")
-                        </span>
-
-                        <span>
-                            @item.TotalTicketsSold
-                        </span>
-
-                        <span class="revenue-text">
-                            @item.TotalRevenue.ToString("#,##0") d
-                        </span>
-
+                        <span class="status-badge @statusClass">@item.Status</span>
+                        <span>@item.StartTime.ToString("dd/MM/yyyy HH:mm")</span>
+                        <span>@item.TotalTicketsSold</span>
+                        <span class="revenue-text">@item.TotalRevenue.ToString("#,##0") đ</span>
                         <div class="row-actions">
-                            <a asp-controller="Organizer"
-                               asp-action="ManageEvent"
-                               asp-route-id="@item.Id">
-                                Manage
-                            </a>
-
-                            @{
-                                var editableStatuses = new[] { "Draft" };
-                                var canEdit = editableStatuses.Contains(item.Status);
-                            }
-                            @if (canEdit)
+                            <a asp-action="ManageEvent" asp-route-id="@item.Id">Quản lý</a>
+                            @if (string.Equals(item.Status, "Draft", StringComparison.OrdinalIgnoreCase))
                             {
-                                <a asp-controller="Organizer"
-                                   asp-action="EditEvent"
-                                   asp-route-id="@item.Id">
-                                    Edit
-                                </a>
+                                <a asp-action="EditEvent" asp-route-id="@item.Id">Chỉnh sửa</a>
                             }
                         </div>
-
                     </div>
                 }
-
             </div>
         }
 
         @if (Model != null && Model.TotalPages > 1)
         {
-            <div class="pagination-bar mt-4">
-                @if (Model.CurrentPage > 1)
+            var firstPage = Math.Max(1, Model.CurrentPage - 2);
+            var lastPage = Math.Min(Model.TotalPages, Model.CurrentPage + 2);
+            <nav class="pagination-bar mt-4" aria-label="Phân trang sự kiện">
+                <a class="pagination-btn @(Model.CurrentPage == 1 ? "disabled" : "")"
+                   asp-action="Events" asp-route-search="@search" asp-route-status="@selectedStatus"
+                   asp-route-fromDate="@fromDate?.ToString("yyyy-MM-dd")" asp-route-toDate="@toDate?.ToString("yyyy-MM-dd")"
+                   asp-route-currentPage="@(Model.CurrentPage - 1)" asp-route-pageSize="@Model.PageSize">‹ Trước</a>
+                @for (var pageNumber = firstPage; pageNumber <= lastPage; pageNumber++)
                 {
-                    <a class="pagination-btn"
-                       asp-controller="Organizer"
-                       asp-action="Events"
-                       asp-route-currentPage="@(Model.CurrentPage - 1)"
-                       asp-route-pageSize="@Model.PageSize">
-                        ? Prev
-                    </a>
+                    <a class="pagination-btn @(pageNumber == Model.CurrentPage ? "active" : "")"
+                       asp-action="Events" asp-route-search="@search" asp-route-status="@selectedStatus"
+                       asp-route-fromDate="@fromDate?.ToString("yyyy-MM-dd")" asp-route-toDate="@toDate?.ToString("yyyy-MM-dd")"
+                       asp-route-currentPage="@pageNumber" asp-route-pageSize="@Model.PageSize">@pageNumber</a>
                 }
-
-                @for (int p = 1; p <= Model.TotalPages; p++)
-                {
-                    <a class="pagination-btn @(p == Model.CurrentPage ? "active" : "")"
-                       asp-controller="Organizer"
-                       asp-action="Events"
-                       asp-route-currentPage="@p"
-                       asp-route-pageSize="@Model.PageSize">
-                        @p
-                    </a>
-                }
-
-                @if (Model.CurrentPage < Model.TotalPages)
-                {
-                    <a class="pagination-btn"
-                       asp-controller="Organizer"
-                       asp-action="Events"
-                       asp-route-currentPage="@(Model.CurrentPage + 1)"
-                       asp-route-pageSize="@Model.PageSize">
-                        Next >
-                    </a>
-                }
-
-                <span class="pagination-info">
-                    Page @Model.CurrentPage / @Model.TotalPages
-                    (@Model.TotalRows events)
-                </span>
-            </div>
+                <a class="pagination-btn @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")"
+                   asp-action="Events" asp-route-search="@search" asp-route-status="@selectedStatus"
+                   asp-route-fromDate="@fromDate?.ToString("yyyy-MM-dd")" asp-route-toDate="@toDate?.ToString("yyyy-MM-dd")"
+                   asp-route-currentPage="@(Model.CurrentPage + 1)" asp-route-pageSize="@Model.PageSize">Sau ›</a>
+                <span class="pagination-info">Trang @Model.CurrentPage / @Model.TotalPages (@Model.TotalRows sự kiện)</span>
+            </nav>
         }
-
     </div>
-
 </section>

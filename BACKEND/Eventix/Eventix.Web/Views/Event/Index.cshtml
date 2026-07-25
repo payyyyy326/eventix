@@ -11,16 +11,12 @@
         <aside class="filter-panel">
             <h2>Lọc sự kiện</h2>
 
-            <form asp-controller="Event"
-                  asp-action="Index"
-                  method="get">
+            <form asp-controller="Event" asp-action="Index" method="get">
 
                 <div class="filter-group">
                     <label>Tìm kiếm</label>
 
-                    <input name="Search"
-                           value="@Model.Filter.Search"
-                           placeholder="Tìm kiếm sự kiện..." />
+                    <input name="Search" value="@Model.Filter.Search" placeholder="Tìm kiếm sự kiện..." />
                 </div>
 
                 <div class="filter-group">
@@ -31,8 +27,7 @@
 
                         @foreach (var category in Model.Categories)
                         {
-                            <option value="@category.Id"
-                                    selected="@(Model.Filter.CategoryId == category.Id)">
+                            <option value="@category.Id" selected="@(Model.Filter.CategoryId == category.Id)">
                                 @category.Name
                             </option>
                         }
@@ -42,35 +37,25 @@
                 <div class="filter-group">
                     <label>Từ ngày</label>
 
-                    <input name="FromDate"
-                           type="date"
-                           value="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" />
+                    <input name="FromDate" type="date" value="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" />
                 </div>
 
                 <div class="filter-group">
                     <label>Đến ngày</label>
 
-                    <input name="ToDate"
-                           type="date"
-                           value="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" />
+                    <input name="ToDate" type="date" value="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" />
                 </div>
 
                 <div class="filter-group">
                     <label>Giá tối thiểu</label>
 
-                    <input name="MinPrice"
-                           type="number"
-                           value="@Model.Filter.MinPrice"
-                           placeholder="0" />
+                    <input name="MinPrice" type="number" value="@Model.Filter.MinPrice" placeholder="0" />
                 </div>
 
                 <div class="filter-group">
                     <label>Giá tối đa</label>
 
-                    <input name="MaxPrice"
-                           type="number"
-                           value="@Model.Filter.MaxPrice"
-                           placeholder="1000000" />
+                    <input name="MaxPrice" type="number" value="@Model.Filter.MaxPrice" placeholder="1000000" />
                 </div>
 
                 <div class="filter-group">
@@ -81,34 +66,25 @@
                             Mới nhất
                         </option>
 
-                        <option value="view"
-                                selected="@(Model.Filter.SortBy == "view")">
+                        <option value="view" selected="@(Model.Filter.SortBy == "view")">
                             Xem nhiều nhất
                         </option>
 
-                        <option value="upcoming"
-                                selected="@(Model.Filter.SortBy == "upcoming")">
+                        <option value="upcoming" selected="@(Model.Filter.SortBy == "upcoming")">
                             Sắp diễn ra
                         </option>
                     </select>
                 </div>
 
-                <input type="hidden"
-                       name="CurrentPage"
-                       value="1" />
+                <input type="hidden" name="CurrentPage" value="1" />
 
-                <input type="hidden"
-                       name="PageSize"
-                       value="@Model.Filter.PageSize" />
+                <input type="hidden" name="PageSize" value="@Model.Filter.PageSize" />
 
-                <button type="submit"
-                        class="filter-btn">
+                <button type="submit" class="filter-btn">
                     Áp dụng bộ lọc
                 </button>
 
-                <a asp-controller="Event"
-                   asp-action="Index"
-                   class="clear-filter-btn">
+                <a asp-controller="Event" asp-action="Index" class="clear-filter-btn">
                     Xóa bộ lọc
                 </a>
 
@@ -140,13 +116,9 @@
 
                     @foreach (var item in Model.Events.DataList)
                     {
-                        <a class="event-card"
-                           asp-controller="Event"
-                           asp-action="Details"
-                           asp-route-id="@item.Id">
+                        <a class="event-card" asp-controller="Event" asp-action="Details" asp-route-id="@item.Id">
 
-                            <img src="@MediaUrl.Img(item.ImageUrl)"
-                                 alt="@item.Title" />
+                            <img src="@MediaUrl.Img(item.ImageUrl)" alt="@item.Title" />
 
                             <div class="event-card-body">
 
@@ -190,4 +162,3 @@
 
     </div>
 </section>
-```

@@ -25,18 +25,22 @@
         .ToList();
 
     var activeBookingCount = activeBookings.Count;
-    var ticketCount = Model.Tickets.Count;
+    var ticketCount = Model.TotalTicketCount;
 }
 
 <main class="commerce-page my-tickets-page">
 
-    <header class="my-tickets-header">
-        <div>
+    <header class="my-tickets-header my-tickets-hero">
+        <div class="my-tickets-hero-copy">
+            <span class="my-tickets-kicker">TRUNG TÂM VÉ</span>
             <h1>Vé của tôi</h1>
-            <p>Quản lý lượt giữ vé và vé điện tử của bạn.</p>
+            <p>Theo dõi vé đang giữ, quản lý vé điện tử và mở mã QR khi tham dự sự kiện.</p>
+        </div>
+        <div class="my-tickets-stats">
+            <div><span>Đang giữ</span><strong>@activeBookingCount</strong></div>
+            <div><span>Vé đã mua</span><strong>@ticketCount</strong></div>
         </div>
     </header>
-
     <nav class="my-tickets-tabs">
         <a class="my-tab-btn @(activeTab == "bookings" ? "active" : "")"
            asp-action="MyTickets"
@@ -197,109 +201,158 @@
         @* ==================== VÉ ĐÃ MUA ==================== *@
         @if (activeTab == "tickets")
         {
-            if (ticketCount == 0)
-            {
-                <section class="commerce-empty-state">
+            <section class="ticket-table-panel">
+                <form class="ticket-filters" asp-action="MyTickets" method="get">
+                    <input type="hidden" name="tab" value="tickets" />
+                    <div class="ticket-filter-search">
+                        <label for="ticketSearch">Tìm kiếm</label>
+                        <input id="ticketSearch" name="search" value="@Model.Search"
+                               placeholder="Tên sự kiện, mã vé, loại vé, địa điểm..." />
+                    </div>
+                    <div>
+                        <label for="ticketStatus">Trạng thái</label>
+                        <select id="ticketStatus" name="status">
+                            <option value="">Tất cả trạng thái</option>
+                            @foreach (var statusOption in Model.TicketStatuses)
+                            {
+                                <option value="@statusOption" selected="@(string.Equals(Model.Status, statusOption, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                    @statusOption
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label for="fromDate">Từ ngày</label>
+                        <input id="fromDate" type="date" name="fromDate" value="@Model.FromDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div>
+                        <label for="toDate">Đến ngày</label>
+                        <input id="toDate" type="date" name="toDate" value="@Model.ToDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div>
+                        <label for="ticketPageSize">Số dòng</label>
+                        <select id="ticketPageSize" name="pageSize">
+                            @foreach (var size in new[] { 5, 10, 20, 50 })
+                            {
+                                <option value="@size" selected="@(Model.TicketPageSize == size ? "selected" : null)">@size</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="ticket-filter-actions">
+                        <button class="commerce-button" type="submit">Lọc vé</button>
+                        <a class="ticket-filter-reset" asp-action="MyTickets" asp-route-tab="tickets">Xóa lọc</a>
+                    </div>
+                </form>
 
-                    <div class="empty-state-icon">🎫</div>
-
-                    <h2>Bạn chưa có vé điện tử</h2>
-
-                    <p>
-                        Vé đã thanh toán thành công sẽ được hiển thị tại đây.
-                    </p>
-
-                    <a class="commerce-button"
-                       asp-controller="Event"
-                       asp-action="Index">
-                        Tìm sự kiện
-                    </a>
-
-                </section>
-            }
-            else
-            {
-                <div class="ticket-grid">
-
-                    @foreach (var ticket in Model.Tickets)
+                <div class="ticket-table-summary">
+                    <span>Hiển thị <strong>@Model.Tickets.Count</strong> / <strong>@Model.FilteredTicketCount</strong> vé phù hợp</span>
+                    @if (Model.FilteredTicketCount != Model.TotalTicketCount)
                     {
-                        var ticketStatusClass =
-                        ticket.Status?.ToLowerInvariant() switch
-                        {
-                            "confirmed" => "status-confirmed",
-                            "used" => "status-used",
-                            "cancelled" => "status-cancelled",
-                            "expired" => "status-expired",
-                            _ => "status-default"
-                        };
-
-                        var ticketStatusText =
-                        ticket.Status?.ToLowerInvariant() switch
-                        {
-                            "confirmed" => "Có hiệu lực",
-                            "used" => "Đã sử dụng",
-                            "cancelled" => "Đã huỷ",
-                            "expired" => "Đã hết hạn",
-                            _ => ticket.Status
-                        };
-
-                        <a class="commerce-card ticket-card"
-                           asp-action="Ticket"
-                           asp-route-id="@ticket.Id">
-
-                            <div class="ticket-card-top">
-
-                                <div>
-                                    <span class="ticket-type-label">
-                                        @ticket.TicketTypeName
-                                    </span>
-
-                                    <h2>@ticket.EventTitle</h2>
-                                </div>
-
-                                <span class="commerce-status @ticketStatusClass">
-                                    @ticketStatusText
-                                </span>
-
-                            </div>
-
-                            <div class="ticket-card-details">
-
-                                <div class="ticket-detail-item">
-                                    <span>Thời gian</span>
-
-                                    <strong>
-                                        @ticket.EventStartTime.ToString("HH:mm - dd/MM/yyyy")
-                                    </strong>
-                                </div>
-
-                                <div class="ticket-detail-item">
-                                    <span>Địa điểm</span>
-
-                                    <strong>@ticket.VenueName</strong>
-                                </div>
-
-                                @if (!string.IsNullOrWhiteSpace(ticket.SeatLabel))
-                                {
-                                    <div class="ticket-detail-item">
-                                        <span>Vị trí</span>
-
-                                        <strong>@ticket.SeatLabel</strong>
-                                    </div>
-                                }
-
-                            </div>
-
-                            <div class="ticket-card-code">
-                                <span>Mã vé</span>
-                                <strong>@ticket.TicketCode</strong>
-                            </div>
-
-                        </a>
+                        <span>Tổng số vé: @Model.TotalTicketCount</span>
                     }
-
                 </div>
-            }
+
+                @if (Model.TotalTicketCount == 0)
+                {
+                    <section class="commerce-empty-state">
+                        <div class="empty-state-icon">🎫</div>
+                        <h2>Bạn chưa có vé điện tử</h2>
+                        <p>Vé đã thanh toán thành công sẽ được hiển thị tại đây.</p>
+                        <a class="commerce-button" asp-controller="Event" asp-action="Index">Tìm sự kiện</a>
+                    </section>
+                }
+                else if (Model.FilteredTicketCount == 0)
+                {
+                    <section class="commerce-empty-state ticket-filter-empty">
+                        <div class="empty-state-icon">🔎</div>
+                        <h2>Không tìm thấy vé phù hợp</h2>
+                        <p>Hãy thay đổi từ khóa, trạng thái hoặc khoảng ngày.</p>
+                        <a class="commerce-button" asp-action="MyTickets" asp-route-tab="tickets">Xóa bộ lọc</a>
+                    </section>
+                }
+                else
+                {
+                    <div class="ticket-table-scroll">
+                        <table class="ticket-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Mã vé</th>
+                                    <th>Sự kiện</th>
+                                    <th>Loại vé / Ghế</th>
+                                    <th>Thời gian</th>
+                                    <th>Địa điểm</th>
+                                    <th>Trạng thái</th>
+                                    <th class="ticket-action-column">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var ticket in Model.Tickets)
+                                {
+                                    var statusClass = ticket.Status?.ToLowerInvariant() switch
+                                    {
+                                        "confirmed" => "status-confirmed",
+                                        "used" => "status-used",
+                                        "cancelled" => "status-cancelled",
+                                        "expired" => "status-expired",
+                                        _ => "status-default"
+                                    };
+                                    var statusText = ticket.Status?.ToLowerInvariant() switch
+                                    {
+                                        "confirmed" => "Có hiệu lực",
+                                        "used" => "Đã sử dụng",
+                                        "cancelled" => "Đã hủy",
+                                        "expired" => "Đã hết hạn",
+                                        _ => ticket.Status
+                                    };
+                                    <tr>
+                                        <td><strong class="ticket-code-cell">@ticket.TicketCode</strong></td>
+                                        <td><strong>@ticket.EventTitle</strong></td>
+                                        <td>
+                                            <span>@ticket.TicketTypeName</span>
+                                            @if (!string.IsNullOrWhiteSpace(ticket.SeatLabel))
+                                            {
+                                                <small>Ghế: @ticket.SeatLabel</small>
+                                            }
+                                        </td>
+                                        <td><time>@ticket.EventStartTime.ToString("HH:mm dd/MM/yyyy")</time></td>
+                                        <td>@ticket.VenueName</td>
+                                        <td><span class="commerce-status @statusClass">@statusText</span></td>
+                                        <td class="ticket-action-column">
+                                            <a class="ticket-view-button" asp-action="Ticket" asp-route-id="@ticket.Id">Xem vé</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (Model.TicketTotalPages > 1)
+                    {
+                        var firstPage = Math.Max(1, Model.TicketPage - 2);
+                        var lastPage = Math.Min(Model.TicketTotalPages, Model.TicketPage + 2);
+                        <nav class="ticket-pagination" aria-label="Phân trang vé">
+                            <a class="ticket-page-link @(Model.TicketPage == 1 ? "disabled" : "")"
+                               asp-action="MyTickets" asp-route-tab="tickets" asp-route-search="@Model.Search"
+                               asp-route-status="@Model.Status" asp-route-fromDate="@Model.FromDate?.ToString("yyyy-MM-dd")"
+                               asp-route-toDate="@Model.ToDate?.ToString("yyyy-MM-dd")" asp-route-pageSize="@Model.TicketPageSize"
+                               asp-route-page="@(Model.TicketPage - 1)">‹ Trước</a>
+                            @for (var pageNumber = firstPage; pageNumber <= lastPage; pageNumber++)
+                            {
+                                <a class="ticket-page-link @(pageNumber == Model.TicketPage ? "active" : "")"
+                                   asp-action="MyTickets" asp-route-tab="tickets" asp-route-search="@Model.Search"
+                                   asp-route-status="@Model.Status" asp-route-fromDate="@Model.FromDate?.ToString("yyyy-MM-dd")"
+                                   asp-route-toDate="@Model.ToDate?.ToString("yyyy-MM-dd")" asp-route-pageSize="@Model.TicketPageSize"
+                                   asp-route-page="@pageNumber">@pageNumber</a>
+                            }
+                            <a class="ticket-page-link @(Model.TicketPage == Model.TicketTotalPages ? "disabled" : "")"
+                               asp-action="MyTickets" asp-route-tab="tickets" asp-route-search="@Model.Search"
+                               asp-route-status="@Model.Status" asp-route-fromDate="@Model.FromDate?.ToString("yyyy-MM-dd")"
+                               asp-route-toDate="@Model.ToDate?.ToString("yyyy-MM-dd")" asp-route-pageSize="@Model.TicketPageSize"
+                               asp-route-page="@(Model.TicketPage + 1)">Sau ›</a>
+                        </nav>
+                    }
+                }
+            </section>
         }
 
     </div>

@@ -1,4 +1,4 @@
-﻿using Eventix.Common.Constants.SystemData;
+using Eventix.Common.Constants.SystemData;
 using Eventix.Controllers;
 using Eventix.Modules.VenueModule.Interfaces;
 using Eventix.Share.Common.Models;
@@ -59,6 +59,7 @@ namespace Eventix.Modules.VenueModule.Controllers
             return SuccessResponse(SystemSuccess.VENUE_UPDATED, venue);
         }
 
+        [AllowAnonymous]
         [HttpGet("{venueId}/seat-map")]
         public async Task<ActionResult<ApiResponseModel<List<VenueSectionLayoutResponse>>>> GetSeatMap(Guid venueId)
         {

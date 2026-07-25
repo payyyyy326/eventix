@@ -15,32 +15,78 @@ public class CommerceController : Controller
 
     // ─── Trang gộp Vé đang giữ + Vé đã mua ─────────────────────────────────
     [HttpGet]
-    public async Task<IActionResult> MyTickets(string tab = "bookings")
+    public async Task<IActionResult> MyTickets(
+        string tab = "bookings", string? search = null, string? status = null,
+        DateTime? fromDate = null, DateTime? toDate = null,
+        int page = 1, int pageSize = 10)
     {
         var client = AuthorizedClient();
         if (client == null) return RedirectToAction("Login", "Auth");
-
         ViewBag.ActiveTab = tab;
 
-        var bookingsTask = client.GetFromJsonAsync<
-            ApiResponseModel<PaginationResponse<BookingResponse>>>(
-            "api/bookings/my?CurrentPage=1&PageSize=100");
-
-        var ticketsTask = client.GetFromJsonAsync<
-            ApiResponseModel<List<TicketResponse>>>("api/tickets/my");
-
+        var bookingsTask = client.GetAsync("api/bookings/my?CurrentPage=1&PageSize=100");
+        var ticketsTask = client.GetAsync("api/tickets/my");
         await Task.WhenAll(bookingsTask, ticketsTask);
 
-        var model = new MyTicketsViewModel
+        if (bookingsTask.Result.StatusCode == System.Net.HttpStatusCode.Unauthorized ||
+            ticketsTask.Result.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
-            Bookings = bookingsTask.Result?.Data?.DataList ?? [],
-            Tickets = ticketsTask.Result?.Data ?? []
-        };
+            ClearExpiredSession();
+            TempData["Error"] = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+            return RedirectToAction("Login", "Auth");
+        }
 
-        return View(model);
+        var bookingsResult = bookingsTask.Result.IsSuccessStatusCode
+            ? await bookingsTask.Result.Content.ReadFromJsonAsync<ApiResponseModel<PaginationResponse<BookingResponse>>>()
+            : null;
+        var ticketsResult = ticketsTask.Result.IsSuccessStatusCode
+            ? await ticketsTask.Result.Content.ReadFromJsonAsync<ApiResponseModel<List<TicketResponse>>>()
+            : null;
+        var allTickets = ticketsResult?.Data ?? [];        var filteredTickets = allTickets.AsEnumerable();
+        search = search?.Trim();
+        status = status?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(search))
+            filteredTickets = filteredTickets.Where(ticket =>
+                ticket.EventTitle.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                ticket.TicketCode.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                ticket.TicketTypeName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                ticket.VenueName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                (ticket.SeatLabel?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
+        if (!string.IsNullOrWhiteSpace(status))
+            filteredTickets = filteredTickets.Where(ticket =>
+                string.Equals(ticket.Status, status, StringComparison.OrdinalIgnoreCase));
+        if (fromDate.HasValue)
+            filteredTickets = filteredTickets.Where(ticket => ticket.EventStartTime.Date >= fromDate.Value.Date);
+        if (toDate.HasValue)
+            filteredTickets = filteredTickets.Where(ticket => ticket.EventStartTime.Date <= toDate.Value.Date);
+
+        pageSize = new[] { 5, 10, 20, 50 }.Contains(pageSize) ? pageSize : 10;
+        var orderedTickets = filteredTickets.OrderByDescending(ticket => ticket.EventStartTime).ToList();
+        var totalFilteredTickets = orderedTickets.Count;
+        var totalPages = Math.Max(1, (int)Math.Ceiling(totalFilteredTickets / (double)pageSize));
+        page = Math.Clamp(page, 1, totalPages);
+
+        return View(new MyTicketsViewModel
+        {
+            Bookings = bookingsResult?.Data?.DataList ?? [],
+            Tickets = orderedTickets.Skip((page - 1) * pageSize).Take(pageSize).ToList(),
+            TotalTicketCount = allTickets.Count,
+            FilteredTicketCount = totalFilteredTickets,
+            TicketPage = page,
+            TicketPageSize = pageSize,
+            TicketTotalPages = totalPages,
+            Search = search,
+            Status = status,
+            FromDate = fromDate,
+            ToDate = toDate,
+            TicketStatuses = allTickets.Select(ticket => ticket.Status)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(value => value)
+                .ToList()
+        });
     }
-
-    // ─── Backward-compat redirects cho link cũ ──────────────────────────────
     [HttpGet]
     public IActionResult Bookings() =>
         RedirectToAction("MyTickets", new { tab = "bookings" });
@@ -238,6 +284,14 @@ public class CommerceController : Controller
     }
 
     // ─── Helper ──────────────────────────────────────────────────────────────
+    private void ClearExpiredSession()
+    {
+        Response.Cookies.Delete(SystemConstants.CookieNames.Token);
+        Response.Cookies.Delete(SystemConstants.CookieNames.RefreshToken);
+        Response.Cookies.Delete(SystemConstants.CookieNames.UserName);
+        Response.Cookies.Delete(SystemConstants.CookieNames.AvatarUrl);
+        Response.Cookies.Delete(SystemConstants.CookieNames.Roles);
+    }
     private HttpClient? AuthorizedClient()
     {
         var token = Request.Cookies[SystemConstants.CookieNames.Token];
