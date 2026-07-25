@@ -26,6 +26,8 @@ using Eventix.Modules.UserModule.Interfaces;
 using Eventix.Modules.UserModule.Service;
 using Eventix.Modules.VenueModule.Interfaces;
 using Eventix.Modules.VenueModule.Services;
+using Eventix.Modules.Admin.Interfaces;
+using Eventix.Modules.Admin.Services;
 using Eventix.Modules.VenueZoneModule.Interfaces;
 using Eventix.Modules.VenueZoneModule.Services;
 using Eventix.Share.Common.Constants;
@@ -194,6 +196,7 @@ namespace Eventix
             builder.Services.AddScoped<IOrganizerProfileService, OrganizerProfileService>();
             builder.Services.AddScoped<IEventService, EventService>();
             builder.Services.AddScoped<IVenueZoneService, VenueZoneService>();
+            builder.Services.AddScoped<IAdminService, AdminService>();
             builder.Services.Configure<ApiSettings>(
                 builder.Configuration.GetSection(ApiSettings.SectionName));
 

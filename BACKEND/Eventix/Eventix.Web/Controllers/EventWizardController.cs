@@ -369,6 +369,104 @@ namespace Eventix.Web.Controllers
             return RedirectToAction("Step4");
         }
 
+        /// <summary>
+        /// AJAX POST: xóa ticket type theo index tại Step3.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult RemoveTicketType([FromBody] int index)
+        {
+            var currentJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
+            var ticketTypes = string.IsNullOrWhiteSpace(currentJson)
+                ? new List<CreateTicketTypeRequest>()
+                : JsonSerializer.Deserialize<List<CreateTicketTypeRequest>>(currentJson) ?? new();
+
+            if (index < 0 || index >= ticketTypes.Count)
+                return Json(new { success = false, message = "Chỉ số vé không hợp lệ." });
+
+            if (ticketTypes.Count == 1)
+                return Json(new { success = false, message = "Cần ít nhất một loại vé." });
+
+            ticketTypes.RemoveAt(index);
+            HttpContext.Session.SetString("EventWizard_TicketTypes", JsonSerializer.Serialize(ticketTypes));
+            InvalidateSeatMapSave();
+
+            return Json(new { success = true, message = "Đã xóa loại vé.", count = ticketTypes.Count });
+        }
+
+        /// <summary>
+        /// AJAX POST: cập nhật ticket type theo index tại Step3.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult UpdateTicketType([FromBody] EventWizardController.UpdateTicketTypeFromReviewRequest request)
+        {
+            if (request?.Ticket == null)
+                return Json(new { success = false, message = "Dữ liệu không hợp lệ." });
+
+            var currentJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
+            var ticketTypes = string.IsNullOrWhiteSpace(currentJson)
+                ? new List<CreateTicketTypeRequest>()
+                : JsonSerializer.Deserialize<List<CreateTicketTypeRequest>>(currentJson) ?? new();
+
+            if (request.Index < 0 || request.Index >= ticketTypes.Count)
+                return Json(new { success = false, message = "Chỉ số vé không hợp lệ." });
+
+            var ticket = request.Ticket;
+
+            // Safety net: ép Kind = UTC
+            if (ticket.SaleStartTime.Kind == DateTimeKind.Unspecified)
+                ticket.SaleStartTime = DateTime.SpecifyKind(ticket.SaleStartTime, DateTimeKind.Utc);
+            if (ticket.SaleEndTime.Kind == DateTimeKind.Unspecified)
+                ticket.SaleEndTime = DateTime.SpecifyKind(ticket.SaleEndTime, DateTimeKind.Utc);
+
+            if (string.IsNullOrWhiteSpace(ticket.Name))
+                return Json(new { success = false, field = "Name", message = "Tên loại vé là bắt buộc." });
+
+            if (ticketTypes.Where((_, i) => i != request.Index)
+                           .Any(t => string.Equals(t.Name.Trim(), ticket.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
+                return Json(new { success = false, field = "Name", message = $"Đã có loại vé tên '{ticket.Name}'." });
+
+            if (ticket.Quantity <= 0)
+                return Json(new { success = false, field = "Quantity", message = "Số lượng phải lớn hơn 0." });
+
+            if (ticket.Price < 0)
+                return Json(new { success = false, field = "Price", message = "Giá không được âm." });
+
+            if (ticket.SaleStartTime == default)
+                return Json(new { success = false, field = "SaleStartTime", message = "Bắt đầu bán là bắt buộc." });
+
+            if (ticket.SaleEndTime == default)
+                return Json(new { success = false, field = "SaleEndTime", message = "Kết thúc bán là bắt buộc." });
+
+            if (ticket.SaleEndTime <= ticket.SaleStartTime)
+                return Json(new { success = false, field = "SaleEndTime", message = "Kết thúc bán phải sau bắt đầu bán." });
+
+            // SaleEndTime phải <= EventStartTime
+            var eventInfoJsonU = HttpContext.Session.GetString("EventWizard_Info");
+            if (!string.IsNullOrWhiteSpace(eventInfoJsonU))
+            {
+                var eventInfoU = JsonSerializer.Deserialize<EventInfoViewModel>(eventInfoJsonU);
+                if (eventInfoU != null && eventInfoU.StartTime != default && ticket.SaleEndTime > eventInfoU.StartTime)
+                    return Json(new { success = false, field = "SaleEndTime",
+                        message = $"Kết thúc bán phải trước thời gian bắt đầu sự kiện ({eventInfoU.StartTime:dd/MM/yyyy HH:mm} UTC)." });
+            }
+
+            var existing = ticketTypes[request.Index];
+            existing.Name          = ticket.Name.Trim();
+            existing.Description   = ticket.Description;
+            existing.Price         = ticket.Price;
+            existing.Quantity      = ticket.Quantity;
+            existing.SaleStartTime = ticket.SaleStartTime;
+            existing.SaleEndTime   = ticket.SaleEndTime;
+            existing.IsSeatRequired = ticket.IsSeatRequired;
+
+            HttpContext.Session.SetString("EventWizard_TicketTypes", JsonSerializer.Serialize(ticketTypes));
+            InvalidateSeatMapSave();
+
+            return Json(new { success = true, message = "Đã cập nhật loại vé.", count = ticketTypes.Count });
+        }
+
         [HttpPost]
         public async Task<IActionResult> SaveSeatMap([FromBody] List<VenueSectionLayoutRequest> request)
         {
@@ -753,6 +851,23 @@ namespace Eventix.Web.Controllers
 
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
+
+            /*
+             * Auto-adjust SaleStartTime nếu đã qua hiện tại.
+             * Lý do: organizer có thể tạo wizard từ hôm qua, hoặc set SaleStartTime
+             * ngay lúc tạo vé nhưng đến lúc Publish thì giờ đó đã qua.
+             * → Thay vì báo lỗi, tự động điều chỉnh về UTC now để mở bán ngay khi publish.
+             */
+            var publishNow = DateTime.UtcNow;
+            foreach (var tt in ticketTypes)
+            {
+                if (tt.SaleStartTime.Kind == DateTimeKind.Unspecified)
+                    tt.SaleStartTime = DateTime.SpecifyKind(tt.SaleStartTime, DateTimeKind.Utc);
+                if (tt.SaleStartTime <= publishNow)
+                    tt.SaleStartTime = publishNow.AddSeconds(5); // nhỏ hơn 1 phút, mở bán gần như ngay lập tức
+            }
+            // Lưu lại session sau khi adjust
+            HttpContext.Session.SetString("EventWizard_TicketTypes", JsonSerializer.Serialize(ticketTypes));
 
             /*
              * Kiểm tra toàn bộ dữ liệu lần cuối

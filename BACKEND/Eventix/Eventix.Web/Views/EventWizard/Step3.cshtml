@@ -238,13 +238,14 @@
                 else
                 {
                     <div class="ticket-type-grid">
-                        @foreach (var ticket in ticketTypes.OrderBy(t => t.Price).ThenBy(t => t.Name))
+                        @for (int i = 0; i < ticketTypes.Count; i++)
                         {
+                            var ticket = ticketTypes[i];
                             var priceLabel = ticket.Price <= 0
                                 ? "Miễn phí"
                                 : $"{ticket.Price:#,##0} VND";
 
-                            <article class="ticket-type-card">
+                            <article class="ticket-type-card" id="ticket-card-@i">
                                 <div class="ticket-type-card-header">
                                     <div>
                                         <h4>@ticket.Name</h4>
@@ -283,6 +284,27 @@
                                         <strong>@ticket.SaleEndTime.ToString("dd/MM/yyyy HH:mm")</strong>
                                     </div>
                                 </div>
+
+                                <div class="ticket-card-actions mt-3" style="display:flex;gap:8px;border-top:1px solid rgba(255,255,255,0.07);padding-top:12px;">
+                                    <button type="button"
+                                            class="wizard-btn-secondary"
+                                            style="padding:6px 16px;font-size:0.83rem;"
+                                            onclick="openEditModal(@i,
+                                                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ticket.Name)),
+                                                @ticket.Price,
+                                                @ticket.Quantity,
+                                                @(ticket.IsSeatRequired ? "true" : "false"),
+                                                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ticket.SaleStartTime.ToString("yyyy-MM-ddTHH:mm:ss") + "Z")),
+                                                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ticket.SaleEndTime.ToString("yyyy-MM-ddTHH:mm:ss") + "Z")),
+                                                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ticket.Description ?? "")))">
+                                        ✏️ Sửa
+                                    </button>
+                                    <button type="button"
+                                            style="padding:6px 16px;font-size:0.83rem;background:rgba(239,68,68,0.14);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:8px;cursor:pointer;font-weight:600;"
+                                            onclick="deleteTicket(@i, '@ticket.Name')">
+                                        🗑 Xóa
+                                    </button>
+                                </div>
                             </article>
                         }
                     </div>
@@ -315,7 +337,86 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 
+    @* ── Edit ticket modal ────────────────────────────────────────────── *@
+    <div id="editTicketModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:#1a1a35;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px;width:min(560px,94vw);max-height:90vh;overflow-y:auto;">
+            <h3 style="margin:0 0 18px;color:#f0f0ff;font-size:18px;">Chỉnh sửa loại vé</h3>
+            <div id="editTicketError" style="display:none;color:#f87171;margin-bottom:12px;padding:10px 14px;background:rgba(239,68,68,0.1);border-radius:8px;font-size:14px;"></div>
+
+            <input type="hidden" id="editIndex" />
+
+            <div class="wizard-grid-2 mb-3">
+                <div class="form-group">
+                    <label>Tên loại vé <span style="color:#f87171">*</span></label>
+                    <input id="et-name" class="form-control" placeholder="VIP, Thường..." />
+                </div>
+                <div class="form-group">
+                    <label>Loại vé</label>
+                    <div style="display:flex;gap:16px;margin-top:10px;">
+                        <label style="cursor:pointer;display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="et-type" id="et-standing" value="false" /> Vào tự do
+                        </label>
+                        <label style="cursor:pointer;display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="et-type" id="et-seated" value="true" /> Có ghế ngồi
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wizard-grid-2 mb-3">
+                <div class="form-group">
+                    <label>Giá vé (VND)</label>
+                    <input id="et-price" type="number" min="0" step="1000" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label>Số lượng <span style="color:#f87171">*</span></label>
+                    <input id="et-qty" type="number" min="1" class="form-control" />
+                </div>
+            </div>
+
+            <div class="wizard-grid-2 mb-3">
+                <div class="form-group">
+                    <label>Bắt đầu bán <span style="color:#f87171">*</span></label>
+                    <input id="et-sale-start" type="datetime-local" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label>Kết thúc bán <span style="color:#f87171">*</span></label>
+                    <input id="et-sale-end" type="datetime-local" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group mb-4">
+                <label>Mô tả</label>
+                <textarea id="et-desc" rows="3" class="form-control" placeholder="Quyền lợi, điều kiện..."></textarea>
+            </div>
+
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button type="button" onclick="saveEditTicket()"
+                        style="padding:10px 22px;background:linear-gradient(135deg,#6d4aff,#9b59ff);color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;">
+                    Lưu thay đổi
+                </button>
+                <button type="button" onclick="closeEditModal()"
+                        style="padding:10px 18px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);color:#c4c8e8;border-radius:10px;font-weight:600;cursor:pointer;">
+                    Huỷ
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // ── Datetime helpers ────────────────────────────────────────────────
+        function toLocalInput(isoStr) {
+            if (!isoStr) return '';
+            const d = new Date(isoStr);
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+        function toLocalDatetimeValue(date) {
+            const pad = n => String(n).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+
+        // ── Add-ticket form: seat radio badge update ────────────────────────
         document.addEventListener("DOMContentLoaded", function () {
             const radioStanding = document.getElementById("radioStanding");
             const radioSeated   = document.getElementById("radioSeated");
@@ -339,13 +440,8 @@
             radioSeated?.addEventListener("change", updateBadge);
             updateBadge();
 
-            function toLocalDatetimeValue(date) {
-                const pad = n => String(n).padStart(2, '0');
-                return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-            }
-
-            const now       = new Date();
-            const nowStr    = toLocalDatetimeValue(now);
+            const now    = new Date();
+            const nowStr = toLocalDatetimeValue(now);
             const saleStart = document.getElementById('saleStartInput');
             const saleEnd   = document.getElementById('saleEndInput');
 
@@ -378,6 +474,90 @@
                 if (startVal) document.getElementById('saleStartUtc').value = new Date(startVal).toISOString();
                 if (endVal)   document.getElementById('saleEndUtc').value   = new Date(endVal).toISOString();
             });
+        });
+
+        // ── Delete ticket ───────────────────────────────────────────────────
+        async function deleteTicket(index, name) {
+            if (!confirm(`Xóa loại vé "${name}"?`)) return;
+
+            const resp = await fetch('@Url.Action("RemoveTicketType", "EventWizard")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? ''
+                },
+                body: JSON.stringify(index)
+            });
+            const data = await resp.json();
+
+            if (data.success) {
+                showToast('success', data.message || 'Đã xóa loại vé.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showToast('error', data.message || 'Không thể xóa.');
+            }
+        }
+
+        // ── Edit modal ──────────────────────────────────────────────────────
+        function openEditModal(index, name, price, qty, isSeated, saleStartIso, saleEndIso, desc) {
+            document.getElementById('editIndex').value         = index;
+            document.getElementById('et-name').value          = name;
+            document.getElementById('et-price').value         = price;
+            document.getElementById('et-qty').value           = qty;
+            document.getElementById('et-desc').value          = desc || '';
+            document.getElementById('et-sale-start').value    = toLocalInput(saleStartIso);
+            document.getElementById('et-sale-end').value      = toLocalInput(saleEndIso);
+            document.getElementById(isSeated ? 'et-seated' : 'et-standing').checked = true;
+            document.getElementById('editTicketError').style.display = 'none';
+            document.getElementById('editTicketModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editTicketModal').style.display = 'none';
+        }
+
+        async function saveEditTicket() {
+            const index = parseInt(document.getElementById('editIndex').value);
+            const isSeated = document.getElementById('et-seated').checked;
+
+            const startLocal = document.getElementById('et-sale-start').value;
+            const endLocal   = document.getElementById('et-sale-end').value;
+
+            const ticket = {
+                Name:          document.getElementById('et-name').value.trim(),
+                Price:         parseFloat(document.getElementById('et-price').value) || 0,
+                Quantity:      parseInt(document.getElementById('et-qty').value) || 0,
+                IsSeatRequired: isSeated,
+                SaleStartTime: startLocal ? new Date(startLocal).toISOString() : null,
+                SaleEndTime:   endLocal   ? new Date(endLocal).toISOString()   : null,
+                Description:   document.getElementById('et-desc').value.trim()
+            };
+
+            const errDiv = document.getElementById('editTicketError');
+
+            const resp = await fetch('@Url.Action("UpdateTicketType", "EventWizard")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? ''
+                },
+                body: JSON.stringify({ index, ticket })
+            });
+            const data = await resp.json();
+
+            if (data.success) {
+                closeEditModal();
+                showToast('success', 'Đã cập nhật loại vé.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                errDiv.textContent = data.message || 'Không thể cập nhật.';
+                errDiv.style.display = 'block';
+            }
+        }
+
+        // Đóng modal khi click backdrop
+        document.getElementById('editTicketModal')?.addEventListener('click', function(e) {
+            if (e.target === this) closeEditModal();
         });
     </script>
 }

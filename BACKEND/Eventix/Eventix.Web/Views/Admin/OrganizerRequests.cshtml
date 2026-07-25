@@ -1,0 +1,192 @@
+@model Eventix.Share.Common.Models.PaginationResponse<Eventix.Share.Admin.AdminOrganizerDetailResponse>
+@{
+    ViewData["Title"] = "Duyệt đơn Organizer";
+    Layout = "_AdminLayout";
+
+    string status   = ViewBag.Status   ?? "";
+    int    page     = ViewBag.Page     ?? 1;
+    int    pageSize = ViewBag.PageSize ?? 20;
+    int    pending  = ViewBag.PendingCount ?? 0;
+
+    string StatusBadge(string s) => s?.ToLower() switch
+    {
+        "approved" => "badge-green",
+        "rejected" => "badge-red",
+        "pending"  => "badge-yellow",
+        _          => "badge-gray"
+    };
+    string StatusLabel(string s) => s?.ToLower() switch
+    {
+        "approved"  => "Đã duyệt",
+        "rejected"  => "Từ chối",
+        "pending"   => "Chờ duyệt",
+        "suspended" => "Tạm ngưng",
+        _           => s ?? "-"
+    };
+}
+
+<div class="admin-page">
+
+    <div class="admin-page-header">
+        <div>
+            <h1>Duyệt đơn Organizer</h1>
+            <p>
+                @(Model.TotalCount.ToString("N0")) đơn đăng ký
+                @if (pending > 0 && string.IsNullOrEmpty(status))
+                {
+                    <span class="badge badge-yellow">@pending chờ duyệt</span>
+                }
+            </p>
+        </div>
+    </div>
+
+    @* ── Filter tabs ──────────────────────────────────────────── *@
+    <div class="admin-tabs">
+        <a asp-controller="Admin" asp-action="OrganizerRequests"
+           class="admin-tab @(string.IsNullOrEmpty(status) ? "active" : "")">
+            Tất cả
+        </a>
+        <a asp-controller="Admin" asp-action="OrganizerRequests" asp-route-status="Pending"
+           class="admin-tab @(status == "Pending" ? "active" : "")">
+            Chờ duyệt
+            @if (pending > 0)
+            {
+                <span class="tab-badge">@pending</span>
+            }
+        </a>
+        <a asp-controller="Admin" asp-action="OrganizerRequests" asp-route-status="Approved"
+           class="admin-tab @(status == "Approved" ? "active" : "")">
+            Đã duyệt
+        </a>
+        <a asp-controller="Admin" asp-action="OrganizerRequests" asp-route-status="Rejected"
+           class="admin-tab @(status == "Rejected" ? "active" : "")">
+            Từ chối
+        </a>
+    </div>
+
+    @* ── Cards list ───────────────────────────────────────────── *@
+    @if (Model.DataList == null || !Model.DataList.Any())
+    {
+        <div class="admin-empty-state">
+            <p>Không có đơn đăng ký nào.</p>
+        </div>
+    }
+    else
+    {
+        <div class="organizer-request-list">
+            @foreach (var o in Model.DataList)
+            {
+                <div class="organizer-request-card" id="card-@o.OrganizerProfileId">
+                    <div class="orc-avatar">
+                        <img src="@(string.IsNullOrWhiteSpace(o.UserAvatarUrl) ? "/images/default-avatar.png" : o.UserAvatarUrl)"
+                             alt="@o.UserFullName" />
+                    </div>
+                    <div class="orc-info">
+                        <div class="orc-name">@o.OrganizationName</div>
+                        <div class="orc-meta">
+                            <span>@o.UserFullName</span>
+                            <span class="sep">·</span>
+                            <span>@o.UserEmail</span>
+                            @if (!string.IsNullOrWhiteSpace(o.ContactPhone))
+                            {
+                                <span class="sep">·</span>
+                                <span>@o.ContactPhone</span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(o.Description))
+                        {
+                            <div class="orc-desc">@o.Description</div>
+                        }
+                        <div class="orc-stats">
+                            <span title="Sự kiện">📅 @o.TotalEvents sk</span>
+                            <span title="Vé đã bán">🎫 @o.TotalTicketsSold vé</span>
+                            <span title="Doanh thu">💰 @o.TotalRevenue.ToString("#,##0") ₫</span>
+                            <span class="text-muted">Đăng ký @o.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                        </div>
+                    </div>
+                    <div class="orc-actions">
+                        <span class="badge @StatusBadge(o.Status) orc-status-badge">@StatusLabel(o.Status)</span>
+
+                        @if (o.Status == "Pending")
+                        {
+                            <button class="admin-btn admin-btn--success admin-btn--sm"
+                                    onclick="approveOrg('@o.OrganizerProfileId')">
+                                ✓ Duyệt
+                            </button>
+                            <button class="admin-btn admin-btn--danger admin-btn--sm"
+                                    onclick="rejectOrg('@o.OrganizerProfileId')">
+                                ✗ Từ chối
+                            </button>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(o.ApprovedByName))
+                        {
+                            <div class="orc-approved-by">
+                                @StatusLabel(o.Status) bởi @o.ApprovedByName
+                                @if (o.ApprovedAt.HasValue)
+                                {
+                                    <span>@o.ApprovedAt.Value.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        @* ── Pagination ───────────────────────────────────────────── *@
+        @if (Model.TotalPages > 1)
+        {
+            <div class="admin-pagination">
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    <a asp-controller="Admin" asp-action="OrganizerRequests"
+                       asp-route-status="@status"
+                       asp-route-page="@i"
+                       asp-route-pageSize="@pageSize"
+                       class="page-btn @(i == page ? "active" : "")">@i</a>
+                }
+            </div>
+        }
+    }
+
+</div>
+
+@section Scripts {
+<script>
+    async function approveOrg(id) {
+        if (!confirm('Duyệt đơn này?')) return;
+
+        const resp = await fetch('@Url.Action("ApproveOrganizer", "Admin")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            showToast('success', 'Đã duyệt hồ sơ organizer.');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('error', data.message || 'Lỗi khi duyệt.');
+        }
+    }
+
+    async function rejectOrg(id) {
+        if (!confirm('Từ chối đơn này?')) return;
+
+        const resp = await fetch('@Url.Action("RejectOrganizer", "Admin")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            showToast('success', 'Đã từ chối hồ sơ organizer.');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('error', data.message || 'Lỗi khi từ chối.');
+        }
+    }
+</script>
+}
