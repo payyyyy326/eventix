@@ -1,4 +1,4 @@
-﻿@using System.Text.Json
+@using System.Text.Json
 @using Eventix.Web.Models.EventWizard
 @model EventSeatMapViewModel
 
@@ -8,18 +8,24 @@
 
     var sectionColors = new[] {
         "#7c3aed", "#2563eb", "#16a34a", "#ea580c", "#db2777", "#0891b2",
-        "#d97706", "#be123c", "#0e7490", "#4d7c0f"
+        "#d97706", "#be123c", "#0e7490", "#4d7c0f", "#7e22ce", "#1d4ed8"
     };
 
+    // Sinh sections từ ticket types trong session — KHÔNG lọc theo venue layout cũ.
+    // Layout cũ chỉ dùng để khôi phục vị trí/kích thước nếu tên section trùng.
     var sectionsForMap = Model.TicketTypes.Select((t, i) => new {
-        Name = t.Name,
-        SeatCount = t.IsSeatRequired ? t.Quantity : 0,
-        Color = t.SectionColor ?? sectionColors[i % sectionColors.Length],
-        IsSeatRequired = t.IsSeatRequired
+        Name           = t.Name,
+        SeatCount      = t.Quantity,
+        IsSeatRequired = t.IsSeatRequired,
+        Color          = t.SectionColor ?? sectionColors[i % sectionColors.Length]
     }).ToList();
 
-    var sectionsJson = JsonSerializer.Serialize(sectionsForMap);
-    var layoutsJson  = JsonSerializer.Serialize(Model.Layouts);
+    var sectionsJson = JsonSerializer.Serialize(sectionsForMap,
+        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+    // Truyền toàn bộ layouts để JS tra cứu position đã lưu (nếu có)
+    var layoutsJson = JsonSerializer.Serialize(Model.Layouts,
+        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 }
 
 <section class="organizer-page">
@@ -36,8 +42,8 @@
                 <span>Tạo sự kiện</span>
                 <h1>Bước 5: Sơ đồ địa điểm</h1>
                 <p>
-                    Sắp xếp các khu vực loại vé trên sơ đồ địa điểm.
-                    Kéo và thay đổi kích thước từng khối để khớp với bố cục thực tế.
+                    Mỗi loại vé tương ứng với một khu vực trên sơ đồ.
+                    Kéo để di chuyển, kéo góc/cạnh để thay đổi kích thước từng khu vực cho khớp với bố cục thực tế.
                 </p>
             </div>
 
@@ -46,89 +52,128 @@
 
         <div class="wizard-panel">
 
-            <div class="wizard-card mb-4">
-                <h3>@(Model.Venue?.Name ?? "Địa điểm đã chọn")</h3>
-                <p>@(Model.Venue?.Address ?? "Chưa có địa chỉ")</p>
-
-                <div class="wizard-meta">
-                    <span class="wizard-pill">
-                        Sức chứa: @(Model.Venue?.Capacity.ToString("#,##0") ?? "0")
-                    </span>
-                    <span class="wizard-pill">
-                        Khu vực: @Model.TicketTypes.Count
-                    </span>
-                </div>
-            </div>
-
-            @if (Model.TicketTypes.Any())
+            @if (TempData["Error"] != null)
             {
+                <div class="alert alert-danger mb-4">@TempData["Error"]</div>
+            }
+
+            @if (!Model.TicketTypes.Any())
+            {
+                <div class="organizer-empty">
+                    <h2>Chưa có loại vé nào</h2>
+                    <p>Quay lại bước 3 để thêm loại vé trước.</p>
+                    <a asp-controller="EventWizard" asp-action="Step3" class="wizard-btn-primary mt-3">
+                        ← Quay lại bước 3
+                    </a>
+                </div>
+            }
+            else
+            {
+                <!-- Thống kê nhanh -->
+                <div class="wizard-grid-3 mb-4">
+                    <div class="wizard-stat">
+                        <span>Tổng số vé/ghế</span>
+                        <strong id="mapStatTotal">0</strong>
+                    </div>
+                    <div class="wizard-stat">
+                        <span>Khu có ghế ngồi</span>
+                        <strong id="mapStatSeated">0</strong>
+                    </div>
+                    <div class="wizard-stat">
+                        <span>Khu vào tự do</span>
+                        <strong id="mapStatStanding">0</strong>
+                    </div>
+                </div>
+
+                <!-- Thông tin venue + actions -->
                 <div class="wizard-card mb-4">
-                    <h4 class="mb-3">Chú thích khu vực</h4>
-                    <div class="d-flex flex-wrap gap-2">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                        <div>
+                            <h3>@(Model.Venue?.Name ?? "Địa điểm đã chọn")</h3>
+                            <p class="text-muted mb-0">@(Model.Venue?.Address ?? "Chưa có địa chỉ")</p>
+                            <div class="wizard-meta mt-2">
+                                <span class="wizard-pill">
+                                    Sức chứa: @(Model.Venue?.Capacity.ToString("#,##0") ?? "0")
+                                </span>
+                                <span class="wizard-pill">
+                                    @Model.TicketTypes.Count khu vực
+                                </span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                            <button type="button" id="resetLayoutBtn" class="wizard-btn-secondary" style="font-size:0.85rem;padding:8px 16px;">
+                                ↺ Đặt lại bố cục
+                            </button>
+                            <button type="button" id="saveSeatMapBtn" class="wizard-btn-primary">
+                                💾 Lưu sơ đồ
+                            </button>
+                        </div>
+                    </div>
+                    <div id="saveMapStatus" class="map-status mt-3"></div>
+                </div>
+
+                <!-- Chú thích màu -->
+                <div class="wizard-card mb-3">
+                    <h4 class="mb-3" style="font-size:0.9rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Chú thích khu vực</h4>
+                    <div class="d-flex flex-wrap gap-3">
                         @foreach (var (ticket, index) in Model.TicketTypes.Select((t, i) => (t, i)))
                         {
                             var color = ticket.SectionColor ?? sectionColors[index % sectionColors.Length];
                             <div class="d-flex align-items-center gap-2">
-                                <div style="width:14px;height:14px;border-radius:3px;background:@color;flex-shrink:0;"></div>
-                                <span class="text-muted" style="font-size:0.85rem;">
+                                <div style="width:14px;height:14px;border-radius:4px;background:@color;flex-shrink:0;"></div>
+                                <span style="font-size:0.88rem;color:#e2e8f0;">
                                     @ticket.Name
-                                    @if (ticket.IsSeatRequired)
-                                    {
-                                        <span class="wizard-pill" style="font-size:0.7rem;padding:2px 6px;margin-left:4px;">@ticket.Quantity ghế</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="wizard-pill info" style="font-size:0.7rem;padding:2px 6px;margin-left:4px;">Tự do</span>
-                                    }
                                 </span>
+                                @if (ticket.IsSeatRequired)
+                                {
+                                    <span class="wizard-pill" style="font-size:0.72rem;padding:2px 8px;">@ticket.Quantity.ToString("#,##0") ghế</span>
+                                }
+                                else
+                                {
+                                    <span class="wizard-pill info" style="font-size:0.72rem;padding:2px 8px;">Tự do · @ticket.Quantity.ToString("#,##0")</span>
+                                }
                             </div>
                         }
                     </div>
                 </div>
-            }
 
-            <div class="wizard-card mb-4">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h3>Trình chỉnh sửa sơ đồ</h3>
-                        <p>Kéo và thay đổi kích thước từng khu vực để khớp với địa điểm thực tế.</p>
-                    </div>
-                    <button type="button" id="saveSeatMapBtn" class="wizard-btn-primary">
-                        Lưu sơ đồ
-                    </button>
+                <!-- Canvas -->
+                <div class="seat-map-stage-label">SÂN KHẤU</div>
+                <div id="seatMapCanvas" class="seat-map-canvas"></div>
+
+                <p class="text-muted mt-2" style="font-size:0.8rem;text-align:center;">
+                    Kéo để di chuyển · Kéo cạnh/góc để thay đổi kích thước · Nhấp nền để bỏ chọn
+                </p>
+
+                <!-- Actions -->
+                <div class="wizard-actions mt-4">
+                    <a asp-controller="EventWizard"
+                       asp-action="Step4"
+                       class="wizard-btn-secondary">
+                        ← Quay lại
+                    </a>
+                    <form id="seatMapContinueForm"
+                          asp-controller="EventWizard"
+                          asp-action="Step5Continue"
+                          method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="wizard-btn-primary">
+                            Tiếp theo: Xem lại →
+                        </button>
+                    </form>
                 </div>
-                <div id="saveMapStatus" class="mt-2 text-muted"></div>
-            </div>
-
-            <div class="seat-map-stage-label">SÂN KHẤU</div>
-
-            <div id="seatMapCanvas" class="seat-map-canvas"></div>
-
-            <div class="wizard-actions mt-4">
-                <a asp-controller="EventWizard"
-                   asp-action="Step4"
-                   class="wizard-btn-secondary">
-                    ← Quay lại
-                </a>
-                <form id="seatMapContinueForm"
-                      asp-controller="EventWizard"
-                      asp-action="Step5Continue"
-                      method="post">
-                    <button type="submit" class="wizard-btn-primary">
-                        Tiếp theo: Xem lại →
-                    </button>
-                </form>
-            </div>
+            }
 
         </div>
     </div>
 </section>
 
+<!-- Truyền dữ liệu sang JS -->
 <script>
     window.eventixSeatMap = {
         sections: @Html.Raw(sectionsJson),
         layouts:  @Html.Raw(layoutsJson),
-        isSaved: @(((bool)(ViewBag.IsSeatMapSaved ?? false)).ToString().ToLowerInvariant())
+        isSaved:  @(((bool)(ViewBag.IsSeatMapSaved ?? false)).ToString().ToLowerInvariant())
     };
 </script>
 

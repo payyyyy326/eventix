@@ -310,6 +310,18 @@ namespace Eventix.Web.Controllers
                 ModelState.AddModelError("NewTicketType.SaleEndTime", "Sale end time is required.");
             else if (ticket.SaleStartTime != default && ticket.SaleEndTime <= ticket.SaleStartTime)
                 ModelState.AddModelError("NewTicketType.SaleEndTime", "Sale end time must be after sale start time.");
+            else
+            {
+                // Validate SaleEndTime phải <= EventStartTime (rule từ backend TicketTypeService)
+                var eventInfoJson = HttpContext.Session.GetString("EventWizard_Info");
+                if (!string.IsNullOrWhiteSpace(eventInfoJson))
+                {
+                    var eventInfo = JsonSerializer.Deserialize<EventInfoViewModel>(eventInfoJson);
+                    if (eventInfo != null && eventInfo.StartTime != default && ticket.SaleEndTime > eventInfo.StartTime)
+                        ModelState.AddModelError("NewTicketType.SaleEndTime",
+                            $"Thời gian kết thúc bán phải trước thời gian bắt đầu sự kiện ({eventInfo.StartTime:dd/MM/yyyy HH:mm} UTC).");
+                }
+            }
 
             // Kiểm tra tổng quantity không vượt venue capacity
             if (ticket.Quantity > 0)
@@ -506,30 +518,23 @@ namespace Eventix.Web.Controllers
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
 
-            // Load ticket types from session to build preview sections for the map
+            // Ticket types từ session — đây là nguồn duy nhất để tạo các block trên map.
             var ticketTypesJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
 
             var ticketTypes = string.IsNullOrWhiteSpace(ticketTypesJson)
                 ? new List<CreateTicketTypeRequest>()
                 : JsonSerializer.Deserialize<List<CreateTicketTypeRequest>>(ticketTypesJson) ?? new();
 
-            // Build preview sections from ticket types (map will be arranged after publish)
-            // Use VenueSectionLayouts from the venue if they exist (from previous events)
+            // Load layouts đã lưu từ venue — chỉ dùng để khôi phục vị trí/kích thước
+            // của block có tên trùng với ticket type. JS sẽ bỏ qua layout không khớp tên.
             var layouts = await LoadSeatMapAsync(client, venueId);
-
-            // Filter layouts to only those matching current ticket type names
-            var ticketTypeNames = ticketTypes.Select(t => t.Name.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            var filteredLayouts = layouts
-                .Where(l => ticketTypeNames.Contains(l.Section ?? string.Empty))
-                .ToList();
 
             var model = new EventSeatMapViewModel
             {
                 VenueId = venueId,
                 Venue = await LoadVenueAsync(client, venueId),
                 TicketTypes = ticketTypes,
-                Layouts = filteredLayouts
+                Layouts = layouts   // truyền hết, JS tự tra cứu theo tên
             };
 
             return View(model);
@@ -751,13 +756,14 @@ namespace Eventix.Web.Controllers
 
             /*
              * Kiểm tra toàn bộ dữ liệu lần cuối
-             * trước khi tạo Event.
+             * trước khi tạo Event — bao gồm SaleEndTime vs EventStartTime.
              */
             var validationResult =
                 await ValidateWizardBeforePublishAsync(
                     client,
                     venueId,
-                    ticketTypes);
+                    ticketTypes,
+                    eventInfo.StartTime);
 
             if (!validationResult.IsValid)
             {
@@ -807,6 +813,7 @@ namespace Eventix.Web.Controllers
 
                 /*
                  * Bước 2: tạo từng TicketType.
+                 * Nếu bất kỳ TicketType nào thất bại → rollback: xóa Event Draft vừa tạo.
                  */
                 foreach (var ticketType in ticketTypes)
                 {
@@ -822,7 +829,11 @@ namespace Eventix.Web.Controllers
                         ticketResult == null ||
                         !ticketResult.IsSuccess)
                     {
-                        TempData["Error"] = ticketResult?.Message ?? $"Cannot create ticket type '{ticketType.Name}'.";
+                        // Rollback: xóa Event Draft để tránh event rỗng tồn tại trong DB
+                        await TryDeleteDraftEventAsync(client, createdEventId.Value);
+
+                        TempData["Error"] =
+                            $"Loại vé '{ticketType.Name}': {ticketResult?.Message ?? "Không thể tạo loại vé."} — Sự kiện đã được hủy, vui lòng thử lại.";
 
                         return RedirectToAction("Step6");
                     }
@@ -943,6 +954,15 @@ namespace Eventix.Web.Controllers
             if (ticket.SaleEndTime <= ticket.SaleStartTime)
                 return Json(new { success = false, message = "Sale end time must be after sale start time." });
 
+            // Validate SaleEndTime phải <= EventStartTime
+            var eventInfoJsonR = HttpContext.Session.GetString("EventWizard_Info");
+            if (!string.IsNullOrWhiteSpace(eventInfoJsonR))
+            {
+                var eventInfoR = JsonSerializer.Deserialize<EventInfoViewModel>(eventInfoJsonR);
+                if (eventInfoR != null && eventInfoR.StartTime != default && ticket.SaleEndTime > eventInfoR.StartTime)
+                    return Json(new { success = false, message = $"Thời gian kết thúc bán phải trước thời gian bắt đầu sự kiện ({eventInfoR.StartTime:dd/MM/yyyy HH:mm} UTC)." });
+            }
+
             var currentJson = HttpContext.Session.GetString("EventWizard_TicketTypes");
             var ticketTypes = string.IsNullOrWhiteSpace(currentJson)
                 ? new List<CreateTicketTypeRequest>()
@@ -1042,6 +1062,19 @@ namespace Eventix.Web.Controllers
 
             if (ticket.SaleEndTime <= ticket.SaleStartTime)
                 return Json(new { success = false, field = "SaleEndTime", message = "Sale end time must be after sale start time." });
+
+            // Validate SaleEndTime phải <= EventStartTime
+            var eventInfoJsonU = HttpContext.Session.GetString("EventWizard_Info");
+            if (!string.IsNullOrWhiteSpace(eventInfoJsonU))
+            {
+                var eventInfoU = JsonSerializer.Deserialize<EventInfoViewModel>(eventInfoJsonU);
+                if (eventInfoU != null && eventInfoU.StartTime != default && ticket.SaleEndTime > eventInfoU.StartTime)
+                    return Json(new {
+                        success = false,
+                        field   = "SaleEndTime",
+                        message = $"Thời gian kết thúc bán phải trước thời gian bắt đầu sự kiện ({eventInfoU.StartTime:dd/MM/yyyy HH:mm} UTC)."
+                    });
+            }
 
             // Cập nhật
             var existing = ticketTypes[request.Index];
@@ -1151,6 +1184,23 @@ namespace Eventix.Web.Controllers
             HttpContext.Session.Remove("EventWizard_SeatMapSaved");
         }
 
+        /// <summary>
+        /// Cố gắng xóa Event Draft khi publish thất bại (rollback).
+        /// Không throw exception — failure ở đây chỉ log, không block UI.
+        /// </summary>
+        private Task TryDeleteDraftEventAsync(HttpClient client, Guid eventId)
+        {
+            try
+            {
+                return client.DeleteAsync($"api/Events/{eventId}");
+            }
+            catch
+            {
+                // Best-effort rollback — bỏ qua nếu không xóa được
+                return Task.CompletedTask;
+            }
+        }
+
         private bool IsSeatMapSaved() =>
             HttpContext.Session.GetString("EventWizard_SeatMapSaved") == "true";
 
@@ -1236,9 +1286,10 @@ namespace Eventix.Web.Controllers
         }
 
         private async Task<(bool IsValid, string Message)> ValidateWizardBeforePublishAsync(
-        HttpClient client,
-        Guid venueId,
-        List<CreateTicketTypeRequest> ticketTypes)
+            HttpClient client,
+            Guid venueId,
+            List<CreateTicketTypeRequest> ticketTypes,
+            DateTime eventStartTime)
         {
             var venue = await LoadVenueAsync(client, venueId);
 
@@ -1254,13 +1305,27 @@ namespace Eventix.Web.Controllers
                     return (false, "All ticket types must have a name.");
 
                 if (ticket.Quantity <= 0)
-                    return (false, $"Ticket type '{ticket.Name}' has an invalid quantity.");
+                    return (false, $"Loại vé '{ticket.Name}': số lượng không hợp lệ.");
 
                 if (ticket.Price < 0)
-                    return (false, $"Ticket type '{ticket.Name}' has an invalid price.");
+                    return (false, $"Loại vé '{ticket.Name}': giá không hợp lệ.");
+
+                if (ticket.SaleStartTime == default)
+                    return (false, $"Loại vé '{ticket.Name}': chưa thiết lập thời gian bắt đầu bán.");
+
+                if (ticket.SaleEndTime == default)
+                    return (false, $"Loại vé '{ticket.Name}': chưa thiết lập thời gian kết thúc bán.");
 
                 if (ticket.SaleStartTime >= ticket.SaleEndTime)
-                    return (false, $"Ticket type '{ticket.Name}' has invalid sale times.");
+                    return (false, $"Loại vé '{ticket.Name}': thời gian kết thúc bán phải sau thời gian bắt đầu bán.");
+
+                // Rule từ backend: SaleEndTime phải <= EventStartTime
+                if (ticket.SaleEndTime > eventStartTime)
+                    return (false,
+                        $"Loại vé '{ticket.Name}': thời gian kết thúc bán " +
+                        $"({ticket.SaleEndTime:dd/MM/yyyy HH:mm} UTC) " +
+                        $"phải trước thời gian bắt đầu sự kiện " +
+                        $"({eventStartTime:dd/MM/yyyy HH:mm} UTC).");
             }
 
             return (true, string.Empty);

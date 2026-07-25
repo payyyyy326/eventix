@@ -120,9 +120,24 @@ namespace Eventix.Modules.EventModule.Services
             }
         }
 
-        public Task<bool> DeleteEventAsync(Guid eventId, Guid organizerId)
+        public async Task<bool> DeleteEventAsync(Guid eventId, Guid organizerId)
         {
-            throw new NotImplementedException();
+            var eventEntity = await _context.Events
+                .FirstOrDefaultAsync(e => e.Id == eventId);
+
+            if (eventEntity == null)
+                throw new NotFoundException(SystemError.EVENT_NOT_FOUND);
+
+            if (eventEntity.CreatedBy != organizerId)
+                throw new ForbiddenException(SystemError.FORBIDDEN);
+
+            // Chỉ cho phép xóa event ở trạng thái Draft (rollback khi wizard publish thất bại)
+            if (eventEntity.Status != EventStatus.Draft)
+                throw new BadRequestException("Only Draft events can be deleted.");
+
+            _context.Events.Remove(eventEntity);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<EventBookingResponse> GetEventBookingAsync(Guid eventId)
