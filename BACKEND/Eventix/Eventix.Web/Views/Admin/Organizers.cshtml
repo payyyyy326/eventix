@@ -1,0 +1,121 @@
+@model Eventix.Share.Common.Models.PaginationResponse<Eventix.Share.Admin.AdminOrganizerStatsResponse>
+@{
+    ViewData["Title"] = "Thống kê Organizer";
+    Layout = "_AdminLayout";
+
+    int page     = ViewBag.Page     ?? 1;
+    int pageSize = ViewBag.PageSize ?? 20;
+
+    string Fmt(decimal v) => v >= 1_000_000_000
+        ? (v / 1_000_000_000m).ToString("N1") + "B"
+        : v >= 1_000_000
+            ? (v / 1_000_000m).ToString("N1") + "M"
+            : v.ToString("#,##0");
+}
+
+<div class="admin-page">
+
+    <div class="admin-page-header">
+        <div>
+            <h1>Thống kê Organizer</h1>
+            <p>@(Model.TotalCount.ToString("N0")) organizer đang hoạt động</p>
+        </div>
+    </div>
+
+    @* ── Summary row ──────────────────────────────────────────── *@
+    @if (Model.DataList != null && Model.DataList.Any())
+    {
+        var totalEvents  = Model.DataList.Sum(o => o.TotalEvents);
+        var totalTickets = Model.DataList.Sum(o => o.TotalTicketsSold);
+        var totalRevenue = Model.DataList.Sum(o => o.TotalRevenue);
+
+        <div class="admin-stats-grid admin-stats-grid--3">
+            <div class="stat-card stat-blue">
+                <div class="stat-value">@totalEvents.ToString("N0")</div>
+                <div class="stat-label">Tổng sự kiện (trang này)</div>
+            </div>
+            <div class="stat-card stat-purple">
+                <div class="stat-value">@totalTickets.ToString("N0")</div>
+                <div class="stat-label">Tổng vé đã bán (trang này)</div>
+            </div>
+            <div class="stat-card stat-green">
+                <div class="stat-value">@Fmt(totalRevenue) ₫</div>
+                <div class="stat-label">Tổng doanh thu (trang này)</div>
+            </div>
+        </div>
+    }
+
+    @* ── Table ────────────────────────────────────────────────── *@
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Tổ chức</th>
+                    <th>Chủ tài khoản</th>
+                    <th>Email liên hệ</th>
+                    <th class="text-right">Sự kiện</th>
+                    <th class="text-right">Published</th>
+                    <th class="text-right">Vé bán</th>
+                    <th class="text-right">Doanh thu</th>
+                    <th>Ngày đăng ký</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.DataList == null || !Model.DataList.Any())
+                {
+                    <tr>
+                        <td colspan="9" class="admin-empty">Chưa có organizer nào được duyệt.</td>
+                    </tr>
+                }
+                else
+                {
+                    int rank = (page - 1) * pageSize + 1;
+                    @foreach (var o in Model.DataList)
+                    {
+                        <tr>
+                            <td class="text-muted text-sm">@rank</td>
+                            <td>
+                                <div class="org-cell">
+                                    <strong>@o.OrganizationName</strong>
+                                </div>
+                            </td>
+                            <td>
+                                <div>@o.UserFullName</div>
+                                <div class="text-muted text-sm">@o.UserEmail</div>
+                            </td>
+                            <td class="text-muted">@(o.ContactEmail ?? "—")</td>
+                            <td class="text-right">
+                                <strong>@o.TotalEvents</strong>
+                            </td>
+                            <td class="text-right">@o.PublishedEvents</td>
+                            <td class="text-right">
+                                <strong>@o.TotalTicketsSold.ToString("N0")</strong>
+                            </td>
+                            <td class="text-right revenue-cell">
+                                @Fmt(o.TotalRevenue) ₫
+                            </td>
+                            <td class="text-muted text-sm">@o.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                        </tr>
+                        rank++;
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* ── Pagination ───────────────────────────────────────────── *@
+    @if (Model.TotalPages > 1)
+    {
+        <div class="admin-pagination">
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                <a asp-controller="Admin" asp-action="Organizers"
+                   asp-route-page="@i"
+                   asp-route-pageSize="@pageSize"
+                   class="page-btn @(i == page ? "active" : "")">@i</a>
+            }
+        </div>
+    }
+
+</div>

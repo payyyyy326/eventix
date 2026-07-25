@@ -1,0 +1,224 @@
+@model Eventix.Share.Common.Models.PaginationResponse<Eventix.Share.Admin.AdminUserResponse>
+@{
+    ViewData["Title"] = "Quản lý Users";
+    Layout = "_AdminLayout";
+
+    string search   = ViewBag.Search ?? "";
+    string status   = ViewBag.Status ?? "";
+    string role     = ViewBag.Role   ?? "";
+    int    page     = ViewBag.Page     ?? 1;
+    int    pageSize = ViewBag.PageSize ?? 20;
+
+    string StatusBadge(string s) => s?.ToLower() switch
+    {
+        "active"  => "badge-green",
+        "banned"  => "badge-red",
+        "pending" => "badge-yellow",
+        _         => "badge-gray"
+    };
+}
+
+<div class="admin-page">
+
+    <div class="admin-page-header">
+        <div>
+            <h1>Quản lý Users</h1>
+            <p>@(Model.TotalCount.ToString("N0")) người dùng trong hệ thống</p>
+        </div>
+    </div>
+
+    @* ── Filter bar ───────────────────────────────────────────── *@
+    <form class="admin-filter-bar" asp-controller="Admin" asp-action="Users" method="get">
+        <input type="text" name="search" value="@search" placeholder="Tìm tên, email..." class="admin-input" />
+
+        <select name="status" class="admin-select">
+            <option value="">-- Tất cả trạng thái --</option>
+            <option value="Active"  selected="@(status == "Active")">Active</option>
+            <option value="Banned"  selected="@(status == "Banned")">Banned</option>
+        </select>
+
+        <select name="role" class="admin-select">
+            <option value="">-- Tất cả role --</option>
+            <option value="Admin"     selected="@(role == "Admin")">Admin</option>
+            <option value="Organizer" selected="@(role == "Organizer")">Organizer</option>
+            <option value="User"      selected="@(role == "User")">User</option>
+        </select>
+
+        <button type="submit" class="admin-btn admin-btn--primary">Lọc</button>
+
+        @if (!string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(status) || !string.IsNullOrWhiteSpace(role))
+        {
+            <a asp-controller="Admin" asp-action="Users" class="admin-btn admin-btn--ghost">Xóa lọc</a>
+        }
+    </form>
+
+    @* ── Table ────────────────────────────────────────────────── *@
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Người dùng</th>
+                    <th>Email</th>
+                    <th>Roles</th>
+                    <th>Trạng thái</th>
+                    <th>Organizer</th>
+                    <th>Ngày tạo</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.DataList == null || !Model.DataList.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="admin-empty">Không có người dùng nào.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var u in Model.DataList)
+                    {
+                        <tr>
+                            <td>
+                                <div class="user-cell">
+                                    <img src="@(string.IsNullOrWhiteSpace(u.AvatarUrl) ? "/images/default-avatar.png" : u.AvatarUrl)"
+                                         alt="@u.FullName" class="user-avatar-sm" />
+                                    <span>@u.FullName</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span>@u.Email</span>
+                                @if (u.EmailVerified)
+                                {
+                                    <span class="verified-badge" title="Email đã xác thực">✓</span>
+                                }
+                            </td>
+                            <td>
+                                @foreach (var r in u.Roles)
+                                {
+                                    <span class="role-badge role-@r.ToLower()">@r</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge @StatusBadge(u.Status)">@u.Status</span>
+                            </td>
+                            <td>
+                                @if (u.HasOrganizerProfile)
+                                {
+                                    <span class="badge @StatusBadge(u.OrganizerStatus ?? "")">@(u.OrganizerStatus ?? "-")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td class="text-muted">@u.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                            <td>
+                                @if (u.Status == "Banned")
+                                {
+                                    <button class="admin-btn admin-btn--sm admin-btn--success"
+                                            onclick="unbanUser('@u.Id', '@u.FullName')">
+                                        Unban
+                                    </button>
+                                }
+                                else if (!u.Roles.Contains("Admin"))
+                                {
+                                    <button class="admin-btn admin-btn--sm admin-btn--danger"
+                                            onclick="banUser('@u.Id', '@u.FullName')">
+                                        Ban
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* ── Pagination ───────────────────────────────────────────── *@
+    @if (Model.TotalPages > 1)
+    {
+        <div class="admin-pagination">
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                <a asp-controller="Admin" asp-action="Users"
+                   asp-route-search="@search"
+                   asp-route-status="@status"
+                   asp-route-role="@role"
+                   asp-route-page="@i"
+                   asp-route-pageSize="@pageSize"
+                   class="page-btn @(i == page ? "active" : "")">@i</a>
+            }
+        </div>
+    }
+
+</div>
+
+@* ── Ban modal ────────────────────────────────────────────────── *@
+<div id="banModal" class="admin-modal-overlay" style="display:none">
+    <div class="admin-modal">
+        <h3>Ban người dùng</h3>
+        <p id="banModalName"></p>
+        <textarea id="banReason" placeholder="Lý do ban (tuỳ chọn)..." class="admin-textarea" rows="3"></textarea>
+        <div class="admin-modal-actions">
+            <button class="admin-btn admin-btn--danger" onclick="confirmBan()">Xác nhận Ban</button>
+            <button class="admin-btn admin-btn--ghost" onclick="closeModal()">Huỷ</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let _pendingUserId = null;
+
+    function banUser(userId, name) {
+        _pendingUserId = userId;
+        document.getElementById('banModalName').textContent = 'Ban: ' + name;
+        document.getElementById('banReason').value = '';
+        document.getElementById('banModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('banModal').style.display = 'none';
+        _pendingUserId = null;
+    }
+
+    async function confirmBan() {
+        if (!_pendingUserId) return;
+        const reason = document.getElementById('banReason').value.trim();
+
+        const resp = await fetch('@Url.Action("BanUser", "Admin")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: _pendingUserId, reason })
+        });
+        const data = await resp.json();
+
+        closeModal();
+        if (data.success) {
+            showToast('success', 'Đã ban người dùng.');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('error', data.message || 'Lỗi khi ban.');
+        }
+    }
+
+    async function unbanUser(userId, name) {
+        if (!confirm('Unban người dùng "' + name + '"?')) return;
+
+        const resp = await fetch('@Url.Action("UnbanUser", "Admin")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            showToast('success', 'Đã unban người dùng.');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('error', data.message || 'Lỗi khi unban.');
+        }
+    }
+</script>
+}

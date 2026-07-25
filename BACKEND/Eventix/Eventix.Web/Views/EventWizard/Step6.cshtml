@@ -149,6 +149,10 @@
                         <h3>Địa điểm</h3>
                         <p>Để thay đổi địa điểm, <a asp-controller="EventWizard" asp-action="Step2">quay lại Bước 2</a>.</p>
                     </div>
+                    <a asp-controller="EventWizard" asp-action="Step5" class="wizard-btn-secondary"
+                       title="Chỉnh sửa sơ đồ chỗ ngồi" style="text-decoration:none;">
+                        🗺️ Sửa map
+                    </a>
                 </div>
                 @if (venue == null)
                 {
@@ -182,11 +186,17 @@
                 <div class="wizard-review-header">
                     <div>
                         <h3>Loại vé</h3>
-                        <p>Thêm hoặc xoá loại vé trực tiếp tại đây.</p>
+                        <p>Thêm/xoá tại đây, hoặc <a asp-controller="EventWizard" asp-action="Step3">quay Bước 3</a> để chỉnh sửa đầy đủ.</p>
                     </div>
-                    <button type="button" class="wizard-btn-secondary" onclick="toggleAddTicket()">
-                        ➕ Thêm vé
-                    </button>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <a asp-controller="EventWizard" asp-action="Step3" class="wizard-btn-secondary"
+                           title="Quay lại Bước 3 để sửa loại vé" style="text-decoration:none;font-size:0.83rem;">
+                            🎫 Sửa loại vé
+                        </a>
+                        <button type="button" class="wizard-btn-secondary" onclick="toggleAddTicket()">
+                            ➕ Thêm vé
+                        </button>
+                    </div>
                 </div>
 
                 <div id="ticketListContainer">

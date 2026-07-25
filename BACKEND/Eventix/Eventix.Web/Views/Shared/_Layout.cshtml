@@ -4,6 +4,9 @@
 
     var isOrganizer = roles.Any(r =>
         r.Equals("Organizer", StringComparison.OrdinalIgnoreCase));
+
+    var isAdmin = roles.Any(r =>
+        r.Equals("Admin", StringComparison.OrdinalIgnoreCase));
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -20,6 +23,7 @@
     <link rel="stylesheet" href="~/css/event-wizard.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/booking.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/commerce.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
 
 </head>
 <body>
@@ -57,6 +61,14 @@
                         <a asp-controller="Organizer"
                            asp-action="Dashboard">
                             Quản lí sự kiện
+                        </a>
+                    }
+
+                    @if (isAdmin)
+                    {
+                        <a asp-controller="Admin"
+                           asp-action="Dashboard">
+                            Admin
                         </a>
                     }
 
