@@ -1,0 +1,106 @@
+@model Eventix.Share.Organizer.CreateOrganizerProfileRequest
+@{
+    ViewData["Title"] = "Đăng ký làm Organizer";
+    Layout = "_Layout";
+}
+
+<section class="profile-page">
+    <div class="profile-card" style="max-width:640px;">
+
+        <div style="margin-bottom:28px;">
+            <h1 style="font-size:24px;font-weight:700;color:#f0f0ff;margin:0 0 8px;">🎪 Đăng ký làm Organizer</h1>
+            <p style="color:#9fa3c0;font-size:14px;margin:0;">
+                Điền thông tin tổ chức của bạn. Admin sẽ xét duyệt và thông báo kết quả.
+            </p>
+        </div>
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="profile-toast profile-toast--error" style="position:static;margin-bottom:16px;opacity:1;transform:none;">
+                ✗ @TempData["Error"]
+            </div>
+        }
+
+        <form asp-controller="User" asp-action="RegisterOrganizer" method="post">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly"
+                 style="color:#f87171;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:14px;"></div>
+
+            <div class="org-form-group" style="margin-bottom:18px;">
+                <label asp-for="OrganizationName"
+                       style="display:block;font-size:13px;font-weight:600;color:#c4c8e8;margin-bottom:6px;">
+                    Tên tổ chức <span style="color:#f87171">*</span>
+                </label>
+                <input asp-for="OrganizationName"
+                       class="org-input"
+                       placeholder="Ví dụ: Công ty Sự kiện ABC, CLB Âm nhạc XYZ..."
+                       style="width:100%;box-sizing:border-box;" />
+                <span asp-validation-for="OrganizationName" style="color:#f87171;font-size:12px;"></span>
+            </div>
+
+            <div class="org-form-group" style="margin-bottom:18px;">
+                <label asp-for="Description"
+                       style="display:block;font-size:13px;font-weight:600;color:#c4c8e8;margin-bottom:6px;">
+                    Mô tả tổ chức
+                </label>
+                <textarea asp-for="Description"
+                          class="org-input org-textarea"
+                          rows="4"
+                          maxlength="1000"
+                          placeholder="Giới thiệu về tổ chức, lĩnh vực hoạt động..."
+                          style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+                <span asp-validation-for="Description" style="color:#f87171;font-size:12px;"></span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
+                <div class="org-form-group">
+                    <label asp-for="ContactEmail"
+                           style="display:block;font-size:13px;font-weight:600;color:#c4c8e8;margin-bottom:6px;">
+                        Email liên hệ
+                    </label>
+                    <input asp-for="ContactEmail"
+                           type="email"
+                           class="org-input"
+                           placeholder="contact@example.com"
+                           style="width:100%;box-sizing:border-box;" />
+                    <span asp-validation-for="ContactEmail" style="color:#f87171;font-size:12px;"></span>
+                </div>
+                <div class="org-form-group">
+                    <label asp-for="ContactPhone"
+                           style="display:block;font-size:13px;font-weight:600;color:#c4c8e8;margin-bottom:6px;">
+                        Số điện thoại
+                    </label>
+                    <input asp-for="ContactPhone"
+                           type="tel"
+                           class="org-input"
+                           placeholder="0901234567"
+                           style="width:100%;box-sizing:border-box;" />
+                    <span asp-validation-for="ContactPhone" style="color:#f87171;font-size:12px;"></span>
+                </div>
+            </div>
+
+            <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:12px;padding:14px 16px;margin-bottom:24px;font-size:13px;color:#a5b4fc;line-height:1.6;">
+                ℹ️ Sau khi gửi, Admin sẽ xem xét và duyệt đơn của bạn.
+                Bạn có thể theo dõi trạng thái tại trang <strong>Trạng thái đăng ký</strong>.
+                Khi được duyệt, tài khoản sẽ được cấp quyền Organizer.
+            </div>
+
+            <div style="display:flex;gap:12px;justify-content:flex-end;">
+                <a asp-controller="User" asp-action="Profile"
+                   style="padding:10px 20px;border-radius:10px;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.06);color:#c4c8e8;text-decoration:none;font-weight:600;font-size:14px;display:inline-flex;align-items:center;">
+                    ← Quay lại
+                </a>
+                <button type="submit"
+                        style="padding:10px 24px;border-radius:10px;background:linear-gradient(135deg,#6d4aff,#9b59ff);color:#fff;border:none;font-weight:700;font-size:14px;cursor:pointer;">
+                    📨 Gửi đơn đăng ký
+                </button>
+            </div>
+        </form>
+
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

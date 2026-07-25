@@ -30,35 +30,53 @@ namespace Eventix.Modules.OrganizerModule.Services
 
             if (!admin) throw new ForbiddenException(SystemError.UNAUTHORIZED);
 
-            var organizerProfile = _context.OrganizerProfiles
-                .FirstOrDefault(x => x.Id == organizerProfileId);
+            var organizerProfile = await _context.OrganizerProfiles
+                .Include(o => o.User)
+                    .ThenInclude(u => u.Roles)
+                .FirstOrDefaultAsync(x => x.Id == organizerProfileId);
+
             if (organizerProfile == null) throw new NotFoundException(SystemError.ORGANIZER_NOT_FOUND);
 
-            organizerProfile.Status = OrganizerStatus.APPROVED;
+            organizerProfile.Status    = OrganizerStatus.APPROVED;
             organizerProfile.ApprovedBy = adminId;
             organizerProfile.ApprovedAt = DateTime.UtcNow;
 
+            // Thêm role Organizer cho user nếu chưa có
+            var user = organizerProfile.User;
+            if (user != null && !user.Roles.Any(r => r.Name == RoleConstants.ORGANIZER))
+            {
+                var organizerRole = await _context.Roles
+                    .FirstOrDefaultAsync(r => r.Name == RoleConstants.ORGANIZER);
+
+                if (organizerRole != null)
+                    user.Roles.Add(organizerRole);
+            }
+
             await _context.SaveChangesAsync();
 
-            var response = new OrganizerProfileResponse
+            var adminName = await _context.Users
+                .Where(u => u.Id == adminId)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync() ?? RoleConstants.ADMIN;
+
+            return new OrganizerProfileResponse
             {
-                Id = organizerProfile.Id,
-                UserId = organizerProfile.UserId,
+                Id               = organizerProfile.Id,
+                UserId           = organizerProfile.UserId,
                 OrganizationName = organizerProfile.OrganizationName,
-                Description = organizerProfile.Description,
-                ContactEmail = organizerProfile.ContactEmail,
-                ContactPhone = organizerProfile.ContactPhone,
-                Status = organizerProfile.Status,
-                CreatedAt = organizerProfile.CreatedAt,
-                ApprovedBy = organizerProfile.ApprovedBy,
-                ApprovedAt = organizerProfile.ApprovedAt,
+                Description      = organizerProfile.Description,
+                ContactEmail     = organizerProfile.ContactEmail,
+                ContactPhone     = organizerProfile.ContactPhone,
+                Status           = organizerProfile.Status,
+                CreatedAt        = organizerProfile.CreatedAt,
+                ApprovedBy       = organizerProfile.ApprovedBy,
+                ApprovedAt       = organizerProfile.ApprovedAt,
                 ApprovedByNavigation = new UserResponse
                 {
-                    Id = adminId,
-                    FullName = _context.Users.Where(u => u.Id == adminId).Select(u => u.FullName).FirstOrDefault() ?? RoleConstants.ADMIN
+                    Id       = adminId,
+                    FullName = adminName
                 }
             };
-            return response;
         }
 
         public async Task<OrganizerProfileResponse> CreateAsync(CreateOrganizerProfileRequest request, Guid userId)

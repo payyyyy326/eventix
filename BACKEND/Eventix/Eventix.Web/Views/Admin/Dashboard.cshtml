@@ -19,6 +19,13 @@
         </div>
     </div>
 
+    @if (ViewBag.ApiError != null)
+    {
+        <div class="alert alert-danger" style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;">
+            <strong>⚠ Lỗi tải dữ liệu:</strong> @ViewBag.ApiError
+        </div>
+    }
+
     @* ── Stat cards row 1: Users ───────────────────────────────── *@
     <div class="admin-section-title">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
