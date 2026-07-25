@@ -112,6 +112,16 @@ namespace Eventix.Modules.EventModule.Controllers
             return SuccessResponse(SystemSuccess.EVENT_PUBLISHED, result);
         }
 
+        // DELETE: api/events/{id}  — chỉ dùng để rollback wizard (xóa Draft event)
+        [HttpDelete("{id}")]
+        [Authorize(Policy = SystemConstants.RoleConstants.ORGANIZER)]
+        public async Task<ActionResult<ApiResponseModel<bool>>> DeleteDraftEvent(Guid id)
+        {
+            var organizerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var result = await _eventService.DeleteEventAsync(id, organizerId);
+            return SuccessResponse(SystemSuccess.EVENT_DELETED, result);
+        }
+
         // POST: api/events/upload-image
         [HttpPost("upload-image")]
         [Consumes("multipart/form-data")]

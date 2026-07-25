@@ -1603,3 +1603,77 @@
     font-size: 13px;
     color: #94a3b8;
 }
+
+/* ── Seat map zone enhancements ───────────────────────────────────────────── */
+
+/* Selected state */
+.seat-map-zone.selected {
+    outline: 3px solid rgba(255, 255, 255, 0.85);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12), 0 12px 30px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+}
+
+/* Zone content layout */
+.seat-map-zone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    pointer-events: none;
+}
+
+.seat-map-zone-content strong {
+    display: block;
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.2;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    word-break: break-word;
+    text-align: center;
+}
+
+.zone-count {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    opacity: 0.9;
+}
+
+/* Zone type badge */
+.zone-badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    pointer-events: none;
+}
+
+.zone-badge.seated {
+    background: rgba(0, 0, 0, 0.28);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.zone-badge.standing {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+/* Status message */
+.map-status {
+    font-size: 0.85rem;
+    font-weight: 600;
+    min-height: 1.4em;
+    transition: color 0.2s;
+}
+
+.map-status--success { color: #22c55e; }
+.map-status--error   { color: #ef4444; }
+.map-status--warning { color: #facc15; }
+.map-status--loading { color: #94a3b8; }
