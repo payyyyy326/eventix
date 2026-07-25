@@ -1,4 +1,5 @@
 using Eventix.Share.Common.Models;
+using Eventix.Share.Organizer;
 using Eventix.Share.User;
 using Eventix.Web.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -167,6 +168,84 @@ namespace Eventix.Web.Controllers
             TempData["Success"] = result.Message;
 
             return RedirectToAction("Profile");
+        }
+
+        // ── Đăng ký Organizer ─────────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> RegisterOrganizer()
+        {
+            var client = CreateAuthorizedClient();
+            if (client == null) return RedirectToAction("Login", "Auth");
+
+            // Kiểm tra user đã có hồ sơ organizer chưa
+            try
+            {
+                var check = await client.GetAsync("api/OrganizerProfile/organizer-detail");
+                if (check.IsSuccessStatusCode)
+                {
+                    var existing = await check.Content
+                        .ReadFromJsonAsync<ApiResponseModel<OrganizerProfileResponse>>();
+                    if (existing?.Data != null)
+                    {
+                        // Đã có hồ sơ → redirect về trang trạng thái
+                        TempData["Info"] = "Bạn đã nộp đơn đăng ký Organizer trước đó.";
+                        return RedirectToAction("OrganizerStatus");
+                    }
+                }
+            }
+            catch { /* chưa có hồ sơ → cho phép đăng ký */ }
+
+            return View(new CreateOrganizerProfileRequest());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RegisterOrganizer(CreateOrganizerProfileRequest model)
+        {
+            var client = CreateAuthorizedClient();
+            if (client == null) return RedirectToAction("Login", "Auth");
+
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var response = await client.PostAsJsonAsync("api/OrganizerProfile/create", model);
+            var result   = await response.Content
+                .ReadFromJsonAsync<ApiResponseModel<OrganizerProfileResponse>>();
+
+            if (!response.IsSuccessStatusCode || result == null || !result.IsSuccess)
+            {
+                ModelState.AddModelError("", result?.Message ?? "Không thể gửi đơn đăng ký.");
+                return View(model);
+            }
+
+            TempData["Success"] = "Đơn đăng ký Organizer đã được gửi. Admin sẽ xét duyệt trong thời gian sớm nhất.";
+            return RedirectToAction("OrganizerStatus");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> OrganizerStatus()
+        {
+            var client = CreateAuthorizedClient();
+            if (client == null) return RedirectToAction("Login", "Auth");
+
+            OrganizerProfileResponse? profile = null;
+            try
+            {
+                var resp = await client.GetAsync("api/OrganizerProfile/organizer-detail");
+                if (resp.IsSuccessStatusCode)
+                {
+                    var result = await resp.Content
+                        .ReadFromJsonAsync<ApiResponseModel<OrganizerProfileResponse>>();
+                    profile = result?.Data;
+                }
+            }
+            catch { /* chưa có hồ sơ */ }
+
+            if (profile == null)
+                return RedirectToAction("RegisterOrganizer");
+
+            return View(profile);
         }
     }
 }

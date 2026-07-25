@@ -58,6 +58,47 @@
             </div>
         </div>
 
+        @* ── Organizer ────────────────────────────────────────────────── *@
+        <div class="profile-organizer-box">
+            @{
+                var roles = (Context.Request.Cookies["roles"] ?? "")
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries);
+                var isOrganizer = roles.Any(r => r.Equals("Organizer", StringComparison.OrdinalIgnoreCase));
+            }
+            @if (isOrganizer)
+            {
+                <div class="profile-organizer-row">
+                    <div>
+                        <strong>🎪 Organizer</strong>
+                        <span class="badge badge-green" style="margin-left:8px;">Đã kích hoạt</span>
+                    </div>
+                    <a asp-controller="Organizer" asp-action="Dashboard"
+                       class="profile-organizer-btn">
+                        Vào Dashboard →
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="profile-organizer-row">
+                    <div>
+                        <strong>🎪 Muốn tổ chức sự kiện?</strong>
+                        <p style="margin:4px 0 0;font-size:13px;color:#9fa3c0;">Đăng ký làm Organizer để tạo và quản lý sự kiện.</p>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <a asp-controller="User" asp-action="OrganizerStatus"
+                           class="profile-organizer-btn profile-organizer-btn--ghost">
+                            Xem trạng thái
+                        </a>
+                        <a asp-controller="User" asp-action="RegisterOrganizer"
+                           class="profile-organizer-btn">
+                            Đăng ký ngay →
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+
     </div>
 </section>
 
