@@ -1,8 +1,9 @@
-﻿using Eventix.Share.Booking;
+using Eventix.Share.Booking;
 using Eventix.Share.Category;
 using Eventix.Share.Common.Constants;
 using Eventix.Share.Common.Models;
 using Eventix.Share.Event;
+using Eventix.Share.SeatMap;
 using Eventix.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
@@ -94,6 +95,7 @@ namespace Eventix.Web.Controllers
                 return NotFound();
             }
 
+            ViewBag.SeatMapLayouts = await LoadSeatMapAsync(result.Data.VenueId);
             return View(result.Data);
         }
 
@@ -111,6 +113,7 @@ namespace Eventix.Web.Controllers
             return View(new BookingViewModel
             {
                 Event = eventData,
+                SeatMapLayouts = await LoadSeatMapAsync(eventData.Venue.Id),
                 Request = new CreateBookingRequest
                 {
                     EventId = id,
@@ -164,10 +167,27 @@ namespace Eventix.Web.Controllers
             return View("Booking", new BookingViewModel
             {
                 Event = eventData,
+                SeatMapLayouts = await LoadSeatMapAsync(eventData.Venue.Id),
                 Request = request
             });
         }
 
+        private async Task<List<VenueSectionLayoutResponse>> LoadSeatMapAsync(Guid venueId)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("Eventix");
+                var response = await client.GetAsync($"api/Venue/{venueId}/seat-map");
+                if (!response.IsSuccessStatusCode) return [];
+                var result = await response.Content.ReadFromJsonAsync<
+                    ApiResponseModel<List<VenueSectionLayoutResponse>>>();
+                return result?.Data ?? [];
+            }
+            catch
+            {
+                return [];
+            }
+        }
         private async Task<EventBookingResponse?> LoadBookingEventAsync(Guid id)
         {
             var client = _httpClientFactory.CreateClient("Eventix");

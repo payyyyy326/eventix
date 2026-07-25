@@ -120,7 +120,7 @@
                 </div>
                 @if (isEditable)
                 {
-                    <a class="dashboard-create-btn" asp-controller="EventWizard" asp-action="Step1">
+                    <a class="dashboard-create-btn" asp-controller="Organizer" asp-action="EditEvent" asp-route-id="@Model.Id">
                         ✏️ Chỉnh sửa
                     </a>
                 }
@@ -171,7 +171,7 @@
         <div class="tab-panel">
             <div class="tab-panel-header">
                 <div>
-                    <h2 class="tab-panel-title">Sơ đồ khu vực</h2>
+                    <h2 class="tab-panel-title">Sơ đồ tổng khu vực</h2>
                     <p class="tab-panel-desc">Bố trí các khu vực vé trên mặt bằng sự kiện</p>
                 </div>
                 <span class="manage-readonly-badge">🔒 Chỉ xem</span>
@@ -210,7 +210,7 @@
                              style="left:@(z.X)px;top:@(z.Y)px;width:@(z.Width)px;height:@(z.Height)px;background:@z.Color;cursor:default;">
                             <div class="seat-map-zone-content">
                                 <strong>@z.Section</strong>
-                                <span>@(z.IsSeatRequired ? $"{z.TotalSeats} ghế" : "Vé đứng")</span>
+                                <span>@(z.IsSeatRequired ? $"{z.AvailableSeats ?? 0} / {z.TotalSeats ?? 0} ghế trống" : $"{z.AvailableSeats ?? 0} vé còn")</span>
                             </div>
                         </div>
                     }

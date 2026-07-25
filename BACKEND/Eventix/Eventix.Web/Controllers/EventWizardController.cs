@@ -1,4 +1,4 @@
-﻿using Eventix.Share.Category;
+using Eventix.Share.Category;
 using Eventix.Share.Common.Models;
 using Eventix.Share.Event;
 using Eventix.Share.Seat;
@@ -887,13 +887,19 @@ namespace Eventix.Web.Controllers
                 return RedirectToAction("Step6");
             }
 
-            Guid? createdEventId = null;
+            Guid? createdEventId = Guid.TryParse(
+                HttpContext.Session.GetString("EventWizard_EventId"),
+                out var savedEventId)
+                ? savedEventId
+                : null;
 
             try
             {
                 /*
                  * Bước 1: tạo Event ở trạng thái Draft.
                  */
+                if (!createdEventId.HasValue)
+                {
                 var createEventRequest =
                     BuildCreateEventRequest(eventInfo, venueId);
 
@@ -926,6 +932,16 @@ namespace Eventix.Web.Controllers
                  * hoặc publish thất bại.
                  */
                 HttpContext.Session.SetString("EventWizard_EventId", createdEventId.Value.ToString());
+                }
+
+                // Retry an interrupted publish without creating the same ticket types again.
+                var existingTicketResponse = await client.GetAsync(
+                    $"api/TicketType?eventId={createdEventId.Value}&CurrentPage=1&PageSize=100");
+                var existingTicketResult = existingTicketResponse.IsSuccessStatusCode
+                    ? await existingTicketResponse.Content.ReadFromJsonAsync<
+                        ApiResponseModel<PaginationResponse<TicketTypeResponse>>>()
+                    : null;
+                var existingTickets = existingTicketResult?.Data?.DataList ?? [];
 
                 /*
                  * Bước 2: tạo từng TicketType.
@@ -933,6 +949,17 @@ namespace Eventix.Web.Controllers
                  */
                 foreach (var ticketType in ticketTypes)
                 {
+                    var existingTicket = existingTickets.FirstOrDefault(item =>
+                        string.Equals(item.Name, ticketType.Name.Trim(), StringComparison.OrdinalIgnoreCase));
+                    if (existingTicket != null)
+                    {
+                        if (existingTicket.Quantity != ticketType.Quantity)
+                        {
+                            TempData["Error"] = $"Ticket type '{ticketType.Name}' already exists with quantity {existingTicket.Quantity}, expected {ticketType.Quantity}.";
+                            return RedirectToAction("Step6");
+                        }
+                        continue;
+                    }
                     var ticketResponse =
                         await client.PostAsJsonAsync($"api/TicketType/event/{createdEventId.Value}", ticketType);
 

@@ -1,4 +1,4 @@
-﻿using Eventix.Common.Constants.SystemData;
+using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Exceptions;
 using Eventix.Common.Helpers;
 using Eventix.Data;
@@ -14,6 +14,7 @@ using Eventix.Share.Organizer;
 using Eventix.Share.TicketType;
 using Eventix.Share.Venue;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using static Eventix.Share.Common.Constants.SystemConstants;
 
 namespace Eventix.Modules.EventModule.Services
@@ -40,17 +41,22 @@ namespace Eventix.Modules.EventModule.Services
             var categoryExists = await _context.Categories.AnyAsync(x => x.Id == request.CategoryId);
             if (!categoryExists) throw new BadRequestException(SystemError.CATEGORY_NOT_FOUND);
 
-            // Kiểm tra trùng venue + thời gian: hai khoảng [A_start, A_end) và [B_start, B_end) overlap khi A_start < B_end AND A_end > B_start
-            var hasOverlap = await _context.Events.AnyAsync(e =>
-                e.VenueId == request.VenueId &&
-                e.Status != EventStatus.Cancelled &&
-                e.StartTime < request.EndTime &&
-                e.EndTime > request.StartTime);
-            if (hasOverlap) throw new BadRequestException(SystemError.EVENT_EXIST);
-
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            // Serializable prevents two near-simultaneous publish requests from both
+            // passing the overlap check and creating duplicate events for one venue.
+            using var transaction = await _context.Database
+                .BeginTransactionAsync(IsolationLevel.Serializable);
             try
             {
+                // Hai khoảng [A_start, A_end) và [B_start, B_end) overlap khi
+                // A_start < B_end AND A_end > B_start.
+                var hasOverlap = await _context.Events.AnyAsync(e =>
+                    e.VenueId == request.VenueId &&
+                    e.Status != EventStatus.Cancelled &&
+                    e.StartTime < request.EndTime &&
+                    e.EndTime > request.StartTime);
+                if (hasOverlap)
+                    throw new BadRequestException(SystemError.EVENT_EXIST);
+
                 var newEvent = new Event
                 {
                     Id = Guid.NewGuid(),
@@ -415,6 +421,29 @@ namespace Eventix.Modules.EventModule.Services
             var eventEntity = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
             if (eventEntity == null)
                 throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
+
+            if (eventEntity.OrganizerId != organizerId)
+                throw new BadRequestException(SystemError.EVENT_NOT_FOUND);
+
+            if (request.StartTime >= request.EndTime)
+                throw new BadRequestException("Event end time must be after start time.");
+
+            var venueExists = await _context.Venues.AnyAsync(x => x.Id == request.VenueId);
+            if (!venueExists)
+                throw new BadRequestException(SystemError.VENUE_NOT_FOUND);
+
+            var categoryExists = await _context.Categories.AnyAsync(x => x.Id == request.CategoryId);
+            if (!categoryExists)
+                throw new BadRequestException(SystemError.CATEGORY_NOT_FOUND);
+
+            var hasOverlap = await _context.Events.AnyAsync(e =>
+                e.Id != eventId &&
+                e.VenueId == request.VenueId &&
+                e.Status != EventStatus.Cancelled &&
+                e.StartTime < request.EndTime &&
+                e.EndTime > request.StartTime);
+            if (hasOverlap)
+                throw new BadRequestException(SystemError.EVENT_EXIST);
 
             eventEntity.CategoryId = request.CategoryId;
             eventEntity.VenueId = request.VenueId;

@@ -1,4 +1,4 @@
-﻿/* =========================
+/* =========================
    Organizer Layout
 ========================= */
 
@@ -1655,3 +1655,19 @@
     flex-direction: column;
     gap: 0;
 }
+
+/* Organizer event filters */
+.organizer-event-filters{display:grid;grid-template-columns:minmax(260px,2fr) repeat(4,minmax(125px,1fr));gap:14px;align-items:end;margin-bottom:18px;padding:18px;border:1px solid rgba(138,37,255,.22);border-radius:14px;background:rgba(9,13,29,.68)}
+.organizer-event-filters label{display:block;margin-bottom:7px;color:#cbd5e1;font-size:13px;font-weight:700}
+.organizer-event-filters input,.organizer-event-filters select{width:100%;height:44px;box-sizing:border-box;padding:0 12px;border:1px solid rgba(255,255,255,.13);border-radius:9px;background:#11162a;color:#f8fafc;color-scheme:dark}
+.organizer-event-filters input:focus,.organizer-event-filters select:focus{outline:0;border-color:#8a25ff;box-shadow:0 0 0 3px rgba(138,37,255,.15)}
+.organizer-filter-actions{grid-column:1/-1;display:flex;align-items:center;justify-content:flex-end;gap:12px}
+.organizer-filter-submit,.organizer-filter-reset{display:inline-flex;align-items:center;justify-content:center;min-height:42px;box-sizing:border-box;padding:0 17px;border-radius:9px;font-weight:700;text-decoration:none;cursor:pointer}
+.organizer-filter-submit{border:0;background:linear-gradient(90deg,#8a25ff,#2563ff);color:#fff}
+.organizer-filter-reset{border:1px solid rgba(138,37,255,.4);background:rgba(138,37,255,.08);color:#c4b5fd}
+.organizer-filter-summary{display:flex;justify-content:space-between;gap:14px;margin:0 0 14px;color:#94a3b8;font-size:14px}
+.organizer-filter-summary strong{color:#f8fafc}
+.organizer-empty-reset{margin-top:10px}
+.pagination-btn.disabled{pointer-events:none;opacity:.4}
+@media(max-width:1100px){.organizer-event-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.organizer-filter-search{grid-column:1/-1}}
+@media(max-width:650px){.organizer-event-filters{grid-template-columns:1fr}.organizer-filter-search,.organizer-filter-actions{grid-column:auto}.organizer-filter-actions{justify-content:stretch}.organizer-filter-actions>*{flex:1}.organizer-filter-summary{flex-direction:column;gap:5px}}

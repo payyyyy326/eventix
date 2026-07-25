@@ -1,4 +1,4 @@
-﻿/* =========================
+/* =========================
    Event Detail
 ========================= */
 
@@ -171,3 +171,5 @@
     font-weight: 800;
     cursor: pointer;
 }
+/* Overall venue map */
+.event-seat-map-section{width:min(1280px,calc(100% - 48px));margin:56px auto}.event-seat-map-heading{margin-bottom:20px}.event-seat-map-heading>span{color:#a78bfa;font-size:12px;font-weight:900;letter-spacing:.16em}.event-seat-map-heading h2{margin:7px 0 8px;color:#fff;font-size:34px}.event-seat-map-heading p{margin:0;color:#9ca3af}.event-overall-map{padding:22px}.event-overall-map .booking-map-zone{cursor:default}.event-overall-map .booking-map-zone:hover{transform:none}.event-map-zone{pointer-events:none}.event-map-legend{display:flex;gap:12px 18px;flex-wrap:wrap;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);color:#aeb6c9;font-size:13px}.event-map-legend span{display:flex;align-items:center;gap:7px}.event-map-legend i{width:16px;height:16px;flex:0 0 16px;border:1px solid rgba(255,255,255,.35);border-radius:5px}@media(max-width:650px){.event-seat-map-section{width:min(100% - 24px,1280px);margin:36px auto}.event-seat-map-heading h2{font-size:27px}.event-overall-map{padding:13px}}

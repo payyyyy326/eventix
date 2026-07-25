@@ -1,8 +1,10 @@
-﻿using Eventix.Share.Common.Models;
+using Eventix.Share.Category;
+using Eventix.Share.Common.Models;
 using Eventix.Share.Event;
 using Eventix.Share.Organizer;
 using Eventix.Share.SeatMap;
 using Eventix.Share.TicketType;
+using Eventix.Share.Venue;
 using Eventix.Web.Models;
 using Eventix.Web.Models.Organizer;
 using Microsoft.AspNetCore.Mvc;
@@ -111,30 +113,77 @@ namespace Eventix.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Events(PaginationRequest<OrganizerEventResponse> request)
+        public async Task<IActionResult> Events(
+            string? search = null,
+            string? status = null,
+            DateTime? fromDate = null,
+            DateTime? toDate = null,
+            int currentPage = 1,
+            int pageSize = 10)
         {
-            request.CurrentPage = request.CurrentPage <= 0 ? 1 : request.CurrentPage;
-            request.PageSize = request.PageSize <= 0 ? 10 : request.PageSize;
-
             var token = Request.Cookies[CookieNames.Token];
-
             if (string.IsNullOrWhiteSpace(token))
                 return RedirectToAction("Login", "Auth");
 
             var client = _httpClientFactory.CreateClient("Eventix");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
+            var httpResponse = await client.GetAsync(
+                "api/OrganizerProfile/events?CurrentPage=1&PageSize=500");
+            if (httpResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                ClearExpiredSession();
+                TempData["Error"] = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+                return RedirectToAction("Login", "Auth");
+            }
 
-            var query =
-                $"api/OrganizerProfile/events?CurrentPage={request.CurrentPage}&PageSize={request.PageSize}";
+            var response = httpResponse.IsSuccessStatusCode
+                ? await httpResponse.Content.ReadFromJsonAsync<
+                    ApiResponseModel<PaginationResponse<OrganizerEventResponse>>>()
+                : null;
+            var allEvents = response?.Data?.DataList ?? [];            var filteredEvents = allEvents.AsEnumerable();
+            search = search?.Trim();
+            status = status?.Trim();
 
-            var response = await client.GetFromJsonAsync<
-                ApiResponseModel<PaginationResponse<OrganizerEventResponse>>>(query);
+            if (!string.IsNullOrWhiteSpace(search))
+                filteredEvents = filteredEvents.Where(item =>
+                    item.Title.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    item.CategoryName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    item.VenueName.Contains(search, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(status))
+                filteredEvents = filteredEvents.Where(item =>
+                    string.Equals(item.Status, status, StringComparison.OrdinalIgnoreCase));
+            if (fromDate.HasValue)
+                filteredEvents = filteredEvents.Where(item => item.StartTime.Date >= fromDate.Value.Date);
+            if (toDate.HasValue)
+                filteredEvents = filteredEvents.Where(item => item.StartTime.Date <= toDate.Value.Date);
 
-            return View(response!.Data);
+            pageSize = new[] { 5, 10, 20, 50 }.Contains(pageSize) ? pageSize : 10;
+            var orderedEvents = filteredEvents.OrderByDescending(item => item.CreatedAt).ToList();
+            var totalRows = orderedEvents.Count;
+            var totalPages = Math.Max(1, (int)Math.Ceiling(totalRows / (double)pageSize));
+            currentPage = Math.Clamp(currentPage, 1, totalPages);
+
+            ViewBag.Search = search;
+            ViewBag.Status = status;
+            ViewBag.FromDate = fromDate;
+            ViewBag.ToDate = toDate;
+            ViewBag.TotalEventCount = allEvents.Count;
+            ViewBag.StatusOptions = allEvents.Select(item => item.Status)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(value => value)
+                .ToList();
+
+            return View(new PaginationResponse<OrganizerEventResponse>
+            {
+                DataList = orderedEvents.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList(),
+                TotalRows = totalRows,
+                TotalPages = totalPages,
+                CurrentPage = currentPage,
+                PageSize = pageSize
+            });
         }
-
         [HttpGet]
         public async Task<IActionResult> ManageEvent(Guid id, string tab = "general")
         {
@@ -185,6 +234,124 @@ namespace Eventix.Web.Controllers
             return View(response.Data);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> EditEvent(Guid id)
+        {
+            var token = Request.Cookies[CookieNames.Token];
+            if (string.IsNullOrWhiteSpace(token))
+                return RedirectToAction("Login", "Auth");
+
+            var client = _httpClientFactory.CreateClient("Eventix");
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", token);
+
+            var ownerResponse = await client.GetAsync($"api/OrganizerProfile/events/{id}");
+            if (ownerResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                ClearExpiredSession();
+                return RedirectToAction("Login", "Auth");
+            }
+            if (!ownerResponse.IsSuccessStatusCode)
+            {
+                TempData["Error"] = "Không tìm thấy sự kiện hoặc bạn không có quyền chỉnh sửa.";
+                return RedirectToAction(nameof(Events));
+            }
+
+            var detailResponse = await client.GetFromJsonAsync<
+                ApiResponseModel<EventDetailResponse>>($"api/Events/{id}");
+            if (detailResponse?.Data == null)
+            {
+                TempData["Error"] = "Không thể tải thông tin sự kiện.";
+                return RedirectToAction(nameof(Events));
+            }
+
+            var detail = detailResponse.Data;
+            var model = new EditEventViewModel
+            {
+                Id = detail.Id,
+                Title = detail.Title,
+                Slug = detail.Slug,
+                CategoryId = detail.CategoryId,
+                VenueId = detail.VenueId,
+                Summary = detail.Summary,
+                Description = detail.Description,
+                ImageUrl = detail.ImageUrl,
+                BannerUrl = detail.BannerUrl,
+                StartTime = detail.StartTime,
+                EndTime = detail.EndTime,
+                Status = detail.Status,
+                IsFeatured = detail.IsFeatured,
+                PublishedAt = detail.PublishedAt
+            };
+            await PopulateEditEventOptionsAsync(client, model);
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditEvent(EditEventViewModel model)
+        {
+            var token = Request.Cookies[CookieNames.Token];
+            if (string.IsNullOrWhiteSpace(token))
+                return RedirectToAction("Login", "Auth");
+
+            var client = _httpClientFactory.CreateClient("Eventix");
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", token);
+
+            if (model.StartTime >= model.EndTime)
+                ModelState.AddModelError(nameof(model.EndTime), "Thời gian kết thúc phải sau thời gian bắt đầu.");
+
+            if (!ModelState.IsValid)
+            {
+                await PopulateEditEventOptionsAsync(client, model);
+                return View(model);
+            }
+
+            var request = new UpdateEventRequest
+            {
+                CategoryId = model.CategoryId,
+                VenueId = model.VenueId,
+                Title = model.Title.Trim(),
+                Slug = model.Slug,
+                Description = model.Description,
+                Summary = model.Summary,
+                StartTime = model.StartTime,
+                EndTime = model.EndTime,
+                Status = model.Status,
+                IsFeatured = model.IsFeatured,
+                PublishedAt = model.PublishedAt
+            };
+
+            var response = await client.PutAsJsonAsync($"api/Events/{model.Id}", request);
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                ClearExpiredSession();
+                return RedirectToAction("Login", "Auth");
+            }
+
+            ApiResponseModel<EventDetailResponse>? result = null;
+            try
+            {
+                result = await response.Content.ReadFromJsonAsync<
+                    ApiResponseModel<EventDetailResponse>>();
+            }
+            catch (JsonException)
+            {
+                // The status code below still provides a useful fallback message.
+            }
+
+            if (!response.IsSuccessStatusCode || result?.IsSuccess != true)
+            {
+                ModelState.AddModelError(string.Empty,
+                    result?.Message ?? "Không thể cập nhật sự kiện. Vui lòng kiểm tra thời gian và địa điểm.");
+                await PopulateEditEventOptionsAsync(client, model);
+                return View(model);
+            }
+
+            TempData["Success"] = "Cập nhật sự kiện thành công.";
+            return RedirectToAction(nameof(ManageEvent), new { id = model.Id });
+        }
         [HttpGet]
         public async Task<IActionResult> TicketTypes(Guid eventId)
         {
@@ -320,6 +487,28 @@ namespace Eventix.Web.Controllers
                 "Organizer profile updated successfully.";
 
             return RedirectToAction(nameof(Profile));
+        }
+        private static async Task PopulateEditEventOptionsAsync(
+            HttpClient client,
+            EditEventViewModel model)
+        {
+            var categoryResponse = await client.GetFromJsonAsync<
+                ApiResponseModel<PaginationResponse<CategoryResponse>>>(
+                "api/category/categories");
+            var venueResponse = await client.GetFromJsonAsync<
+                ApiResponseModel<PaginationResponse<VenueResponse>>>(
+                "api/Venue/venues?CurrentPage=1&PageSize=500");
+
+            model.Categories = categoryResponse?.Data?.DataList ?? [];
+            model.Venues = venueResponse?.Data?.DataList ?? [];
+        }
+        private void ClearExpiredSession()
+        {
+            Response.Cookies.Delete(CookieNames.Token);
+            Response.Cookies.Delete(CookieNames.RefreshToken);
+            Response.Cookies.Delete(CookieNames.UserName);
+            Response.Cookies.Delete(CookieNames.AvatarUrl);
+            Response.Cookies.Delete(CookieNames.Roles);
         }
     }
 }

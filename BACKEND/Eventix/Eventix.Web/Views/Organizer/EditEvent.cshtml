@@ -1,0 +1,120 @@
+@model Eventix.Web.Models.EditEventViewModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Chỉnh sửa sự kiện";
+    Layout = "_OrganizerLayout";
+}
+
+<section class="organizer-page edit-event-page">
+    <div class="dashboard-header">
+        <div class="page-heading">
+            <span>Quản lý sự kiện</span>
+            <h1>Chỉnh sửa sự kiện</h1>
+            <p>Cập nhật thông tin hiện có. Loại vé và sơ đồ được quản lý tại trang chi tiết sự kiện.</p>
+        </div>
+        <a asp-action="ManageEvent" asp-route-id="@Model.Id" class="edit-back-link">← Quay lại quản lý</a>
+    </div>
+
+    <div class="dashboard-panel edit-event-panel">
+        <form asp-action="EditEvent" method="post" class="organizer-form">
+            @Html.AntiForgeryToken()
+            <input asp-for="Id" type="hidden" />
+            <input asp-for="Slug" type="hidden" />
+            <input asp-for="Status" type="hidden" />
+            <input asp-for="IsFeatured" type="hidden" />
+            <input asp-for="PublishedAt" type="hidden" />
+            <input asp-for="ImageUrl" type="hidden" />
+            <input asp-for="BannerUrl" type="hidden" />
+
+            <div asp-validation-summary="ModelOnly" class="edit-validation"></div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.BannerUrl) || !string.IsNullOrWhiteSpace(Model.ImageUrl))
+            {
+                <div class="edit-current-media">
+                    <img src="@MediaUrl.Img(Model.BannerUrl ?? Model.ImageUrl, "")" alt="@Model.Title" />
+                    <div>
+                        <strong>Ảnh sự kiện hiện tại</strong>
+                        <span>Ảnh được giữ nguyên khi cập nhật thông tin.</span>
+                    </div>
+                </div>
+            }
+
+            <div class="form-group edit-full">
+                <label asp-for="Title">Tên sự kiện</label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="edit-grid">
+                <div class="form-group">
+                    <label asp-for="CategoryId">Danh mục</label>
+                    <select asp-for="CategoryId"
+                            asp-items="@(new SelectList(Model.Categories, "Id", "Name", Model.CategoryId))"
+                            class="form-select">
+                        <option value="">-- Chọn danh mục --</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="VenueId">Địa điểm</label>
+                    <select asp-for="VenueId"
+                            asp-items="@(new SelectList(Model.Venues, "Id", "Name", Model.VenueId))"
+                            class="form-select">
+                        <option value="">-- Chọn địa điểm --</option>
+                    </select>
+                    <span asp-validation-for="VenueId" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="edit-grid">
+                <div class="form-group">
+                    <label asp-for="StartTime">Thời gian bắt đầu</label>
+                    <input asp-for="StartTime" type="datetime-local" class="form-control"
+                           value="@Model.StartTime.ToString("yyyy-MM-ddTHH:mm")" />
+                    <span asp-validation-for="StartTime" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="EndTime">Thời gian kết thúc</label>
+                    <input asp-for="EndTime" type="datetime-local" class="form-control"
+                           value="@Model.EndTime.ToString("yyyy-MM-ddTHH:mm")" />
+                    <span asp-validation-for="EndTime" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group edit-full">
+                <label asp-for="Summary">Mô tả ngắn</label>
+                <input asp-for="Summary" class="form-control" />
+            </div>
+
+            <div class="form-group edit-full">
+                <label asp-for="Description">Mô tả chi tiết</label>
+                <textarea asp-for="Description" rows="7" class="form-control"></textarea>
+            </div>
+
+            <div class="edit-actions">
+                <a asp-action="ManageEvent" asp-route-id="@Model.Id" class="edit-cancel">Hủy</a>
+                <button type="submit" class="dashboard-create-btn">Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <style>
+        .edit-event-page { max-width: 980px; }
+        .edit-event-panel { padding: 28px; }
+        .edit-back-link, .edit-cancel { color: #c4b5fd; text-decoration: none; font-weight: 700; }
+        .edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+        .edit-full { margin-bottom: 18px; }
+        .edit-event-panel label { display: block; margin-bottom: 7px; font-weight: 700; }
+        .edit-current-media { display: flex; align-items: center; gap: 16px; padding: 12px; margin-bottom: 22px; border: 1px solid rgba(139,92,246,.35); border-radius: 14px; background: rgba(139,92,246,.08); }
+        .edit-current-media img { width: 150px; height: 78px; object-fit: cover; border-radius: 10px; }
+        .edit-current-media div { display: flex; flex-direction: column; gap: 5px; }
+        .edit-current-media span { color: #9ca3af; font-size: .88rem; }
+        .edit-actions { display: flex; align-items: center; justify-content: flex-end; gap: 18px; margin-top: 26px; }
+        .edit-validation { color: #fca5a5; margin-bottom: 16px; }
+        @@media (max-width: 720px) { .edit-grid { grid-template-columns: 1fr; } .edit-current-media { align-items: flex-start; } }
+    </style>
+}

@@ -1,4 +1,4 @@
-﻿using Eventix.Common.Constants.SystemData;
+using Eventix.Common.Constants.SystemData;
 using Eventix.Common.Exceptions;
 using Eventix.Data;
 using Eventix.Entities;
@@ -208,12 +208,17 @@ namespace Eventix.Modules.VenueModule.Services
                 {
                     Id = x.Id,
                     VenueId = x.VenueId,
+                    TicketTypeId = x.TicketTypeId,
                     Section = x.Section,
                     X = x.X,
                     Y = x.Y,
                     Width = x.Width,
                     Height = x.Height,
-                    Color = x.Color
+                    Color = x.Color,
+                    IsSeatRequired = x.TicketType != null && x.TicketType.IsSeatRequired,
+                    AvailableSeats = x.TicketType == null ? null :
+                        x.TicketType.Quantity - x.TicketType.SoldQuantity - x.TicketType.ReservedQuantity,
+                    TotalSeats = x.TicketType == null ? null : x.TicketType.Quantity
                 })
                 .ToListAsync();
         }

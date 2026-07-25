@@ -144,25 +144,168 @@ sequenceDiagram
 - Ghế đã tạo ở lần publish trước sẽ được **skip** để tránh trùng.
 - `VenueZoneId = null` trong luồng này; VenueZone là module tùy chọn riêng.
 
-## 7. Tạo sự kiện bằng Event Wizard
+## 7. Sequence Diagram – quản lý tạo sự kiện mới
 
 ```mermaid
-flowchart TD
-    S1[Thông tin cơ bản] --> S2[Chọn/tạo venue]
-    S2 --> S3[Tạo ticket type + cấu hình ghế]
-    S3 --> S4[Upload banner/images]
-    S4 --> S5[Review]
-    S5 --> S6[Lưu Draft hoặc Publish]
+sequenceDiagram
+    autonumber
+    actor Organizer
+    participant Web as Eventix.Web / EventWizard
+    participant Session as Session Wizard
+    participant File as File Storage
+    participant VenueAPI as Venue API
+    participant EventAPI as Events API
+    participant TicketAPI as TicketType API
+    participant SeatAPI as Seat / SeatMap API
+    participant DB as SQL Server
+
+    Organizer->>Web: Mở chức năng Tạo sự kiện
+    Web->>EventAPI: GET danh mục sự kiện
+    EventAPI->>DB: Đọc Categories
+    DB-->>EventAPI: Danh sách danh mục
+    EventAPI-->>Web: Categories
+    Web-->>Organizer: Bước 1 - Thông tin sự kiện
+
+    opt Organizer tải banner hoặc ảnh đại diện
+        Organizer->>Web: Chọn file ảnh
+        Web->>File: Lưu file vào uploads/events
+        File-->>Web: Relative image URL
+    end
+
+    Organizer->>Web: Gửi thông tin, thời gian, ảnh
+    Web->>Web: Validate dữ liệu Bước 1
+    alt Thông tin không hợp lệ
+        Web-->>Organizer: Hiển thị lỗi tại trường dữ liệu
+    else Thông tin hợp lệ
+        Web->>Session: Lưu EventWizard_Info
+        Web-->>Organizer: Chuyển sang Bước 2
+    end
+
+    Web->>VenueAPI: GET danh sách địa điểm
+    VenueAPI->>DB: Đọc Venues
+    DB-->>VenueAPI: Danh sách địa điểm
+    VenueAPI-->>Web: Venue list
+    Web-->>Organizer: Bước 2 - Chọn hoặc tạo địa điểm
+
+    alt Chọn địa điểm đã có
+        Organizer->>Web: Chọn Venue
+    else Tạo địa điểm mới
+        Organizer->>Web: Nhập thông tin Venue
+        Web->>VenueAPI: POST /api/Venue/create
+        VenueAPI->>DB: INSERT Venue
+        DB-->>VenueAPI: Venue đã tạo
+        VenueAPI-->>Web: VenueId
+    end
+    Web->>Session: Lưu EventWizard_VenueId
+
+    Web-->>Organizer: Bước 3 - Khai báo loại vé
+    loop Mỗi khu / loại vé
+        Organizer->>Web: Nhập tên khu, giá, số lượng,<br/>thời gian bán, vé đứng/ngồi
+        Web->>Web: Validate Quantity, Price, SaleTime
+        Web->>Session: Cập nhật EventWizard_TicketTypes
+    end
+
+    Web-->>Organizer: Bước 4 - Xem trước ghế ngồi
+    Web->>SeatAPI: GET trạng thái ghế theo event/venue
+    SeatAPI->>DB: Đọc cấu hình ghế hiện có
+    DB-->>SeatAPI: Seat configuration
+    SeatAPI-->>Web: Dữ liệu xem trước
+
+    Web-->>Organizer: Bước 5 - Sắp xếp sơ đồ địa điểm
+    Organizer->>Web: Di chuyển / thay đổi kích thước các khu
+    Organizer->>Web: Nhấn Lưu sơ đồ
+    Web->>SeatAPI: PUT /api/Venue/{venueId}/seat-map
+    SeatAPI->>DB: Lưu VenueSectionLayouts
+    DB-->>SeatAPI: Thành công
+    SeatAPI-->>Web: Layout đã lưu
+    Web->>Session: EventWizard_SeatMapSaved = true
+
+    Web-->>Organizer: Bước 6 - Xem lại và công bố
+    Organizer->>Web: Nhấn Công bố sự kiện
+    Web->>Session: Đọc Info, VenueId, TicketTypes,<br/>SeatMapSaved, EventId nếu retry
+    Web->>Web: Validate toàn bộ Wizard
+
+    alt Wizard thiếu hoặc dữ liệu không hợp lệ
+        Web-->>Organizer: Dừng publish và hiển thị lỗi
+    else Dữ liệu hợp lệ
+        alt Đã có EventWizard_EventId do lần publish trước gián đoạn
+            Web->>Web: Tái sử dụng Draft EventId
+        else Chưa có Draft Event
+            Web->>EventAPI: POST /api/Events/create
+            EventAPI->>DB: BEGIN TRANSACTION SERIALIZABLE
+            EventAPI->>DB: Kiểm tra trùng Venue và thời gian
+            alt Trùng lịch với sự kiện khác
+                DB-->>EventAPI: Có khoảng thời gian giao nhau
+                EventAPI->>DB: ROLLBACK
+                EventAPI-->>Web: EVENT_EXIST
+                Web-->>Organizer: Thông báo thời gian đã có sự kiện
+            else Không trùng lịch
+                EventAPI->>DB: INSERT Event trạng thái Draft
+                EventAPI->>DB: COMMIT
+                EventAPI-->>Web: Draft EventId
+                Web->>Session: Lưu EventWizard_EventId
+            end
+        end
+
+        opt Có Draft EventId hợp lệ
+            Web->>TicketAPI: GET ticket types của Event
+            TicketAPI->>DB: Đọc TicketTypes đã tạo
+            DB-->>TicketAPI: Existing ticket types
+            TicketAPI-->>Web: Danh sách hiện có
+
+            loop Mỗi TicketType trong Session
+                alt TicketType đã tồn tại và đúng Quantity
+                    Web->>Web: Bỏ qua để tránh tạo trùng
+                else TicketType chưa tồn tại
+                    Web->>TicketAPI: POST /api/TicketType/event/{eventId}
+                    TicketAPI->>DB: INSERT TicketType
+                    DB-->>TicketAPI: TicketType đã tạo
+                    TicketAPI-->>Web: Thành công
+                end
+            end
+
+            alt Tạo TicketType thất bại
+                Web->>EventAPI: DELETE Draft Event
+                EventAPI->>DB: Xóa dữ liệu Draft có thể hoàn tác
+                Web-->>Organizer: Báo lỗi và giữ dữ liệu Wizard để sửa
+            else Tất cả TicketType hợp lệ
+                Web->>EventAPI: POST /api/Events/{eventId}/publish
+                EventAPI->>DB: Đọc Event, Venue và TicketTypes
+                EventAPI->>EventAPI: Validate quyền sở hữu, quota,<br/>capacity và thời gian bán
+
+                loop Mỗi TicketType có IsSeatRequired = true
+                    EventAPI->>DB: Kiểm tra EventSeatStatus đã tồn tại
+                    alt Chưa tạo ghế cho khu này
+                        EventAPI->>DB: Generate Seats theo Quantity
+                        EventAPI->>DB: INSERT EventSeatStatus = Available
+                    else Ghế đã tồn tại
+                        EventAPI->>EventAPI: Bỏ qua để tránh sinh trùng
+                    end
+                    EventAPI->>DB: Gắn TicketTypeId vào SectionLayout
+                end
+
+                EventAPI->>DB: Cập nhật trạng thái Published / OnSale
+                DB-->>EventAPI: Publish thành công
+                EventAPI-->>Web: Event đã công bố
+                Web->>Session: Xóa dữ liệu EventWizard
+                Web-->>Organizer: Chuyển tới Quản lý sự kiện
+            end
+        end
+    end
 ```
 
-### Quy tắc
+### Ý nghĩa các nhánh quan trọng
 
-- Event liên kết Category, Venue và OrganizerProfile.
-- Ticket type khai báo **tên section, quota, price, sale window** và `IsSeatRequired`.
-- Section của seat map được tạo tự động từ **tên TicketType** — không cần cấu hình VenueZone riêng.
-- Ghế được generate khi Publish; mỗi lần publish chỉ tạo ghế chưa tồn tại.
-- Event chỉ nên publish khi thông tin bắt buộc, venue và ticket type hợp lệ.
-- Ảnh được lưu vào vùng upload và URL được lưu trong database.
+- Dữ liệu từ Bước 1–5 được giữ trong `Session`; Event chưa được tạo trong database cho tới lúc nhấn
+  **Công bố sự kiện**.
+- Kiểm tra trùng địa điểm và thời gian được thực hiện trong transaction `Serializable`. Nếu trùng lịch,
+  transaction rollback và không được tạo thêm Event.
+- `EventWizard_EventId` giúp lần thử lại sử dụng đúng Draft đã tạo trước đó, không tạo sự kiện trùng.
+- TicketType đã tồn tại với đúng số lượng sẽ được bỏ qua khi retry; TicketType còn thiếu mới được tạo tiếp.
+- Ghế chỉ được sinh cho TicketType có `IsSeatRequired = true`. Vé đứng giữ nguyên `Quantity` nhưng không
+  tạo danh sách ghế cụ thể.
+- Nếu tạo TicketType thất bại, hệ thống xóa Draft vừa tạo và trả người dùng về bước xem lại để sửa dữ liệu.
+- Sau khi publish thành công, Session Wizard được xóa và Organizer được chuyển đến trang quản lý sự kiện.
 
 ## 8. Publish và tự động cập nhật trạng thái Event
 
@@ -184,20 +327,182 @@ stateDiagram-v2
 
 Job không được ghi đè `Cancelled`. Mọi thay đổi được lưu theo batch của lần chạy.
 
-## 9. Xem thông tin booking
+## 9. Sequence Diagram – Khách hàng đặt vé
 
-### Endpoint
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer as Khách hàng
+    participant Browser as Trình duyệt
+    participant Web as Eventix.Web
+    participant EventAPI as Events API
+    participant BookingAPI as Booking API
+    participant OrderAPI as Orders API
+    participant PaymentAPI as Payment API
+    participant DB as SQL Server
+    participant QR as QR Generator
+    participant Mail as Email Service
+    participant Quartz as BookingExpirationJob
 
-`GET /api/events/{eventId}/booking`
+    Customer->>Browser: Mở chi tiết sự kiện
+    Browser->>Web: GET /Event/Details/{eventId}
+    Web->>EventAPI: GET /api/Events/{eventId}
+    EventAPI->>DB: Đọc Event, Venue, TicketTypes và sơ đồ
+    DB-->>EventAPI: Thông tin sự kiện
+    EventAPI-->>Web: EventDetailResponse
+    Web-->>Browser: Hiển thị sự kiện và nút Đặt vé
 
-API trả:
+    Customer->>Browser: Chọn Đặt vé
+    Browser->>Web: GET /Event/Booking/{eventId}
+    Web->>EventAPI: GET /api/Events/{eventId}/booking
+    EventAPI->>DB: Đọc TicketTypes và EventSeatStatus
+    DB-->>EventAPI: Khu vé, quota và trạng thái ghế
+    EventAPI-->>Web: EventBookingResponse
+    Web-->>Browser: Hiển thị loại vé và sơ đồ khu
 
-- Event, venue và thời gian.
-- Ticket type, zone, `HasSeats`, quota còn lại.
-- Toàn bộ ghế kèm status và tọa độ.
+    Customer->>Browser: Chọn vé đứng hoặc vé ngồi
+    Customer->>Browser: Chọn khu vé
 
-Ghế Reserved/Sold vẫn được trả về để UI giữ đúng bố cục, nhưng bị disable và hiển
-thị “không khả dụng”. Ghế được sắp theo section, row, XPosition và number.
+    alt Vé đứng
+        Customer->>Browser: Nhập số lượng vé
+        Browser->>Browser: Không hiển thị sơ đồ ghế
+    else Vé ngồi
+        Browser->>Browser: Chỉ hiển thị ghế thuộc khu đã chọn
+        Customer->>Browser: Chọn các ghế Available
+        Browser->>Browser: Quantity = số SeatIds đã chọn
+    end
+
+    Customer->>Browser: Xác nhận đặt vé
+    Browser->>Web: POST /Event/Book
+    Web->>BookingAPI: POST /api/bookings<br/>EventId, TicketTypeId, Quantity, SeatIds
+    BookingAPI->>DB: BEGIN TRANSACTION SERIALIZABLE
+    BookingAPI->>DB: Đọc Event và TicketType
+    BookingAPI->>BookingAPI: Kiểm tra event, thời gian bán,<br/>quota và quyền người dùng
+
+    alt Dữ liệu chung không hợp lệ
+        BookingAPI->>DB: ROLLBACK
+        BookingAPI-->>Web: BadRequest / Conflict
+        Web-->>Browser: Hiển thị lỗi đặt vé
+    else Vé đứng hợp lệ
+        BookingAPI->>DB: Kiểm tra AvailableQuantity >= Quantity
+        alt Không đủ vé
+            BookingAPI->>DB: ROLLBACK
+            BookingAPI-->>Web: Không đủ số lượng vé
+            Web-->>Browser: Yêu cầu chọn lại số lượng
+        else Còn đủ vé
+            BookingAPI->>DB: INSERT Reservation Active<br/>ExpiresAt = now + 15 phút
+            BookingAPI->>DB: ReservedQuantity += Quantity
+            BookingAPI->>DB: COMMIT
+            BookingAPI->>Mail: Gửi email giữ vé thành công
+            BookingAPI-->>Web: BookingResponse
+        end
+    else Vé ngồi hợp lệ
+        BookingAPI->>BookingAPI: Loại bỏ SeatIds trùng<br/>và kiểm tra count = Quantity
+        BookingAPI->>DB: Khóa và đọc EventSeatStatus
+        alt Có ghế không còn Available
+            BookingAPI->>DB: ROLLBACK
+            BookingAPI-->>Web: 409 Seat not available
+            Web-->>Browser: Tải lại sơ đồ và báo ghế đã được đặt
+        else Tất cả ghế còn trống
+            loop Mỗi ghế được chọn
+                BookingAPI->>DB: INSERT một Reservation Active
+                BookingAPI->>DB: SeatStatus = Reserved
+            end
+            BookingAPI->>DB: ReservedQuantity += số ghế
+            BookingAPI->>DB: COMMIT
+            BookingAPI->>Mail: Gửi email giữ vé thành công
+            BookingAPI-->>Web: Danh sách BookingResponse
+        end
+    end
+
+    Web-->>Browser: Trang xác nhận giữ vé<br/>và thời hạn thanh toán
+
+    alt Khách hàng thanh toán trong 15 phút
+        Customer->>Browser: Tiếp tục thanh toán
+        Browser->>Web: Tạo đơn từ ReservationIds
+        Web->>OrderAPI: POST /api/orders
+        OrderAPI->>DB: BEGIN TRANSACTION SERIALIZABLE
+        OrderAPI->>DB: Kiểm tra reservation thuộc khách,<br/>Active và chưa hết hạn
+        OrderAPI->>OrderAPI: Tính Subtotal, ServiceFee và Total
+        OrderAPI->>DB: INSERT Order Pending và OrderItems
+        OrderAPI->>DB: Gắn Reservation.OrderId
+        OrderAPI->>DB: COMMIT
+        OrderAPI-->>Web: OrderResponse
+        Web-->>Browser: Hiển thị trang thanh toán
+
+        Customer->>Browser: Xác nhận thanh toán Demo
+        Browser->>Web: POST hoàn tất thanh toán
+        Web->>PaymentAPI: POST /api/payments/demo/complete
+        PaymentAPI->>DB: BEGIN TRANSACTION SERIALIZABLE
+        PaymentAPI->>DB: Đọc Order, Items và Reservations
+        PaymentAPI->>PaymentAPI: Kiểm tra Pending và chưa hết hạn
+
+        alt Order không còn hợp lệ
+            PaymentAPI->>DB: ROLLBACK
+            PaymentAPI-->>Web: Thanh toán thất bại
+            Web-->>Browser: Hiển thị lý do thất bại
+        else Order hợp lệ
+            loop Mỗi reservation
+                PaymentAPI->>DB: ReservedQuantity giảm<br/>SoldQuantity tăng
+                PaymentAPI->>DB: Reservation = Confirmed
+                opt Vé ngồi
+                    PaymentAPI->>DB: SeatStatus = Sold
+                end
+                PaymentAPI->>DB: INSERT Ticket Active,<br/>TicketCode và QrToken
+            end
+            PaymentAPI->>DB: Order = Paid
+            PaymentAPI->>DB: INSERT Payment Success
+            PaymentAPI->>DB: COMMIT
+            PaymentAPI->>QR: Sinh ảnh QR từ QrToken
+            QR-->>PaymentAPI: Ảnh QR của từng vé
+            PaymentAPI->>Mail: Gửi email đặt vé thành công kèm QR
+            PaymentAPI-->>Web: PaymentResponse
+            Web-->>Browser: Hiển thị thanh toán thành công
+            Browser-->>Customer: Vé xuất hiện trong Vé của tôi
+        end
+
+    else Khách hàng chủ động hủy lượt giữ
+        Customer->>Browser: Chọn Hủy vé đang giữ
+        Browser->>Web: DELETE booking
+        Web->>BookingAPI: DELETE /api/bookings/{reservationId}
+        BookingAPI->>DB: Reservation = Cancelled
+        BookingAPI->>DB: Hoàn ReservedQuantity và giải phóng ghế
+        BookingAPI->>DB: Order Pending = Cancelled nếu có
+        BookingAPI->>DB: COMMIT
+        BookingAPI->>Mail: Gửi email hủy vé
+        BookingAPI-->>Web: Hủy thành công
+        Web-->>Browser: Cập nhật danh sách vé đang giữ
+
+    else Không thanh toán trong 15 phút
+        Quartz->>DB: Tìm Reservation Active đã hết hạn
+        Quartz->>DB: Reservation = Expired
+        Quartz->>DB: Order Pending = Expired nếu có
+        Quartz->>DB: Hoàn ReservedQuantity và giải phóng ghế
+        Quartz->>DB: COMMIT
+        Quartz->>Mail: Gửi email đặt vé thất bại
+        Mail-->>Customer: Thông báo vé đã hết thời gian giữ
+    end
+```
+
+### Dữ liệu trả về khi mở trang đặt vé
+
+Endpoint `GET /api/events/{eventId}/booking` trả về:
+
+- Event, venue và thời gian diễn ra.
+- TicketType của từng khu, loại vé đứng/ngồi, giá và số lượng còn lại.
+- Ghế theo đúng `TicketTypeId`, section, row, number và trạng thái.
+- Ghế `Reserved` hoặc `Sold` vẫn được trả về để giữ bố cục sơ đồ nhưng bị vô hiệu hóa.
+
+### Điểm kiểm soát quan trọng
+
+- Server luôn kiểm tra lại quota và trạng thái ghế trong transaction `Serializable`; giao diện không phải
+  nguồn xác nhận cuối cùng.
+- Khi đổi từ khu C1 sang C2/C3, giao diện chỉ hiển thị ghế có `TicketTypeId` của khu đang chọn và xóa
+  các ghế đã chọn ở khu trước.
+- Vé đứng tạo một reservation theo số lượng; vé ngồi tạo một reservation cho từng ghế.
+- Email giữ vé chỉ gửi sau khi transaction giữ vé đã commit.
+- Vé QR chỉ được phát hành sau khi thanh toán commit thành công.
+- Nếu không thanh toán, Quartz giải phóng quota/ghế sau khoảng 15–16 phút và gửi email thất bại.
 
 ## 10. Giữ vé đứng
 

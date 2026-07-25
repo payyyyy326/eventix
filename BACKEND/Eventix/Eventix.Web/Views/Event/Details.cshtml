@@ -1,13 +1,13 @@
-﻿@model Eventix.Share.Event.EventDetailResponse
+@model Eventix.Share.Event.EventDetailResponse
 
 @{
     ViewData["Title"] = Model.Title;
     Layout = "_Layout";
+    var seatLayouts = ViewBag.SeatMapLayouts as List<Eventix.Share.SeatMap.VenueSectionLayoutResponse> ?? [];
 }
 
 <section class="event-banner">
-    <img src="@MediaUrl.Img(Model.BannerUrl)"
-         alt="@Model.Title" />
+    <img src="@MediaUrl.Img(Model.BannerUrl)" alt="@Model.Title" />
 </section>
 
 <section class="event-detail-container">
@@ -72,6 +72,37 @@
 
 </section>
 
+@if (seatLayouts.Any())
+{
+    <section class="event-seat-map-section">
+        <div class="event-seat-map-heading">
+            <span>SƠ ĐỒ ĐỊA ĐIỂM</span>
+            <h2>Sơ đồ tổng khu vực</h2>
+            <p>Xem vị trí sân khấu và toàn bộ khu vé trước khi lựa chọn.</p>
+        </div>
+        <div class="booking-venue-map event-overall-map">
+            <div class="booking-venue-map-scroll">
+                <div class="booking-map-stage-label">SÂN KHẤU</div>
+                <div class="booking-map-canvas">
+                    @foreach (var layout in seatLayouts)
+                    {
+                        <div class="booking-map-zone event-map-zone"
+                             style="left:@(layout.X)px;top:@(layout.Y)px;width:@(layout.Width)px;height:@(layout.Height)px;background:@layout.Color;">
+                            <strong>@layout.Section</strong>
+                            <span>@(layout.IsSeatRequired ? $"{layout.AvailableSeats ?? 0} / {layout.TotalSeats ?? 0} ghế trống" : $"{layout.AvailableSeats ?? 0} vé còn")</span>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="event-map-legend">
+                @foreach (var layout in seatLayouts.GroupBy(item => new { item.Section, item.Color, item.IsSeatRequired }).Select(group => group.First()))
+                {
+                    <span><i style="background:@layout.Color"></i><strong>@layout.Section</strong> · @(layout.IsSeatRequired ? "Khu ghế ngồi" : "Khu đứng")</span>
+                }
+            </div>
+        </div>
+    </section>
+}
 <section class="ticket-section">
     <h2>Các loại vé</h2>
 
@@ -101,14 +132,14 @@
                         </p>
                     }
 
-                <div class="ticket-meta">
+                    <div class="ticket-meta">
 
-                    <span>
-                        Còn lại:
-                        @(ticket.Quantity -
-                                            ticket.SoldQuantity -
-                                            ticket.ReservedQuantity)
-                </span>
+                        <span>
+                            Còn lại:
+                            @(ticket.Quantity -
+                                                ticket.SoldQuantity -
+                                                ticket.ReservedQuantity)
+                        </span>
 
                         <span>
                             Thời gian bán:
@@ -117,7 +148,7 @@
                             @ticket.SaleEndTime.ToString("dd/MM/yyyy HH:mm")
                         </span>
 
-                @if (ticket.IsSeatRequired)
+                        @if (ticket.IsSeatRequired)
                         {
                             <span>
                                 Có chọn ghế
@@ -142,10 +173,7 @@
 
                     @if (available > 0)
                     {
-                        <a class="ticket-buy-btn"
-                           asp-controller="Event"
-                           asp-action="Booking"
-                           asp-route-id="@Model.Id"
+                        <a class="ticket-buy-btn" asp-controller="Event" asp-action="Booking" asp-route-id="@Model.Id"
                            asp-route-ticketTypeId="@ticket.Id">
                             Đặt vé
                         </a>
@@ -179,4 +207,4 @@
     </div>
 
 </section>
-```
+

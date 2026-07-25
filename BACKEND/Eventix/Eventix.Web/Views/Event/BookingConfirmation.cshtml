@@ -5,42 +5,89 @@
     var first = Model.First();
     var quantity = Model.Sum(x => x.Quantity);
     var total = Model.Sum(x => x.TotalAmount);
-    var seats = Model
-        .Where(x => !string.IsNullOrWhiteSpace(x.SeatLabel))
-        .Select(x => x.SeatLabel)
-        .ToList();
+    var expiresAt = Model.Min(x => x.ExpiresAt);
+    var seats = Model.Where(x => !string.IsNullOrWhiteSpace(x.SeatLabel))
+        .Select(x => x.SeatLabel).ToList();
 }
 
-<main class="booking-confirmation">
-    <div class="booking-success-icon">✓</div>
-    <span class="booking-eyebrow">ĐẶT VÉ THÀNH CÔNG</span>
-    <h1>@first.EventTitle</h1>
-    <p>@first.TicketTypeName · @quantity vé</p>
+<main class="booking-confirmation-page">
+    <section class="booking-confirmation-card">
+        <div class="booking-success-mark" aria-hidden="true">
+            <span>✓</span>
+        </div>
+        <span class="booking-confirmation-eyebrow">GIỮ VÉ THÀNH CÔNG</span>
+        <h1>@first.EventTitle</h1>
+        <p class="booking-confirmation-lead">
+            Vé của bạn đang được giữ. Hoàn tất thanh toán trước khi thời gian giữ vé kết thúc.
+        </p>
 
-    @if (seats.Count > 0)
-    {
-        <p>Ghế: <strong>@string.Join(", ", seats)</strong></p>
-    }
+        <div class="booking-confirmation-details">
+            <div>
+                <span>Hạng vé</span>
+                <strong>@first.TicketTypeName</strong>
+            </div>
+            <div>
+                <span>Số lượng</span>
+                <strong>@quantity vé</strong>
+            </div>
+            @if (seats.Count > 0)
+            {
+                <div class="booking-confirmation-seats">
+                    <span>Vị trí ghế</span>
+                    <strong>@string.Join(", ", seats)</strong>
+                </div>
+            }
+        </div>
 
-    <div class="booking-confirmation-total">
-        @total.ToString("#,##0") VND
-    </div>
+        <div class="booking-confirmation-price">
+            <span>Tổng thanh toán</span>
+            <strong>@total.ToString("#,##0") <small>VND</small></strong>
+        </div>
 
-    <p>Hệ thống đang giữ vé đến
-        <strong>@Model.Min(x => x.ExpiresAt).ToString("HH:mm dd/MM/yyyy")</strong>.
-    </p>
+        <div class="booking-expiry-notice" data-expires="@expiresAt.ToString("O")">
+            <span class="booking-expiry-icon">◷</span>
+            <div>
+                <span>Thời gian giữ vé còn lại</span>
+                <strong id="booking-expiry-countdown">Đang tính...</strong>
+                <small>Hết hạn lúc @expiresAt.ToString("HH:mm, dd/MM/yyyy")</small>
+            </div>
+        </div>
 
-    <form asp-controller="Commerce" asp-action="Checkout" method="get">
-        @foreach (var booking in Model)
-        {
-            <input type="hidden" name="reservationIds" value="@booking.Id" />
-        }
-        <button class="booking-primary-action" type="submit">
-            Tiếp tục thanh toán
-        </button>
-    </form>
-
-    <a asp-controller="Event" asp-action="Details" asp-route-id="@first.EventId">
-        Quay lại sự kiện
-    </a>
+        <div class="booking-confirmation-actions">
+            <form asp-controller="Commerce" asp-action="Checkout" method="get">
+                @foreach (var booking in Model)
+                {
+                    <input type="hidden" name="reservationIds" value="@booking.Id" />
+                }
+                <button class="booking-primary-action" type="submit">Tiếp tục thanh toán <span>→</span></button>
+            </form>
+            <a class="booking-secondary-action" asp-controller="Event" asp-action="Details" asp-route-id="@first.EventId">
+                Quay lại sự kiện
+            </a>
+        </div>
+        <p class="booking-confirmation-footnote">Thông tin vé sẽ được gửi qua email sau khi thanh toán thành công.</p>
+    </section>
 </main>
+
+<script>
+    (() => {
+        const notice = document.querySelector('.booking-expiry-notice');
+        const output = document.getElementById('booking-expiry-countdown');
+        if (!notice || !output) return;
+        const expiresAt = new Date(notice.dataset.expires).getTime();
+        function updateCountdown() {
+            const remaining = expiresAt - Date.now();
+            if (remaining <= 0 || Number.isNaN(remaining)) {
+                output.textContent = 'Đã hết thời gian giữ vé';
+                notice.classList.add('is-expired');
+                return;
+            }
+            const totalSeconds = Math.floor(remaining / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            output.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        updateCountdown();
+        window.setInterval(updateCountdown, 1000);
+    })();
+</script>
